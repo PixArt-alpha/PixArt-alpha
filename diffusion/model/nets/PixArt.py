@@ -24,7 +24,7 @@ from diffusion.utils.logger import get_root_logger
 
 class PixArtBlock(nn.Module):
     """
-    A Pixel block with adaptive layer norm (adaLN-single) conditioning.
+    A PixArt block with adaptive layer norm (adaLN-single) conditioning.
     """
 
     def __init__(self, hidden_size, num_heads, mlp_ratio=4.0, drop_path=0., window_size=0, input_size=None, use_rel_pos=False, **block_kwargs):

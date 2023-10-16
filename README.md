@@ -64,7 +64,7 @@ pip install -r requirements.txt
 ```
 
 # ⏬ Download Models 
-All models will be automatically downloaded. You can also choose to download manually from this [url](https://huggingface.co/PixArt-alpha).
+All models will be automatically downloaded. You can also choose to download manually from this [url](https://huggingface.co/PixArt-alpha/PixArt).
 
 # 💻 How to Test
 Inference requires at least `23GB` of GPU memory.
@@ -79,7 +79,7 @@ python scripts/interface.py --model_path path/to/model.pth --image_size=1024 --p
 Let's have a look at a simple example using the [https://your-server-ip:port](https://huggingface.co/TencentARC/t2i-adapter-lineart-sdxl-1.0).
 
 ## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt) 
-<a href="https://huggingface.co/Adapter/t2iadapter/resolve/main/figs_SDXLV1.0/demo_dragon.png"><img width="520" style="margin:0;padding:0;" src="https://huggingface.co/Adapter/t2iadapter/resolve/main/figs_SDXLV1.0/demo_dragon.png"/></a>
+![Training Efficiency.](asset/images/sample.png)
 
 ...
 
@@ -92,7 +92,7 @@ Let's have a look at a simple example using the [https://your-server-ip:port](ht
 [//]: # (https://user-images.githubusercontent.com/73707470/253800159-c7e12362-1ea1-4b20-a44e-bd6c8d546765.mp4)
 
 # 🤗 Acknowledgements
-- Thanks to DiT for their wonderful work and codebase.
+- Thanks to [DiT](https://github.com/facebookresearch/DiT) for their wonderful work and codebase.
 
 # BibTeX
     @article{mou2023t2i,
