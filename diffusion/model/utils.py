@@ -459,7 +459,7 @@ def prepare_prompt_ar(prompt, ratios, device='cpu'):
     else:
         custom_hw = ratios[closest_ratio]
     default_hw = ratios[closest_ratio]
-    prompt_show = f'{prompt_clean.strip()},\n --ar {closest_ratio}, --default hw {ratios[closest_ratio]}, --custom hw {custom_hw}'
+    prompt_show = f'prompt: {prompt_clean.strip()}\nSize: --ar {closest_ratio}, --bin hw {ratios[closest_ratio]}, --custom hw {custom_hw}'
     return prompt_clean, prompt_show, torch.tensor(default_hw, device=device)[None], torch.tensor([float(closest_ratio)], device=device)[None], torch.tensor(custom_hw, device=device)[None]
 
 

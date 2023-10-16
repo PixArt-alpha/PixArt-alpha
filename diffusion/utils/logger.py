@@ -5,7 +5,7 @@ from mmcv.utils.logging import logger_initialized
 from .dist_utils import is_local_master
 
 
-def get_root_logger(log_file=None, log_level=logging.INFO, name='DiT'):
+def get_root_logger(log_file=None, log_level=logging.INFO, name='PixArt'):
     """Get root logger.
 
     Args:
