@@ -3,7 +3,7 @@
 </p>
 
 
-### <div align="center">👉 PIXART-α: Begin Your Magic</div> 
+### <div align="center">👉 PixArt-α: Begin Your Magic</div> 
 
 <div align="center">
 
