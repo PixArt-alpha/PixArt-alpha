@@ -95,9 +95,11 @@ Let's have a look at a simple example using the [https://your-server-ip:port](ht
 - Thanks to [DiT](https://github.com/facebookresearch/DiT) for their wonderful work and codebase.
 
 # BibTeX
-    @article{mou2023t2i,
-      title={T2i-adapter: Learning adapters to dig out more controllable ability for text-to-image diffusion models},
-      author={Mou, Chong and Wang, Xintao and Xie, Liangbin and Wu, Yanze and Zhang, Jian and Qi, Zhongang and Shan, Ying and Qie, Xiaohu},
-      journal={arXiv preprint arXiv:2302.08453},
-      year={2023}
+    @misc{chen2023pixartalpha,
+          title={PixArt-$\alpha$: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis}, 
+          author={Junsong Chen and Jincheng Yu and Chongjian Ge and Lewei Yao and Enze Xie1 and Yue Wu and Zhongdao Wang and James Kwok and Ping Luo and Huchuan Lu and Zhenguo Li},
+          year={2023},
+          eprint={2310.00426},
+          archivePrefix={arXiv},
+          primaryClass={cs.CV}
     }
