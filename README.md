@@ -13,7 +13,7 @@
 
 ---
 
-Official implementation of **[PIXART-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis](https://arxiv.org/abs/2310.00426)**.
+Official implementation of **[PixArt-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis](https://arxiv.org/abs/2310.00426)**.
 
 ---
 
