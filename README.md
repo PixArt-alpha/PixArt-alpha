@@ -35,8 +35,8 @@ Official implementation of **[PixArt-α: Fast Training of Diffusion Transformer 
 
 - More samples
 <div id="dreambooth" style="display: flex; justify-content: center;">
-  <img src="asset/images/more-samples1.png" style="width: 100%; height: auto; object-fit: contain; margin: 5px;">
-  <img src="asset/images/more-samples.png" style="width: 100%; height: auto; object-fit: contain; margin: 5px;">
+  <img src="asset/images/more-samples1.png" style="width: 49%; height: auto; object-fit: contain; margin: 5px;">
+  <img src="asset/images/more-samples.png" style="width: 49%; height: auto; object-fit: contain; margin: 5px;">
 </div>
 
 - PixArt + Dreambooth
