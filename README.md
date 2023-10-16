@@ -76,7 +76,7 @@ To get started, first install the required dependencies:
 ```bash
 python scripts/interface.py --model_path path/to/model.pth --image_size=1024 --port=12345
 ```
-Let's have a look at a simple example using the [https://your-server-ip:port](https://huggingface.co/TencentARC/t2i-adapter-lineart-sdxl-1.0).
+Let's have a look at a simple example using the `https://your-server-ip:port`.
 
 ## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt) 
 ![Training Efficiency.](asset/images/sample.png)
