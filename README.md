@@ -1,9 +1,10 @@
 <p align="center">
   <img src="asset/logo.png"  height=120>
+  <img src="asset/logo1.png"  height=120>
 </p>
 
 
-### <div align="center">👉 PixArt-α: Begin Your Magic</div> 
+### <div align="center">👉 PixArt-α: Unleashing your Creativity div> 
 
 <div align="center">
 

@@ -144,7 +144,7 @@ if __name__ == '__main__':
         sys.exit()
 
     title = f"""
-        '' Begin your magic \n ''
+        '' Unleashing your Creativity \n ''
         <div style='display: flex; align-items: center; justify-content: center; text-align: center;'>
             <img src='https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/logo.png' style='width: 400px; height: auto; margin-right: 10px;' />
             {args.image_size}px
