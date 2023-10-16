@@ -4,7 +4,7 @@
 </p>
 
 
-### <div align="center">👉 PixArt-α: Unleashing your Creativity div> 
+### <div align="center">👉 PixArt-α: Unleashing your Creativity <div> 
 
 <div align="center">
 
