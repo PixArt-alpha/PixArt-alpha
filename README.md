@@ -113,7 +113,6 @@ Let's have a look at a simple example using the `http://your-server-ip:port`.
 ## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt) 
 ![Training Efficiency.](asset/images/sample.png)
 
-...
 
 ## 🔥To-Do List
 
