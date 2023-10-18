@@ -1,0 +1,25 @@
+name: PixArt
+channels:
+  - pytorch
+  - nvidia
+dependencies:
+  - python >= 3.8
+  - pytorch >= 1.13
+  - torchvision
+  - pytorch-cuda=11.7
+  - pip:
+    - timm==0.6.12
+    - diffusers
+    - accelerate
+    - mmcv==1.7.0
+    - diffusers
+    - accelerate==0.15.0
+    - tensorboard
+    - transformers==4.26.1
+    - sentencepiece~=0.1.97
+    - ftfy~=6.1.1
+    - beautifulsoup4~=4.11.1
+    - opencv-python
+    - bs4
+    - einops
+    - xformers
