@@ -75,7 +75,7 @@ PixArt-α only takes 10.8% of Stable Diffusion v1.5's training time (675 vs. 6,2
 | RAPHAEL   | Diff | 3.0B    | 5.0B    | 60,000        |
 | PIXART-α  | Diff | 0.6B    | 0.025B  | 675           |
 
-## High-quality Generation from PixArt-α.
+## High-quality Generation from PixArt-α
 
 - More samples
 <div id="dreambooth" style="display: flex; justify-content: center;">
@@ -132,7 +132,6 @@ Let's have a look at a simple example using the `http://your-server-ip:port`.
 ## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt) 
 ![Training Efficiency.](asset/images/sample.png)
 
-...
 
 ## 🔥To-Do List
 
