@@ -73,7 +73,7 @@ PixArt-α only takes 10.8% of Stable Diffusion v1.5's training time (675 vs. 6,2
 | GigaGAN   | GAN  | 0.9B    | 0.98B   | 4,783         |
 | Imagen    | Diff | 3.0B    | 15.36B  | 7,132         |
 | RAPHAEL   | Diff | 3.0B    | 5.0B    | 60,000        |
-| PIXART-α  | Diff | 0.6B    | 0.025B  | 675           |
+| PixArt-α  | Diff | 0.6B    | 0.025B  | 675           |
 
 ## High-quality Generation from PixArt-α
 
