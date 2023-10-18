@@ -18,6 +18,7 @@ from diffusion.model.nets import PixArtMS_XL_2, PixArt
 from diffusion.model.t5 import T5Embedder
 from torchvision.utils import _log_api_usage_once, make_grid
 from diffusion.data.datasets import ASPECT_RATIO_512_TEST, ASPECT_RATIO_1024_TEST
+from asset.examples import examples
 
 
 def get_args():
@@ -178,6 +179,7 @@ if __name__ == '__main__':
                                  Textbox(label="clean prompt"),
                                  Textbox(label="model info")],
                         title=title,
-                        description=description
+                        description=description,
+                        examples=examples
                         )
     demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True, enable_queue=True)
