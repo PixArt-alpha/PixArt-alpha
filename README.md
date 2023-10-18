@@ -136,7 +136,8 @@ Let's have a look at a simple example using the `http://your-server-ip:port`.
 
 ## 🔥To-Do List
 
-- [x] inference code & model
+- [x] inference code
+- [ ] model zoo 
 - [ ] diffusers version
 - [ ] training code
 
