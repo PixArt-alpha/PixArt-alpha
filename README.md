@@ -79,8 +79,8 @@ PixArt-α only takes 10.8% of Stable Diffusion v1.5's training time (675 vs. 6,2
 
 - More samples
 <div id="dreambooth" style="display: flex; justify-content: center;">
-  <img src="asset/images/more-samples1.png" style="width: 50%; height: auto; object-fit: contain; margin: 5px;">
-  <img src="asset/images/more-samples.png" style="width: 43%; height: auto; object-fit: contain; margin: 5px;">
+  <img src="https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/samples/16.png" style="width: 50%; height: auto; object-fit: contain; margin: 5px;">
+  <img src="https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/samples/17.png" style="width: 43%; height: auto; object-fit: contain; margin: 5px;">
 </div>
 
 - PixArt + [Dreambooth](https://dreambooth.github.io/)
