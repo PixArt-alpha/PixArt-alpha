@@ -54,7 +54,8 @@ We hope PixArt-α will provide new insights to the AIGC community and startups t
 
 
 ## 🚩 **New Features/Updates**
-- ✅ Oct. 15, 2023. Release the inference code and pretrained model of [PixArt-α](https://github.com/PixArt-alpha/PixArt).
+- ✅ Release pretrained 1024 models. 
+- ✅ Oct. 15, 2023. Release the inference code.
 
 ---
 
@@ -107,7 +108,7 @@ pip install torch==2.0.0+cu117 torchvision==0.15.1+cu117 torchaudio==2.0.1 --ind
 pip install -r requirements.txt
 ```
 
-# ⏬ Download Models (coming soon)
+# ⏬ Download Models
 All models will be automatically downloaded. You can also choose to download manually from this [url](https://huggingface.co/PixArt-alpha/PixArt-alpha).
 
 | Model          | #Params  | url                                                      |
