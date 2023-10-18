@@ -54,7 +54,7 @@ We hope PixArt-α will provide new insights to the AIGC community and startups t
 
 
 ## 🚩 **New Features/Updates**
-- ✅ Release pretrained 1024 models. 
+
 - ✅ Oct. 15, 2023. Release the inference code.
 
 ---
@@ -116,7 +116,7 @@ All models will be automatically downloaded. You can also choose to download man
 | T5             | 4.3B     | [T5](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/t5-v1_1-xxl)   |
 | VAE            | 80M      | [VAE](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/sd-vae-ft-ema)  |
 | PixArt-α-512   | 0.6B     | [512](about:blank)  |
-| PixArt-α-1024  | 0.6B     | [1024](https://huggingface.co/PixArt-alpha/PixArt-alpha/blob/main/PixArt-XL-2-1024x1024.pt) or [1024_ema](https://huggingface.co/PixArt-alpha/PixArt-alpha/blob/main/PixArt-XL-2-1024x1024_ema.pt) |
+| PixArt-α-1024  | 0.6B     | [1024](about:blank) |
 
 # 💻 How to Test
 Inference requires at least `23GB` of GPU memory.
