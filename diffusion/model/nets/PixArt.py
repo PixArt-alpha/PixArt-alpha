@@ -121,7 +121,6 @@ class PixArt(nn.Module):
         else:
             print(f'Warning: lewei scale: {self.lewei_scale}, base size: {self.base_size}')
 
-
     def forward(self, x, t, y, mask=None, data_info=None):
         """
         Forward pass of PixArt.

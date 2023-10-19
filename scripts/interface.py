@@ -13,8 +13,8 @@ from datetime import datetime
 from typing import List, Union
 import gradio as gr
 from gradio.components import Textbox, Image
-from diffusion.model.utils import prepare_prompt_ar, resize_img
-from diffusion.model.nets import PixArtMS_XL_2, PixArt
+from diffusion.model.utils import prepare_prompt_ar, resize_img, mask_feature
+from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2
 from diffusion.model.t5 import T5Embedder
 from torchvision.utils import _log_api_usage_once, make_grid
 from diffusion.data.datasets import ASPECT_RATIO_512_TEST, ASPECT_RATIO_1024_TEST
@@ -24,10 +24,9 @@ from asset.examples import examples
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--image_size', default=1024, type=int)
-    parser.add_argument('--model_path', type=str)
+    parser.add_argument('--model_path', default='output/pretrained_models/PixArt-XL-2-1024x1024.pth', type=str)
+    parser.add_argument('--t5_path', default='output/pretrained_models/t5_ckpts', type=str)
     parser.add_argument('--tokenizer_path', default='output/pretrained_models/sd-vae-ft-ema', type=str)
-    parser.add_argument('--txt_feature_root', default='data/SA1B/caption_feature', type=str)
-    parser.add_argument('--txt_feature_path', default='data/SA1B/partition/part0.txt', type=str)
     parser.add_argument('--llm_model', default='t5', type=str)
     parser.add_argument('--port', default=7788, type=int)
 
@@ -47,20 +46,12 @@ def ndarr_image(tensor: Union[torch.Tensor, List[torch.Tensor]], **kwargs,) -> N
 def set_env():
     torch.manual_seed(0)
     torch.set_grad_enabled(False)
-    for i in range(20):
+    for _ in range(30):
         torch.randn(1, 4, args.image_size, args.image_size)
 
-def mask_feature(emb, mask):
-    if emb.shape[0] == 1:
-        keep_index = mask.sum().item()
-        return emb[:, :, :keep_index, :], keep_index
-    else:
-        masked_feature= emb * mask[:, None, :, None]
-        return masked_feature, emb.shape[2]
 
 @torch.inference_mode()
 def generate_img(prompt, sampler, sample_steps, scale):
-    torch.cuda.empty_cache()
     os.makedirs(f'output/demo/online_demo_prompts/', exist_ok=True)
     save_promt_path = f'output/demo/online_demo_prompts/tested_prompts{datetime.now().date()}.txt'
     with open(save_promt_path, 'a') as f:
@@ -115,6 +106,7 @@ def generate_img(prompt, sampler, sample_steps, scale):
     display_model_info = f'Model path: {args.model_path},\nBase image size: {args.image_size}, \nSampling Algo: {sampler}'
     return ndarr_image(samples, normalize=True, value_range=(-1, 1)), prompt_show, display_model_info
 
+
 if __name__ == '__main__':
     args = get_args()
     set_env()
@@ -125,7 +117,7 @@ if __name__ == '__main__':
     latent_size = args.image_size // 8
     t5_device = {512: 'cuda', 1024: 'cuda'}
     if args.image_size == 512:
-        model = PixArt(input_size=latent_size, lewei_scale=lewei_scale[args.image_size]).to(device)
+        model = PixArt_XL_2(input_size=latent_size, lewei_scale=lewei_scale[args.image_size]).to(device)
     else:
         model = PixArtMS_XL_2(input_size=latent_size, lewei_scale=lewei_scale[args.image_size]).to(device)
     state_dict = find_model(args.model_path)
@@ -139,7 +131,7 @@ if __name__ == '__main__':
     vae = AutoencoderKL.from_pretrained(args.tokenizer_path).to(device)
 
     if args.llm_model == 't5':
-        llm_embed_model = T5Embedder(device=t5_device[args.image_size], local_cache=True, cache_dir='data/t5_ckpts', torch_dtype=torch.float)
+        llm_embed_model = T5Embedder(device=t5_device[args.image_size], local_cache=True, cache_dir=args.t5_path, torch_dtype=torch.float)
     else:
         print(f'We support t5 only, please initialize the llm again')
         sys.exit()

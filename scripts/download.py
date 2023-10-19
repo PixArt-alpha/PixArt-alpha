@@ -34,7 +34,7 @@ def download_model(model_name):
     local_path = f'pretrained_models/{model_name}'
     if not os.path.isfile(local_path):
         os.makedirs('pretrained_models', exist_ok=True)
-        web_path = f'https://huggingface.co/PixArt-alpha/PixArt/{model_name}'
+        web_path = f'https://huggingface.co/PixArt-alpha/PixArt-alpha/{model_name}'
         download_url(web_path, 'pretrained_models')
     model = torch.load(local_path, map_location=lambda storage, loc: storage)
     return model

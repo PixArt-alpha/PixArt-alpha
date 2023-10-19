@@ -478,3 +478,12 @@ def resize_img(samples, hw, custom_hw):
         return transform(samples)
     else:
         return samples
+
+
+def mask_feature(emb, mask):
+    if emb.shape[0] == 1:
+        keep_index = mask.sum().item()
+        return emb[:, :, :keep_index, :], keep_index
+    else:
+        masked_feature = emb * mask[:, None, :, None]
+        return masked_feature, emb.shape[2]

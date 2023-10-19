@@ -77,3 +77,8 @@ ASPECT_RATIO_1024_TEST = {
     '2.5':  [1600.,  640.], '3.0':  [1728.,  576.],
     '4.0':  [2048.,  512.],
 }
+
+
+def get_chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
