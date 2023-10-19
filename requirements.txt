@@ -11,7 +11,7 @@ transformers==4.26.1
 sentencepiece~=0.1.97
 ftfy~=6.1.1
 beautifulsoup4~=4.11.1
-protobuf==3.20.0
+protobuf==3.20.2
 gradio==3.38.0
 opencv-python
 ftfy
