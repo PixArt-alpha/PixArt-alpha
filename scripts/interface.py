@@ -43,8 +43,8 @@ def ndarr_image(tensor: Union[torch.Tensor, List[torch.Tensor]], **kwargs,) -> N
     return ndarr
 
 
-def set_env():
-    torch.manual_seed(0)
+def set_env(seed=0):
+    torch.manual_seed(seed)
     torch.set_grad_enabled(False)
     for _ in range(30):
         torch.randn(1, 4, args.image_size, args.image_size)

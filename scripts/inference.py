@@ -39,6 +39,12 @@ def get_args():
     return parser.parse_args()
 
 
+def set_env(seed):
+    torch.manual_seed(seed)
+    torch.set_grad_enabled(False)
+    for _ in range(30):
+        torch.randn(1, 4, args.image_size, args.image_size)
+
 @torch.inference_mode()
 def visualize(items, bs, sample_steps, cfg_scale):
 
@@ -101,8 +107,7 @@ if __name__ == '__main__':
     args = get_args()
     # Setup PyTorch:
     seed = args.seed
-    torch.manual_seed(seed)
-    torch.set_grad_enabled(False)
+    set_env(seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     assert args.sampling_algo in ['iddpm', 'dpms']
 

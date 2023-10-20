@@ -13,6 +13,7 @@ ftfy~=6.1.1
 beautifulsoup4~=4.11.1
 protobuf==3.20.2
 gradio==3.38.0
+yapf==0.40.1
 opencv-python
 ftfy
 bs4

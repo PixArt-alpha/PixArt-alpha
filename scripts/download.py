@@ -12,7 +12,7 @@ import torch
 import os
 
 
-pretrained_models = {'PixArt-XL-2-512x512.pt', 'PixArt-XL-2-1024x1024.pt'}
+pretrained_models = {'PixArt-XL-2-512x512.pth', 'PixArt-XL-2-1024x1024.pth', 'sd-vae-ft-ema', 't5_ckpts'}
 
 
 def find_model(model_name):
