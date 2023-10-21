@@ -62,7 +62,7 @@ where the `action` is specially designed for the `non-spatial` dimension.
 ### 1. Evaluate the performance in one click.
 We provide a script to evaluate the performance of all the dimensions in one click. 
 ```bash
-bash all_eval.sh
+bash auto_eval.sh
 ```
 
 If you would like to run the evaluation for a specific dimension, please refer to the following steps.
