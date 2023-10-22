@@ -1,7 +1,11 @@
 _base_ = ['../PixArt_xl2_internal.py']
+data_root = 'data'
+image_list_json = ['data_info.json',]
+
+data = dict(type='InternalData', root='InternData', image_list_json=image_list_json, transform='default_train', load_vae_feat=True)
+image_size = 1024
 
 # model setting
-image_size = 1024
 window_block_indexes = []
 window_size=0
 use_rel_pos=False

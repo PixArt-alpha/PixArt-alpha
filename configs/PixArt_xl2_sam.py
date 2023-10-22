@@ -1,13 +1,12 @@
 data_root = '/data/data'
-data = dict(type='InternalData', root='images', image_list_json=['data_info.json'], transform='default_train', load_vae_feat=True)
+data = dict(type='SAM', root='images', image_list_txt='part0.txt', transform='default_train', load_vae_feat=True)
 image_size = 256  # the generated image resolution
 train_batch_size = 32
 eval_batch_size = 16
 use_fsdp=False   # if use FSDP mode
-valid_num=2000      # valid samples for each aspect ratio using multi-scale training
 
 # model setting
-model = 'PixArt_XL_2'
+model = 'T2IDiT_XL_2'
 aspect_ratio_type = None         # base aspect ratio [ASPECT_RATIO_512 or ASPECT_RATIO_256]
 multi_scale = False     # if use multiscale dataset model training
 lewei_scale = 1.0
@@ -19,8 +18,8 @@ eval_sampling_steps = 250
 num_epochs = 80
 gradient_accumulation_steps = 1
 grad_checkpointing = False
-gradient_clip = 1.0
 gc_step = 1
+gradient_clip = 1.0
 auto_lr = dict(rule='sqrt')
 
 # we use different weight decay with the official implementation since it results better result
