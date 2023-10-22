@@ -17,7 +17,7 @@ This repo contains PyTorch model definitions, pre-trained weights and inference/
 Fast training diffusion models with transformers. You can find more visualizations on our [project page](https://pixart-alpha.github.io/).
 
 > [**PixArt-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis**](https://pixart-alpha.github.io/)<br>
-> [Junsong Chen*](https://github.com/lawrence-cj), [Jincheng Yu*](https://lovesykun.cn/about.html), 
+> [Junsong Chen*](https://lawrence-cj.github.io/), [Jincheng Yu*](https://lovesykun.cn/about.html), 
 > [Chongjian Ge*](https://chongjiange.github.io/), [Lewei Yao*](https://scholar.google.com/citations?user=hqDyTg8AAAAJ&hl=zh-CN&oi=ao),
 > [Enze Xie](https://xieenze.github.io/)&#8224;,
 > [Yue Wu](https://yuewuhkust.github.io/), [Zhongdao Wang](https://zhongdao.github.io/), 
@@ -55,6 +55,7 @@ We hope PixArt-α will provide new insights to the AIGC community and startups t
 
 ## 🚩 **New Features/Updates**
 
+- ✅ Oct. 20, 2023. Collaborate with Huggingface & Diffusers team to co-release the code and weights. (plz stay tuned.)
 - ✅ Oct. 15, 2023. Release the inference code.
 
 ---
@@ -123,12 +124,15 @@ Inference requires at least `23GB` of GPU memory.
 
 ## Quick start with [Gradio](https://www.gradio.app/guides/quickstart)
 
-To get started, first install the required dependencies:
+To get started, first install the required dependencies, then run:
 
 ```bash
 python scripts/interface.py --model_path path/to/model.pth --image_size=1024 --port=12345
 ```
 Let's have a look at a simple example using the `http://your-server-ip:port`.
+
+## Test with [T2ICompBench](https://github.com/Karine-Huang/T2I-CompBench)
+Step into [README.md](eval_t2icombench/README.md) for more details.
 
 ## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
 ![Training Efficiency.](asset/images/sample.png)
@@ -137,6 +141,7 @@ Let's have a look at a simple example using the `http://your-server-ip:port`.
 ## 🔥To-Do List
 
 - [x] inference code
+- [x] T2ICompBench code
 - [ ] model zoo 
 - [ ] diffusers version
 - [ ] training code

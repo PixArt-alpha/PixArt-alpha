@@ -13,7 +13,7 @@ import torch
 from torchvision.utils import save_image
 from diffusers.models import AutoencoderKL
 
-from scripts.interface import mask_feature
+from diffusion.model.utils import prepare_prompt_ar, resize_img, mask_feature
 from diffusion import IDDPM, DPMS
 from scripts.download import find_model
 from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2
@@ -29,7 +29,7 @@ def get_args():
     parser.add_argument('--txt_file', default='asset/samples.txt', type=str)
     parser.add_argument('--model_path', default='output/pretrained_models/PixArt-XL-2-1024x1024.pth', type=str)
     parser.add_argument('--bs', default=1, type=int)
-    parser.add_argument('--cfg_scale', default=4.0, type=float)
+    parser.add_argument('--cfg_scale', default=4.5, type=float)
     parser.add_argument('--sampling_algo', default='dpms', type=str, choices=['iddpm', 'dpms'])
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--dataset', default='custom', type=str)
@@ -39,7 +39,7 @@ def get_args():
     return parser.parse_args()
 
 
-def set_env(seed):
+def set_env(seed=0):
     torch.manual_seed(seed)
     torch.set_grad_enabled(False)
     for _ in range(30):
@@ -48,11 +48,20 @@ def set_env(seed):
 @torch.inference_mode()
 def visualize(items, bs, sample_steps, cfg_scale):
 
-    hw = torch.tensor([[args.image_size, args.image_size]], dtype=torch.float, device=device).repeat(bs, 1)
-    ar = torch.tensor([[1.]], device=device).repeat(bs, 1)
     for chunk in tqdm(list(get_chunks(items, bs)), unit='batch'):
 
-        prompts = chunk
+        prompts = []
+        if bs == 1:
+            prompt_clean, _, hw, ar, custom_hw = prepare_prompt_ar(chunk[0], base_ratios, device=device)  # ar for aspect ratio
+            prompts.append(prompt_clean)
+            latent_size_h, latent_size_w = int(hw[0, 0] // 8), int(hw[0, 1] // 8)
+        else:
+            hw = torch.tensor([[args.image_size, args.image_size]], dtype=torch.float, device=device).repeat(bs, 1)
+            ar = torch.tensor([[1.]], device=device).repeat(bs, 1)
+            for prompt in chunk:
+                prompts.append(prepare_prompt_ar(prompt, base_ratios, device=device)[0].strip())
+            latent_size_h, latent_size_w = latent_size, latent_size
+
         null_y = model.y_embedder.y_embedding[None].repeat(len(prompts), 1, 1)[:, None]
 
         with torch.no_grad():
@@ -64,7 +73,7 @@ def visualize(items, bs, sample_steps, cfg_scale):
             if args.sampling_algo == 'iddpm':
                 # Create sampling noise:
                 n = len(prompts)
-                z = torch.randn(n, 4, latent_size, latent_size, device=device).repeat(2, 1, 1, 1)
+                z = torch.randn(n, 4, latent_size_h, latent_size_w, device=device).repeat(2, 1, 1, 1)
 
                 model_kwargs = dict(y=torch.cat([masked_embs, null_y[:, :, :keep_index, :]]),
                                     cfg_scale=cfg_scale, data_info={'img_hw': hw, 'aspect_ratio': ar})
@@ -78,7 +87,7 @@ def visualize(items, bs, sample_steps, cfg_scale):
             elif args.sampling_algo == 'dpms':
                 # Create sampling noise:
                 n = len(prompts)
-                z = torch.randn(n, 4, latent_size, latent_size, device=device)
+                z = torch.randn(n, 4, latent_size_h, latent_size_w, device=device)
                 model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar})
                 dpm_solver = DPMS(model.forward_with_dpmsolver,
                                   condition=masked_embs,
@@ -130,6 +139,7 @@ if __name__ == '__main__':
     print('Missing keys: ', missing)
     print('Unexpected keys', unexpected)
     model.eval()
+    base_ratios = eval(f'ASPECT_RATIO_{args.image_size}_TEST')
 
     vae = AutoencoderKL.from_pretrained(args.tokenizer_path).to(device)
     t5 = T5Embedder(device="cuda", local_cache=True, cache_dir=args.t5_path, torch_dtype=torch.float)
@@ -143,12 +153,14 @@ if __name__ == '__main__':
     # img save setting
     try:
         epoch_name = re.search(r'.*epoch_(\d+).*.pth', args.model_path).group(1)
+        step_name = re.search(r'.*step_(\d+).*.pth', args.model_path).group(1)
     except:
-        epoch_name = '-unknown'
+        epoch_name = 'unknown'
+        step_name = 'unknown'
     img_save_dir = os.path.join(work_dir, 'vis')
     os.umask(0o000)  # file permission: 666; dir permission: 777
     os.makedirs(img_save_dir, exist_ok=True)
 
-    save_root = os.path.join(img_save_dir, f"{datetime.now().date()}_{args.dataset}_epoch{epoch_name}_scale{args.cfg_scale}_step{sample_steps}_size{args.image_size}_bs{args.bs}_samp{args.sampling_algo}_seed{seed}")
+    save_root = os.path.join(img_save_dir, f"{datetime.now().date()}_{args.dataset}_epoch{epoch_name}_step{step_name}_scale{args.cfg_scale}_step{sample_steps}_size{args.image_size}_bs{args.bs}_samp{args.sampling_algo}_seed{seed}")
     os.makedirs(save_root, exist_ok=True)
     visualize(items, args.bs, sample_steps, args.cfg_scale)
