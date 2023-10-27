@@ -19,7 +19,7 @@ def get_closest_ratio(height: float, width: float, ratios: dict):
 class InternalDataMS(InternalData):
     def __init__(self,
                  root,
-                 image_list_json='mj_1_new.json',
+                 image_list_json='data_info.json',
                  transform=None,
                  resolution=256,
                  sample_subset=None,
@@ -52,18 +52,13 @@ class InternalDataMS(InternalData):
             self.ratio_index[float(k)] = []     # used for self.getitem
             self.ratio_nums[float(k)] = 0      # used for batch-sampler
 
-        with open('data/MJData/not_exist.txt', 'r') as f:
-            noe = set([line.strip() for line in f])
-        with open('data/MJData/not_exist/ms256/not_exist_new_mj_15M.txt', 'r') as f:
-            noe = noe.union([line.strip() for line in f])
-
         image_list_json = image_list_json if isinstance(image_list_json, list) else [image_list_json]
         for json_file in image_list_json:
             meta_data = self.load_json(os.path.join(self.root, 'partition', json_file))
             self.ori_imgs_nums += len(meta_data)
             meta_data_clean = [item for item in meta_data if (item['path'] not in noe and item['ratio'] <= 4)]
             self.meta_data_clean.extend(meta_data_clean)
-            self.img_samples.extend([os.path.join(self.root.replace('MJData', "MJImgs"), item['path']) for item in meta_data_clean])
+            self.img_samples.extend([os.path.join(self.root.replace('InternalData', "InternalImgs"), item['path']) for item in meta_data_clean])
             self.txt_feat_samples.extend([os.path.join(self.root, 'caption_features', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npz')) for item in meta_data_clean])
             self.vae_feat_samples.extend([os.path.join(self.root, f'img_vae_fatures_{resolution}_multiscale/ms', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npy')) for item in meta_data_clean])
 
@@ -142,7 +137,7 @@ class InternalDataMS(InternalData):
         return img, txt_fea, attention_mask, data_info
 
     def __getitem__(self, idx):
-        for i in range(20):
+        for _ in range(20):
             try:
                 data = self.getdata(idx)
                 return data

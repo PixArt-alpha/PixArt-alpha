@@ -16,7 +16,7 @@ import json
 class InternalData(Dataset):
     def __init__(self,
                  root,
-                 image_list_json='mj_1_new.json',
+                 image_list_json='data_info.json',
                  transform=None,
                  resolution=256,
                  sample_subset=None,
@@ -42,21 +42,15 @@ class InternalData(Dataset):
         self.vae_feat_samples = []
         self.mask_index_samples = []
 
-        with open('data/MJData/not_exist.txt', 'r') as f:
-            noe = set([line.strip() for line in f])
-        with open('data/MJData/not_exist_5-10.txt', 'r') as f:
-            noe = noe.union([line.strip() for line in f])
-
         image_list_json = image_list_json if isinstance(image_list_json, list) else [image_list_json]
         for json_file in image_list_json:
             meta_data = self.load_json(os.path.join(self.root, 'partition', json_file))
             self.ori_imgs_nums += len(meta_data)
             meta_data_clean = [item for item in meta_data if (item['path'] not in noe and item['ratio'] <= 4)]
             self.meta_data_clean.extend(meta_data_clean)
-            self.img_samples.extend([os.path.join(self.root.replace('MJData', "MJImgs"), item['path']) for item in meta_data_clean])
+            self.img_samples.extend([os.path.join(self.root.replace('InternalData', "InternalImgs"), item['path']) for item in meta_data_clean])
             self.txt_feat_samples.extend([os.path.join(self.root, 'caption_features', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npz')) for item in meta_data_clean])
             self.vae_feat_samples.extend([os.path.join(self.root, f'img_vae_features_{resolution}resolution/noflip', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npy')) for item in meta_data_clean])
-            self.mask_index_samples.extend([os.path.join(self.root, f'img_{resolution}resolution_fft3', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npy')) for item in meta_data_clean])
 
         # Set loader and extensions
         if load_vae_feat:
@@ -72,7 +66,6 @@ class InternalData(Dataset):
         img_path = self.img_samples[index]
         npz_path = self.txt_feat_samples[index]
         npy_path = self.vae_feat_samples[index]
-        mask_npy_path = self.mask_index_samples[index]
         data_info = {'img_hw': torch.tensor([self.meta_data_clean[index]['height'], self.meta_data_clean[index]['width']], dtype=torch.float32),
                      'aspect_ratio': torch.tensor(1.)}
 
@@ -90,18 +83,18 @@ class InternalData(Dataset):
             img = self.transform(img)
 
         data_info["mask_type"] = self.mask_type
-        if self.mask_ratio > 0:
-            data_info["N"] = self.N
-            if self.load_mask_index:
-                data_info['strength'] = torch.from_numpy(np.load(mask_npy_path))
+        # if self.mask_ratio > 0:
+        #     data_info["N"] = self.N
+        #     if self.load_mask_index:
+        #         data_info['strength'] = torch.from_numpy(np.load(mask_npy_path))
             # else:
             #     data_info['ori_img'] = self.load_ori_img(img_path)
-            data_info['img_path'] = img_path
+            # data_info['img_path'] = img_path
 
         return img, txt_fea, attention_mask, data_info
 
     def __getitem__(self, idx):
-        for i in range(20):
+        for _ in range(20):
             try:
                 data = self.getdata(idx)
                 return data
