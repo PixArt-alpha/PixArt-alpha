@@ -4,8 +4,7 @@ image_list_txt = ['part0.txt', 'part1.txt', 'part2.txt', 'part3.txt', 'part4.txt
                   'part9.txt', 'part10.txt', 'part11.txt', 'part12.txt', 'part13.txt', 'part14.txt','part15.txt','part16.txt',
                   'part17.txt','part18.txt','part19.txt','part20.txt','part21.txt', 'part22.txt', 'part23.txt', 'part24.txt',
                   'part25.txt', 'part26.txt', 'part27.txt', 'part28.txt', 'part29.txt', 'part30.txt', 'part31.txt']
-# data = dict(type='SAM', root='SA1B', image_list_txt=image_list_txt, transform='default_train', load_vae_feat=True)
-data = dict(type='SAM', root='SA1B', image_list_txt=['part0.txt', 'part1.txt'], transform='default_train', load_vae_feat=True)
+data = dict(type='SAM', root='SA1B', image_list_txt=image_list_txt, transform='default_train', load_vae_feat=True)
 image_size = 256
 
 # model setting
@@ -20,7 +19,7 @@ vae_pretrained = "output/pretrained_models/sd-vae-ft-ema"
 # training setting
 use_fsdp=False   # if use FSDP mode
 num_workers=10
-train_batch_size = 176 # 32  # max 96 for DiT-L/4 when grad_checkpoint
+train_batch_size = 176 # 32
 num_epochs = 200 # 3
 gradient_accumulation_steps = 1
 grad_checkpointing = True

@@ -55,7 +55,7 @@ We hope PixArt-α will provide new insights to the AIGC community and startups t
 
 ## 🚩 **New Features/Updates**
 
-- ✅ Oct. 24, 2023. Release the training & feature extraction code.
+- ✅ Oct. 27, 2023. Release the training & feature extraction code.
 - ✅ Oct. 20, 2023. Collaborate with Huggingface & Diffusers team to co-release the code and weights. (plz stay tuned.)
 - ✅ Oct. 15, 2023. Release the inference code.
 
@@ -120,8 +120,49 @@ All models will be automatically downloaded. You can also choose to download man
 | PixArt-α-512   | 0.6B     | [512](about:blank)  |
 | PixArt-α-1024  | 0.6B     | [1024](about:blank) |
 
+# 🔥 How to Train
+Here we take SAM dataset training config as an example, but of course, you can also prepare your own dataset following this method.
+
+You **ONLY** need to change the **config** file in [config](./configs/t2i_js_config) and **dataloader** in [dataset](./diffusion/data/datasets).
+```bash
+python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 scripts/train.py configs/t2i_js_config/PixArt_xl2_img256_SAM.py --work-dir output/train_SAM_256
+```
+
+The directory structure for SAM dataset is:
+```
+cd ./data
+
+SA1B
+├──images/
+│  ├──sa_xxxxx.jpg
+│  ├──sa_xxxxx.jpg
+│  ├──......
+├──partition/
+│  ├──part0.txt
+│  ├──part1.txt
+│  ├──......
+├──caption_feature_wmask/
+│  ├──sa_xxxxx.npz
+│  ├──sa_xxxxx.npz
+│  ├──......
+├──img_vae_feature/
+│  ├──train_vae_256/
+│  │  ├──noflip/
+│  │  │  ├──sa_xxxxx.npy
+│  │  │  ├──sa_xxxxx.npy
+│  │  ├──......
+
+```
+
+
+
 # 💻 How to Test
 Inference requires at least `23GB` of GPU memory.
+Currently support:
+- [x] [IDDPM](https://arxiv.org/abs/2102.09672)
+- [x] [DPM-Solver](https://arxiv.org/abs/2206.00927)
+- [x] [SA-Solver (waiting for official release)](https://arxiv.org/abs/2309.05019)
+- [ ] [DPM-Solver-v3](https://arxiv.org/abs/2310.13268v2)
 
 ## Quick start with [Gradio](https://www.gradio.app/guides/quickstart)
 
@@ -147,9 +188,7 @@ Step into [README.md](eval_t2icompbench/README.md) for more details.
 - [ ] model zoo 
 - [ ] diffusers version
 
-
 [//]: # (https://user-images.githubusercontent.com/73707470/253800159-c7e12362-1ea1-4b20-a44e-bd6c8d546765.mp4)
-
 
 
 # 📖BibTeX
