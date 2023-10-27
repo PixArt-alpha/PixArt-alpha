@@ -55,6 +55,7 @@ We hope PixArt-α will provide new insights to the AIGC community and startups t
 
 ## 🚩 **New Features/Updates**
 
+- ✅ Oct. 24, 2023. Release the training & feature extraction code.
 - ✅ Oct. 20, 2023. Collaborate with Huggingface & Diffusers team to co-release the code and weights. (plz stay tuned.)
 - ✅ Oct. 15, 2023. Release the inference code.
 
@@ -142,9 +143,9 @@ Step into [README.md](eval_t2icompbench/README.md) for more details.
 
 - [x] inference code
 - [x] T2ICompBench code
+- [x] training code
 - [ ] model zoo 
 - [ ] diffusers version
-- [ ] training code
 
 
 [//]: # (https://user-images.githubusercontent.com/73707470/253800159-c7e12362-1ea1-4b20-a44e-bd6c8d546765.mp4)

@@ -438,14 +438,15 @@ class StackedRandomGenerator:
         return torch.stack([torch.randint(*args, size=size[1:], generator=gen, **kwargs) for gen in self.generators])
 
 
-def prepare_prompt_ar(prompt, ratios, device='cpu'):
+def prepare_prompt_ar(prompt, ratios, device='cpu', show=True):
     # get aspect_ratio or ar
     aspect_ratios = re.findall(r"--aspect_ratio\s+(\d+:\d+)", prompt)
     ars = re.findall(r"--ar\s+(\d+:\d+)", prompt)
     custom_hw = re.findall(r"--hw\s+(\d+:\d+)", prompt)
-    print("aspect_ratios:", aspect_ratios, "ars:", ars, "hws:", custom_hw)
+    if show:
+        print("aspect_ratios:", aspect_ratios, "ars:", ars, "hws:", custom_hw)
     prompt_clean = prompt.split("--aspect_ratio")[0].split("--ar")[0].split("--hw")[0]
-    if len(aspect_ratios) + len(ars) + len(custom_hw) == 0:
+    if len(aspect_ratios) + len(ars) + len(custom_hw) == 0 and show:
         print( "Wrong prompt format. Set to default ar: 1. change your prompt into format '--ar h:w or --hw h:w' for correct generating")
     if len(aspect_ratios) != 0:
         ar = float(aspect_ratios[0].split(':')[0]) / float(aspect_ratios[0].split(':')[1])
