@@ -113,12 +113,13 @@ pip install -r requirements.txt
 # ⏬ Download Models
 All models will be automatically downloaded. You can also choose to download manually from this [url](https://huggingface.co/PixArt-alpha/PixArt-alpha).
 
-| Model          | #Params  | url                                                      |
-|:---------------|:---------|:---------------------------------------------------------|
-| T5             | 4.3B     | [T5](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/t5-v1_1-xxl)   |
-| VAE            | 80M      | [VAE](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/sd-vae-ft-ema)  |
-| PixArt-α-512   | 0.6B     | [512](about:blank)  |
-| PixArt-α-1024  | 0.6B     | [1024](about:blank) |
+| Model            | #Params  | url                                                                             |
+|:-----------------|:---------|:--------------------------------------------------------------------------------|
+| T5               | 4.3B     | [T5](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/t5-v1_1-xxl)    |
+| VAE              | 80M      | [VAE](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/sd-vae-ft-ema) |
+| PixArt-α-SAM-256 | 0.6B     | [256](about:blank)                                                              |
+| PixArt-α-512     | 0.6B     | [512](about:blank)                                                              |
+| PixArt-α-1024    | 0.6B     | [1024](about:blank)                                                             |
 
 # 🔥 How to Train
 Here we take SAM dataset training config as an example, but of course, you can also prepare your own dataset following this method.
