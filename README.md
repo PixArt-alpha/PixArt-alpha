@@ -183,11 +183,12 @@ Step into [README.md](eval_t2icompbench/README.md) for more details.
 
 ## 🔥To-Do List
 
-- [x] inference code
+- [x] Inference code
 - [x] T2ICompBench code
-- [x] training code
-- [ ] model zoo 
-- [ ] diffusers version
+- [x] Training code
+- [x] T5 & VAE feature extraction code
+- [ ] Model zoo 
+- [ ] Diffusers version
 
 [//]: # (https://user-images.githubusercontent.com/73707470/253800159-c7e12362-1ea1-4b20-a44e-bd6c8d546765.mp4)
 
