@@ -132,7 +132,7 @@ python scripts/interface.py --model_path path/to/model.pth --image_size=1024 --p
 Let's have a look at a simple example using the `http://your-server-ip:port`.
 
 ## Test with [T2ICompBench](https://github.com/Karine-Huang/T2I-CompBench)
-Step into [README.md](eval_t2icombench/README.md) for more details.
+Step into [README.md](eval_t2icompbench/README.md) for more details.
 
 ## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
 ![Training Efficiency.](asset/images/sample.png)

@@ -10,8 +10,8 @@ Please refer to [Install.md](Install.md) for installation instructions.
 clone the repo and move to the directory
 ```bash
 git clone https://github.com/Karine-Huang/T2I-CompBench.git
-mv T2I-CompBench/* eval_t2icombench/
-cd eval_t2icombench/
+mv T2I-CompBench/* eval_t2icompbench/
+cd eval_t2icompbench/
 ```
 ## 📝 Data Preparation
 Before evaluation, you need to first gerate data covering different dimensions for evaluation.
