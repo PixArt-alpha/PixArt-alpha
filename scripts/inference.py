@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
     # only support fixed latent size currently
     latent_size = args.image_size // 8
-    lewei_scale = {512: 1, 1024: 2}     # trick for pos embedding adoption
+    lewei_scale = {512: 1, 1024: 2}     # trick for positional embedding interpolation
     sample_steps_dict = {'iddpm': 100, 'dpms': 20}
     sample_steps = args.step if args.step != -1 else sample_steps_dict[args.sampling_algo]
 

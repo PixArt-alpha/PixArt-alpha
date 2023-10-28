@@ -10,7 +10,7 @@ valid_num=2000      # valid samples for each aspect ratio using multi-scale trai
 model = 'PixArt_XL_2'
 aspect_ratio_type = None         # base aspect ratio [ASPECT_RATIO_512 or ASPECT_RATIO_256]
 multi_scale = False     # if use multiscale dataset model training
-lewei_scale = 1.0
+lewei_scale = 1.0    # lewei_scale for positional embedding interpolation
 # training setting
 num_workers=4
 train_sampling_steps = 1000
