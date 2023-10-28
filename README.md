@@ -26,6 +26,16 @@ Fast training diffusion models with transformers. You can find more visualizatio
 > [Zhenguo Li](https://scholar.google.com/citations?user=XboZC1AAAAAJ)
 > <br>Huawei Noah’s Ark Lab, Dalian University of Technology, HKU, HKUST<br>
 
+---
+
+## 🚩 **New Features/Updates**
+
+- ✅ Oct. 27, 2023. Release the training & feature extraction code.
+- ✅ Oct. 20, 2023. Collaborate with Huggingface & Diffusers team to co-release the code and weights. (plz stay tuned.)
+- ✅ Oct. 15, 2023. Release the inference code.
+
+---
+
 ## 🐱 Abstract
 <b>TL; DR: <font color="red">PixArt-α</font> is a Transformer-based T2I diffusion model whose image generation quality is competitive with state-of-the-art image generators (e.g., Imagen, SDXL, and even Midjourney), and the training speed markedly surpasses existing large-scale T2I models, e.g., PixArt-α only takes 10.8% of Stable Diffusion v1.5's training time (675 vs. 6,250 A100 GPU days).</b>
 
@@ -48,16 +58,6 @@ We hope PixArt-α will provide new insights to the AIGC community and startups t
 ---
 
 ![A small cactus with a happy face in the Sahara desert.](asset/images/teaser.png)
-
----
-
-
-
-## 🚩 **New Features/Updates**
-
-- ✅ Oct. 27, 2023. Release the training & feature extraction code.
-- ✅ Oct. 20, 2023. Collaborate with Huggingface & Diffusers team to co-release the code and weights. (plz stay tuned.)
-- ✅ Oct. 15, 2023. Release the inference code.
 
 ---
 
@@ -156,7 +156,6 @@ SA1B
 ```
 
 
-
 # 💻 How to Test
 Inference requires at least `23GB` of GPU memory.
 Currently support:
@@ -174,8 +173,6 @@ python scripts/interface.py --model_path path/to/model.pth --image_size=1024 --p
 ```
 Let's have a look at a simple example using the `http://your-server-ip:port`.
 
-## Test with [T2ICompBench](https://github.com/Karine-Huang/T2I-CompBench)
-Step into [README.md](eval_t2icompbench/README.md) for more details.
 
 ## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
 ![Training Efficiency.](asset/images/sample.png)
