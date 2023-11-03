@@ -105,7 +105,6 @@ class SanitizedLaion(Dataset):
         return len(self.lines)
 
     def __getitem__(self, idx):
-        idx=1
         item = self.lines[idx]
         caption = item['prompt'].strip()
         prompt = self.prompt.format(caption) if self.caption else self.prompt
@@ -200,7 +199,7 @@ if __name__ == "__main__":
     Describe this image in a very detailed manner
     <image><|im_end|><|im_start|>assistant\n"""
     d = SanitizedLaion(args.data_root, args.index, prompt, args.model_path, img_extension='.png')
-    l = DataLoader(d, batch_size=1, pin_memory=True, num_workers=10)
+    l = DataLoader(d, batch_size=32, pin_memory=True, num_workers=10)
 
     tokenizer, model, context_len = load_model(args.model_path)
     # model = torch.compile(model)
