@@ -31,7 +31,7 @@ Fast training diffusion models with transformers. You can find more visualizatio
 ## 🚩 **New Features/Updates**
 
 - ✅ Oct. 27, 2023. Release the training & feature extraction code.
-- ✅ Oct. 20, 2023. Collaborate with Huggingface & Diffusers team to co-release the code and weights. (plz stay tuned.)
+- ✅ Oct. 20, 2023. Collaborate with Hugging Face & Diffusers team to co-release the code and weights. (plz stay tuned.)
 - ✅ Oct. 15, 2023. Release the inference code.
 
 ---
