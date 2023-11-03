@@ -206,7 +206,6 @@ if __name__ == "__main__":
     for b in tqdm(l):
         for c, p in caption(tokenizer, model, context_len, *b):
             o = path.join(args.output, f'{p}.txt')
-            print(c)
             makedirs(path.dirname(o), exist_ok=True, mode=0o755)
             with open(o, 'w') as k:
                 k.write(c)

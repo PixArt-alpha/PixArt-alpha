@@ -30,6 +30,7 @@ Fast training diffusion models with transformers. You can find more visualizatio
 
 ## 🚩 **New Features/Updates**
 
+- ✅ Nov. 03, 2023. Release the LLaVA-captioning inference code.
 - ✅ Oct. 27, 2023. Release the training & feature extraction code.
 - ✅ Oct. 20, 2023. Collaborate with Hugging Face & Diffusers team to co-release the code and weights. (plz stay tuned.)
 - ✅ Oct. 15, 2023. Release the inference code.
@@ -178,12 +179,23 @@ Let's have a look at a simple example using the `http://your-server-ip:port`.
 ![Training Efficiency.](asset/images/sample.png)
 
 
-## 🔥To-Do List
+# ✏️ How to LLaVA captioning
+Thanks to the code base of [
+LLaVA-Lightning-MPT](https://huggingface.co/liuhaotian/LLaVA-Lightning-MPT-7B-preview), 
+we can caption the LAION and SAM dataset with the following launching code:
+```bash
+python scripts/VLM_caption_lightning.py --output output/dir/ --data-root data/root/path --index path/to/data.json
+```
+![Dialog with LLaVA.](asset/images/LLaVA-dialog.png)
+We present auto-labeling with custom prompts for LAION (left) and SAM (right). The words highlighted in green represent the original caption in LAION, while those marked in red indicate the detailed captions labeled by LLaVA.
+
+## 💪To-Do List
 
 - [x] Inference code
 - [x] T2ICompBench code
 - [x] Training code
 - [x] T5 & VAE feature extraction code
+- [x] LLaVA captioning code
 - [ ] Model zoo 
 - [ ] Diffusers version
 
