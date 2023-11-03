@@ -186,8 +186,9 @@ we can caption the LAION and SAM dataset with the following launching code:
 ```bash
 python scripts/VLM_caption_lightning.py --output output/dir/ --data-root data/root/path --index path/to/data.json
 ```
-![Dialog with LLaVA.](asset/images/LLaVA-dialog.png)
 We present auto-labeling with custom prompts for LAION (left) and SAM (right). The words highlighted in green represent the original caption in LAION, while those marked in red indicate the detailed captions labeled by LLaVA.
+
+![Dialog with LLaVA.](asset/images/LLaVA-dialog.png)
 
 ## 💪To-Do List
 
