@@ -6,10 +6,12 @@
 ### <div align="center">👉 PixArt-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis <div> 
 
 <div align="center">
-
-[![Huggingface PixArt-alpha](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) &ensp; [![Project page PixArt-alpha](https://img.shields.io/static/v1?label=Project&message=Github&color=blue)](https://pixart-alpha.github.io/) &ensp; [![arXiv](https://img.shields.io/badge/arXiv-2310.00426-b31b1b.svg?style=flat-square)](https://arxiv.org/abs/2310.00426)
-
-</div> 
+  <a href="https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha"><img src="https://img.shields.io/static/v1?label=Demo&message=Huggingface&color=yellow"></a> &ensp;
+  <a href="https://pixart-alpha.github.io/"><img src="https://img.shields.io/static/v1?label=Project%20Page&message=Github&color=blue&logo=github-pages"></a> &ensp;
+  <a href="https://arxiv.org/abs/2310.00426"><img src="https://img.shields.io/static/v1?label=Paper&message=Arxiv&color=red&logo=arxiv"></a> &ensp;
+  <a href="https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing"><img src="https://img.shields.io/static/v1?label=Free%20Trial&message=Google%20Colab&logo=google&color=orange"></a> &ensp;
+  <a href="https://huggingface.co/docs/diffusers/main/en/api/pipelines/pixart"><img src="https://img.shields.io/static/v1?label=Usage&message=Diffusers&color=green&"></a> &ensp;
+</div>
 
 ---
 
@@ -29,7 +31,7 @@ Fast training diffusion models with transformers. You can find more visualizatio
 ---
 
 ## 🚩 **New Features/Updates**
-
+- ✅ Nov. 06, 2023. Release pretrained weights with diffuser integration, huggingface demo, and Google Colab example.
 - ✅ Nov. 03, 2023. Release the LLaVA-captioning inference code.
 - ✅ Oct. 27, 2023. Release the training & feature extraction code.
 - ✅ Oct. 20, 2023. Collaborate with Hugging Face & Diffusers team to co-release the code and weights. (plz stay tuned.)
@@ -119,8 +121,8 @@ All models will be automatically downloaded. You can also choose to download man
 | T5               | 4.3B     | [T5](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/t5-v1_1-xxl)    |
 | VAE              | 80M      | [VAE](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/sd-vae-ft-ema) |
 | PixArt-α-SAM-256 | 0.6B     | [256](about:blank)                                                              |
-| PixArt-α-512     | 0.6B     | [512](about:blank)                                                              |
-| PixArt-α-1024    | 0.6B     | [1024](about:blank)                                                             |
+| PixArt-α-512     | 0.6B     | [512](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-512x512.pth) or [diffuser version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-512x512)|
+| PixArt-α-1024    | 0.6B     | [1024](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-1024-MS.pth) or [diffuser version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS)|
 
 # 🔥 How to Train
 Here we take SAM dataset training config as an example, but of course, you can also prepare your own dataset following this method.
@@ -197,8 +199,10 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
 - [x] Training code
 - [x] T5 & VAE feature extraction code
 - [x] LLaVA captioning code
-- [ ] Model zoo 
-- [ ] Diffusers version
+- [x] Model zoo 
+- [x] Diffusers version
+- [x] Google Colab example
+- [ ] Huggingface demo
 
 [//]: # (https://user-images.githubusercontent.com/73707470/253800159-c7e12362-1ea1-4b20-a44e-bd6c8d546765.mp4)
 
