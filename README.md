@@ -84,7 +84,7 @@ PixArt-α only takes 10.8% of Stable Diffusion v1.5's training time (675 vs. 6,2
 ## High-quality Generation from PixArt-α
 
 - More samples
-<div id="dreambooth" style="display: flex; justify-content: center;">
+<div id="more-samples" style="display: flex; justify-content: center;">
   <img src="asset/images/more-samples1.png" style="width: 50%; height: auto; object-fit: contain; margin: 5px;">
   <img src="asset/images/more-samples.png" style="width: 43%; height: auto; object-fit: contain; margin: 5px;">
 </div>
@@ -96,7 +96,7 @@ PixArt-α only takes 10.8% of Stable Diffusion v1.5's training time (675 vs. 6,2
 </div>
 
 - PixArt + [ControlNet](https://github.com/lllyasviel/ControlNet)
-<div id="dreambooth" style="display: flex; justify-content: center;">
+<div id="ControlNet" style="display: flex; justify-content: center;">
   <img src="asset/images/controlnet/controlnet_huawei.svg" width="46%" style="margin: 5px;">
   <img src="asset/images/controlnet/controlnet_lenna.svg" width="46%" style="margin: 5px;">
 </div>
@@ -177,9 +177,6 @@ python scripts/interface.py --model_path path/to/model.pth --image_size=1024 --p
 Let's have a look at a simple example using the `http://your-server-ip:port`.
 
 
-## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
-![Training Efficiency.](asset/images/sample.png)
-
 ## Using in 🧨 diffusers
 
 Make sure you have the updated versions of the following libraries:
@@ -209,6 +206,9 @@ This integration allows running the pipeline with a batch size of 4 under 11 GBs
 
 You can also click [here](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing) to have a free trial on Google Colab.
 
+## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
+![Online Demo sample](asset/images/sample.png)
+
 # ✏️ How to LLaVA captioning
 Thanks to the code base of [
 LLaVA-Lightning-MPT](https://huggingface.co/liuhaotian/LLaVA-Lightning-MPT-7B-preview), 
@@ -223,16 +223,15 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
 ## 💪To-Do List
 
 - [x] Inference code
-- [x] T2ICompBench code
 - [x] Training code
 - [x] T5 & VAE feature extraction code
 - [x] LLaVA captioning code
 - [x] Model zoo 
-- [x] Diffusers version
+- [x] Diffusers version & Hugging Face demo
 - [x] Google Colab example
-- [x] Hugging Face demo
+- [ ] SAM-LLaVA caption dataset
 
-[//]: # (https://user-images.githubusercontent.com/73707470/253800159-c7e12362-1ea1-4b20-a44e-bd6c8d546765.mp4)
+[//]: # (.mp4)
 
 
 # 📖BibTeX
@@ -246,5 +245,7 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
     }
     
 # 🤗Acknowledgements
-- Thanks to [DiT](https://github.com/facebookresearch/DiT) for their wonderful work and codebase.
-- Thanks to the 🧨 diffusers team for the integration onto 🧨 diffusers.
+- Thanks to [Diffusers](https://github.com/huggingface/diffusers) for their wonderful technical support and awesome collaboration!
+- Thanks to [huggingface](https://github.com/huggingface) for sponsoring the nicely demo!
+- Thanks to [DiT](https://github.com/facebookresearch/DiT) for their wonderful work and codebase!
+
