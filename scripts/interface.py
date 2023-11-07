@@ -6,7 +6,7 @@ sys.path.insert(0, str(current_file_path.parent.parent))
 import os
 import torch
 from torchvision.utils import save_image
-from diffusion import IDDPM, DPMS
+from diffusion import IDDPM, DPMS, SASolverSampler
 from diffusers.models import AutoencoderKL
 from download import find_model
 from datetime import datetime
@@ -100,6 +100,21 @@ def generate_img(prompt, sampler, sample_steps, scale):
             skip_type="time_uniform",
             method="multistep",
         )
+    elif sampler == 'sa-solver':
+        # Create sampling noise:
+        n = len(prompts)
+        model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar})
+        sa_solver = SASolverSampler(model.forward_with_dpmsolver, device=device)
+        samples = sa_solver.sample(
+            S=25,
+            batch_size=n,
+            shape=(4, latent_size_h, latent_size_w),
+            eta=0.3,
+            conditioning=masked_embs,
+            unconditional_conditioning=null_y[:, :, :keep_index, :],
+            unconditional_guidance_scale=scale,
+            model_kwargs=model_kwargs,
+        )[0]
     samples = vae.decode(samples / 0.18215).sample
     torch.cuda.empty_cache()
     samples = resize_img(samples, hw, custom_hw)

@@ -13,8 +13,8 @@ import torch
 from torchvision.utils import save_image
 from diffusers.models import AutoencoderKL
 
-from diffusion.model.utils import prepare_prompt_ar, resize_img, mask_feature
-from diffusion import IDDPM, DPMS
+from diffusion.model.utils import prepare_prompt_ar, mask_feature
+from diffusion import IDDPM, DPMS, SASolverSampler
 from scripts.download import find_model
 from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2
 from diffusion.model.t5 import T5Embedder
@@ -101,7 +101,21 @@ def visualize(items, bs, sample_steps, cfg_scale):
                     skip_type="time_uniform",
                     method="multistep",
                 )
-
+            elif args.sampling_algo == 'sa-solver':
+                # Create sampling noise:
+                n = len(prompts)
+                model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar})
+                sa_solver = SASolverSampler(model.forward_with_dpmsolver, device=device)
+                samples = sa_solver.sample(
+                    S=30,
+                    batch_size=n,
+                    shape=(4, latent_size_h, latent_size_w),
+                    eta=0.3,
+                    conditioning=masked_embs,
+                    unconditional_conditioning=null_y[:, :, :keep_index, :],
+                    unconditional_guidance_scale=cfg_scale,
+                    model_kwargs=model_kwargs,
+                )[0]
         samples = vae.decode(samples / 0.18215).sample
         torch.cuda.empty_cache()
         # Save and display images:
