@@ -81,7 +81,7 @@ PixArt-α only takes 10.8% of Stable Diffusion v1.5's training time (675 vs. 6,2
 ## High-quality Generation from PixArt-α
 
 - More samples
-<div id="dreambooth" style="display: flex; justify-content: center;">
+<div id="more-samples" style="display: flex; justify-content: center;">
   <img src="asset/images/more-samples1.png" style="width: 50%; height: auto; object-fit: contain; margin: 5px;">
   <img src="asset/images/more-samples.png" style="width: 43%; height: auto; object-fit: contain; margin: 5px;">
 </div>
@@ -93,7 +93,7 @@ PixArt-α only takes 10.8% of Stable Diffusion v1.5's training time (675 vs. 6,2
 </div>
 
 - PixArt + [ControlNet](https://github.com/lllyasviel/ControlNet)
-<div id="dreambooth" style="display: flex; justify-content: center;">
+<div id="ControlNet" style="display: flex; justify-content: center;">
   <img src="asset/images/controlnet/controlnet_huawei.svg" width="46%" style="margin: 5px;">
   <img src="asset/images/controlnet/controlnet_lenna.svg" width="46%" style="margin: 5px;">
 </div>
@@ -175,7 +175,7 @@ Let's have a look at a simple example using the `http://your-server-ip:port`.
 
 
 ## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
-![Training Efficiency.](asset/images/sample.png)
+![Online Demo sample](asset/images/sample.png)
 
 
 ## 🔥To-Do List
