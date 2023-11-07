@@ -160,7 +160,8 @@ SA1B
 
 
 # 💻 How to Test
-Inference requires at least `23GB` of GPU memory.
+Inference requires at least `23GB` of GPU memory using this repo, while `11GB` using in 🧨 [diffusers](#Using-in-🧨-diffusers).
+
 Currently support:
 - [x] [IDDPM](https://arxiv.org/abs/2102.09672)
 - [x] [DPM-Solver](https://arxiv.org/abs/2206.00927)
@@ -206,7 +207,7 @@ This integration allows running the pipeline with a batch size of 4 under 11 GBs
 
 You can also click [here](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing) to have a free trial on Google Colab.
 
-## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
+## Online Demo [![Hugging Face PixArt](https://img.shields.io/static/v1?label=Demo&message=HuggingFace%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
 ![Online Demo sample](asset/images/sample.png)
 
 # ✏️ How to LLaVA captioning
@@ -246,6 +247,6 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
     
 # 🤗Acknowledgements
 - Thanks to [Diffusers](https://github.com/huggingface/diffusers) for their wonderful technical support and awesome collaboration!
-- Thanks to [huggingface](https://github.com/huggingface) for sponsoring the nicely demo!
+- Thanks to [Hugging Face](https://github.com/huggingface) for sponsoring the nicely demo!
 - Thanks to [DiT](https://github.com/facebookresearch/DiT) for their wonderful work and codebase!
 
