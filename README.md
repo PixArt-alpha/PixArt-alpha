@@ -207,6 +207,7 @@ Check out the [documentation](https://huggingface.co/docs/diffusers/main/en/api/
 
 This integration allows running the pipeline with a batch size of 4 under 11 GBs of GPU VRAM. GPU VRAM consumption under 10 GB will soon be supported, too. Stay tuned. 
 
+You can also click [here](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing) to have a free trial on Google Colab.
 
 # ✏️ How to LLaVA captioning
 Thanks to the code base of [
@@ -246,3 +247,4 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
     
 # 🤗Acknowledgements
 - Thanks to [DiT](https://github.com/facebookresearch/DiT) for their wonderful work and codebase.
+- Thanks to the 🧨 diffusers team for the integration onto 🧨 diffusers.
