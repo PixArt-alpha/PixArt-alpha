@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 from __future__ import annotations
 import os
+import sys
+from pathlib import Path
+current_file_path = Path(__file__).resolve()
+sys.path.insert(0, str(current_file_path.parent.parent))
 import random
 import gradio as gr
 import numpy as np
@@ -9,6 +13,8 @@ from diffusers import PixArtAlphaPipeline
 import torch
 from typing import Tuple
 from datetime import datetime
+from diffusion.data.datasets import ASPECT_RATIO_1024_TEST
+from diffusion.model.utils import resize_and_crop_img
 
 
 DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/logo.png)
@@ -86,6 +92,8 @@ style_list = [
 styles = {k["name"]: (k["prompt"], k["negative_prompt"]) for k in style_list}
 STYLE_NAMES = list(styles.keys())
 DEFAULT_STYLE_NAME = "(No style)"
+SCHEDULE_NAME = ["DPM-Solver", "SA-Solver"]
+DEFAULT_SCHEDULE_NAME = "DPM-Solver"
 
 def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str, str]:
     p, n = styles.get(style_name, styles[DEFAULT_STYLE_NAME])
@@ -111,6 +119,13 @@ if torch.cuda.is_available():
     if USE_TORCH_COMPILE:
         pipe.transformer = torch.compile(pipe.transformer, mode="reduce-overhead", fullgraph=True)
         print("Model Compiled!")
+
+
+def prepare_prompt_hw(height, width, ratios):
+    ar = float(height/width)
+    closest_ratio = min(ratios.keys(), key=lambda ratio: abs(float(ratio) - ar))
+    default_hw = ratios[closest_ratio]
+    return int(default_hw[0]), int(default_hw[1])
 
 
 def save_image(img):
@@ -144,19 +159,22 @@ def generate(
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator().manual_seed(seed)
 
+    # preparing for image size
+    bin_height, bin_width = prepare_prompt_hw(height=height, width=width, ratios=ASPECT_RATIO_1024_TEST)
     if not use_negative_prompt:
         negative_prompt = None  # type: ignore
     prompt, negative_prompt = apply_style(style, prompt, negative_prompt)
     image = pipe(
         prompt=prompt,
-        width=width,
-        height=height,
+        width=bin_width,
+        height=bin_height,
         guidance_scale=guidance_scale,
         num_inference_steps=num_inference_steps,
         generator=generator,
         output_type="pil",
     ).images[0]
 
+    image = resize_and_crop_img(image, width, height)
     image_path = save_image(image)
     print(image_path)
     return [image_path], seed
@@ -193,6 +211,15 @@ with gr.Blocks(css="scripts/style.css") as demo:
     with gr.Accordion("Advanced options", open=False):
         with gr.Row():
             use_negative_prompt = gr.Checkbox(label="Use negative prompt", value=False)
+        schedule = gr.Radio(
+            show_label=True,
+            container=True,
+            interactive=True,
+            choices=SCHEDULE_NAME,
+            value=DEFAULT_SCHEDULE_NAME,
+            label="Sampler Schedule",
+            visible=False,
+        )
         style_selection = gr.Radio(
             show_label=True,
             container=True,

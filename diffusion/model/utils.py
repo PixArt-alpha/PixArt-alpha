@@ -11,6 +11,7 @@ from collections.abc import Iterable
 from itertools import repeat
 from torchvision import transforms as T
 import random
+from PIL import Image
 
 
 def _ntuple(n):
@@ -479,6 +480,50 @@ def resize_img(samples, hw, custom_hw):
         return transform(samples)
     else:
         return samples
+
+# def resize_and_crop_tensor(samples: torch.Tensor, custom_hw):
+#     orig_hw = samples.shape[2:]
+#     if (orig_hw != custom_hw).all():
+#         ratio = max(custom_hw[0,0] / orig_hw[0,0], custom_hw[0, 1] / orig_hw[0, 1])
+#         resized_width = int(orig_hw[0,1] * ratio)
+#         resized_height = int(orig_hw[0,0] * ratio)
+#         transform = T.Compose([
+#             T.Resize((resized_height, resized_width)),
+#             T.CenterCrop(custom_hw[0])
+#         ])
+#         # if custom_hw[0,0] / hw[0,0] > custom_hw[0,1] / hw[0,1]:
+#         #     resize_size = int(custom_hw[0,0]), int(hw[0,1] * custom_hw[0,0] / hw[0,0])
+#         # elif custom_hw[0,0] / hw[0,0] > custom_hw[0,1] / hw[0,1]:
+#         #     resize_size = int(hw[0,0] * custom_hw[0,1] / hw[0,1]), int(custom_hw[0,1])
+#         # else:
+#         #     resize_size = int(custom_hw[0,0]), int(custom_hw[0,1])
+#         # transform = T.Compose([
+#         # T.Resize(resize_size),  # Image.BICUBIC
+#         # T.CenterCrop(resize_size),
+#         # ])
+#         return transform(samples)
+#     else:
+#         return samples
+
+
+def resize_and_crop_img(img: Image, new_width, new_height):
+    orig_width, orig_height = img.size
+
+    ratio = max(new_width/orig_width, new_height/orig_height)
+    resized_width = int(orig_width * ratio)
+    resized_height = int(orig_height * ratio)
+
+    img = img.resize((resized_width, resized_height), Image.LANCZOS)
+
+    left = (resized_width - new_width)/2
+    top = (resized_height - new_height)/2
+    right = (resized_width + new_width)/2
+    bottom = (resized_height + new_height)/2
+
+    img = img.crop((left, top, right, bottom))
+
+    return img
+
 
 
 def mask_feature(emb, mask):

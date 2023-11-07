@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from torchvision.datasets.folder import default_loader, IMG_EXTENSIONS
 from torch.utils.data import Dataset
-from diffusers.utils import randn_tensor
+from diffusers.utils.torch_utils import randn_tensor
 from torchvision import transforms as T
 from diffusion.data.builder import get_data_path, DATASETS
 
