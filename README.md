@@ -170,12 +170,12 @@ Currently support:
 
 ## Quick start with [Gradio](https://www.gradio.app/guides/quickstart)
 
-To get started, first install the required dependencies, then run:
+To get started, first install the required dependencies, then run on your local machine:
 
 ```bash
 python scripts/interface.py --model_path path/to/model.pth --image_size=1024 --port=12345
 ```
-Let's have a look at a simple example using the `http://your-server-ip:port`.
+Let's have a look at a simple example using the `http://your-server-ip:12345`.
 
 
 ## Using in 🧨 diffusers
@@ -204,6 +204,16 @@ image = pipe(prompt).images[0]
 Check out the [documentation](https://huggingface.co/docs/diffusers/main/en/api/pipelines/pixart) to learn more.
 
 This integration allows running the pipeline with a batch size of 4 under 11 GBs of GPU VRAM. GPU VRAM consumption under 10 GB will soon be supported, too. Stay tuned. 
+
+### Gradio with diffusers (Faster)
+
+To get started, first install the required dependencies, then run on your local machine:
+
+```bash
+# diffusers version
+DEMO_PORT=12345 python scripts/app.py
+```
+Let's have a look at a simple example using the `http://your-server-ip:12345`.
 
 You can also click [here](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing) to have a free trial on Google Colab.
 
