@@ -160,7 +160,7 @@ SA1B
 
 
 # 💻 How to Test
-Inference requires at least `23GB` of GPU memory using this repo, while `11GB` using in 🧨 [diffusers](#Using-in-🧨-diffusers).
+Inference requires at least `23GB` of GPU memory using this repo, while `11GB` using in 🧨 [diffusers](#using-in--diffusers).
 
 Currently support:
 - [x] [IDDPM](https://arxiv.org/abs/2102.09672)
