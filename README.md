@@ -177,9 +177,6 @@ python scripts/interface.py --model_path path/to/model.pth --image_size=1024 --p
 Let's have a look at a simple example using the `http://your-server-ip:port`.
 
 
-## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
-![Online Demo sample](asset/images/sample.png)
-
 ## Using in 🧨 diffusers
 
 Make sure you have the updated versions of the following libraries:
@@ -207,6 +204,9 @@ Check out the [documentation](https://huggingface.co/docs/diffusers/main/en/api/
 
 This integration allows running the pipeline with a batch size of 4 under 11 GBs of GPU VRAM. GPU VRAM consumption under 10 GB will soon be supported, too. Stay tuned. 
 
+## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
+![Online Demo sample](asset/images/sample.png)
+
 
 # ✏️ How to LLaVA captioning
 Thanks to the code base of [
@@ -222,16 +222,15 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
 ## 💪To-Do List
 
 - [x] Inference code
-- [x] T2ICompBench code
 - [x] Training code
 - [x] T5 & VAE feature extraction code
 - [x] LLaVA captioning code
 - [x] Model zoo 
-- [x] Diffusers version
+- [x] Diffusers version & Hugging Face demo
 - [x] Google Colab example
-- [x] Hugging Face demo
+- [ ] SAM-LLaVA caption dataset
 
-[//]: # (https://user-images.githubusercontent.com/73707470/253800159-c7e12362-1ea1-4b20-a44e-bd6c8d546765.mp4)
+[//]: # (.mp4)
 
 
 # 📖BibTeX
@@ -245,4 +244,6 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
     }
     
 # 🤗Acknowledgements
-- Thanks to [DiT](https://github.com/facebookresearch/DiT) for their wonderful work and codebase.
+- Thanks to [Diffusers](https://github.com/huggingface/diffusers) for their wonderful technical support and awesome collaboration!
+- Thanks to [huggingface](https://github.com/huggingface) for their nicely demo sponsor!
+- Thanks to [DiT](https://github.com/facebookresearch/DiT) for their wonderful work and codebase!
