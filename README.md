@@ -6,7 +6,7 @@
 ### <div align="center">👉 PixArt-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis <div> 
 
 <div align="center">
-  <a href="https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha"><img src="https://img.shields.io/static/v1?label=Demo&message=Huggingface&color=yellow"></a> &ensp;
+  <a href="https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha"><img src="https://img.shields.io/static/v1?label=Demo&message=HuggingFace&color=yellow"></a> &ensp;
   <a href="https://pixart-alpha.github.io/"><img src="https://img.shields.io/static/v1?label=Project%20Page&message=Github&color=blue&logo=github-pages"></a> &ensp;
   <a href="https://arxiv.org/abs/2310.00426"><img src="https://img.shields.io/static/v1?label=Paper&message=Arxiv&color=red&logo=arxiv"></a> &ensp;
   <a href="https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing"><img src="https://img.shields.io/static/v1?label=Free%20Trial&message=Google%20Colab&logo=google&color=orange"></a> &ensp;
@@ -31,7 +31,7 @@ Fast training diffusion models with transformers. You can find more visualizatio
 ---
 
 ## 🚩 **New Features/Updates**
-- ✅ Nov. 06, 2023. Release pretrained weights with diffuser integration, huggingface demo, and Google Colab example.
+- ✅ Nov. 06, 2023. Release pretrained weights with 🧨 diffusers integration, Hugging Face demo, and Google Colab example.
 - ✅ Nov. 03, 2023. Release the LLaVA-captioning inference code.
 - ✅ Oct. 27, 2023. Release the training & feature extraction code.
 - ✅ Oct. 20, 2023. Collaborate with Hugging Face & Diffusers team to co-release the code and weights. (plz stay tuned.)
@@ -180,6 +180,33 @@ Let's have a look at a simple example using the `http://your-server-ip:port`.
 ## Online Demo [![Huggingface PixArt](https://img.shields.io/static/v1?label=Demo&message=Huggingface%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
 ![Online Demo sample](asset/images/sample.png)
 
+## Using in 🧨 diffusers
+
+Make sure you have the updated versions of the following libraries:
+
+```bash
+pip install -U transformers accelerate diffusers
+```
+
+And then:
+
+```python
+import torch
+from diffusers import PixArtAlphaPipeline
+
+# You can replace the checkpoint id with "PixArt-alpha/PixArt-XL-2-512x512" too.
+pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-XL-2-1024-MS", torch_dtype=torch.float16)
+# Enable memory optimizations.
+pipe.enable_model_cpu_offload()
+
+prompt = "A small cactus with a happy face in the Sahara desert."
+image = pipe(prompt).images[0]
+```
+
+Check out the [documentation](https://huggingface.co/docs/diffusers/main/en/api/pipelines/pixart) to learn more.
+
+This integration allows running the pipeline with a batch size of 4 under 11 GBs of GPU VRAM. GPU VRAM consumption under 10 GB will soon be supported, too. Stay tuned. 
+
 
 # ✏️ How to LLaVA captioning
 Thanks to the code base of [
@@ -202,7 +229,7 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
 - [x] Model zoo 
 - [x] Diffusers version
 - [x] Google Colab example
-- [ ] Huggingface demo
+- [x] Hugging Face demo
 
 [//]: # (https://user-images.githubusercontent.com/73707470/253800159-c7e12362-1ea1-4b20-a44e-bd6c8d546765.mp4)
 
