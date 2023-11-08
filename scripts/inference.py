@@ -13,7 +13,7 @@ import torch
 from torchvision.utils import save_image
 from diffusers.models import AutoencoderKL
 
-from diffusion.model.utils import prepare_prompt_ar, mask_feature
+from diffusion.model.utils import prepare_prompt_ar
 from diffusion import IDDPM, DPMS
 from scripts.download import find_model
 from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2
@@ -67,16 +67,14 @@ def visualize(items, bs, sample_steps, cfg_scale):
         with torch.no_grad():
             caption_embs, emb_masks = t5.get_text_embeddings(prompts)
             caption_embs = caption_embs.float()[:, None]
-            masked_embs, keep_index = mask_feature(caption_embs, emb_masks)
             print(f'finish embedding')
 
             if args.sampling_algo == 'iddpm':
                 # Create sampling noise:
                 n = len(prompts)
                 z = torch.randn(n, 4, latent_size_h, latent_size_w, device=device).repeat(2, 1, 1, 1)
-
-                model_kwargs = dict(y=torch.cat([masked_embs, null_y[:, :, :keep_index, :]]),
-                                    cfg_scale=cfg_scale, data_info={'img_hw': hw, 'aspect_ratio': ar})
+                model_kwargs = dict(y=torch.cat([caption_embs, null_y]),
+                                    cfg_scale=cfg_scale, data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
                 diffusion = IDDPM(str(sample_steps))
                 # Sample images:
                 samples = diffusion.p_sample_loop(
@@ -88,10 +86,10 @@ def visualize(items, bs, sample_steps, cfg_scale):
                 # Create sampling noise:
                 n = len(prompts)
                 z = torch.randn(n, 4, latent_size_h, latent_size_w, device=device)
-                model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar})
+                model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
                 dpm_solver = DPMS(model.forward_with_dpmsolver,
-                                  condition=masked_embs,
-                                  uncondition=null_y[:, :, :keep_index, :],
+                                  condition=caption_embs,
+                                  uncondition=null_y,
                                   cfg_scale=cfg_scale,
                                   model_kwargs=model_kwargs)
                 samples = dpm_solver.sample(
@@ -104,7 +102,7 @@ def visualize(items, bs, sample_steps, cfg_scale):
 
         samples = vae.decode(samples / 0.18215).sample
         torch.cuda.empty_cache()
-        # Save and display images:
+        # Save images:
         os.umask(0o000)  # file permission: 666; dir permission: 777
         for i, sample in enumerate(samples):
             save_path = os.path.join(save_root, f"{prompts[i][:100]}.jpg")

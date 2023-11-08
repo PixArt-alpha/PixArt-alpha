@@ -133,13 +133,11 @@ class PixArt(nn.Module):
         t = self.t_embedder(t)  # (N, D)
         t0 = self.t_block(t)
         y = self.y_embedder(y, self.training)  # (N, 1, L, D)
-        if self.training:
-            mask = mask.squeeze(1).squeeze(1)
-            y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
-            y_lens = mask.sum(dim=1).tolist()
-        else:
-            y_lens = [y.shape[2]] * y.shape[0]
-            y = y.squeeze(1).view(1, -1, x.shape[-1])
+        if mask.shape[0] != y.shape[0]:
+            mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
+        mask = mask.squeeze(1).squeeze(1)
+        y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
+        y_lens = mask.sum(dim=1).tolist()
         for block in self.blocks:
             x = auto_grad_checkpoint(block, x, y, t0, y_lens)  # (N, T, D) #support grad checkpoint
         x = self.final_layer(x, t)  # (N, T, patch_size ** 2 * out_channels)
@@ -154,14 +152,14 @@ class PixArt(nn.Module):
         model_out = self.forward(x, t, y, mask)
         return model_out.chunk(2, dim=1)[0]
 
-    def forward_with_cfg(self, x, t, y, cfg_scale, **kwargs):
+    def forward_with_cfg(self, x, t, y, cfg_scale, mask=None, **kwargs):
         """
         Forward pass of PixArt, but also batches the unconditional forward pass for classifier-free guidance.
         """
         # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
         half = x[: len(x) // 2]
         combined = torch.cat([half, half], dim=0)
-        model_out = self.forward(combined, t, y, kwargs)
+        model_out = self.forward(combined, t, y, mask, kwargs)
         model_out = model_out['x'] if isinstance(model_out, dict) else model_out
         eps, rest = model_out[:, :3], model_out[:, 3:]
         cond_eps, uncond_eps = torch.split(eps, len(eps) // 2, dim=0)

@@ -167,13 +167,11 @@ class PixArtMS(PixArt):
         t = t + torch.cat([csize, ar], dim=1)
         t0 = self.t_block(t)
         y = self.y_embedder(y, self.training)  # (N, D)
-        if self.training:
-            mask = mask.squeeze(1).squeeze(1)
-            y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
-            y_lens = mask.sum(dim=1).tolist()
-        else:
-            y_lens = [y.shape[2]] * y.shape[0]
-            y = y.squeeze(1).view(1, -1, x.shape[-1])
+        if mask.shape[0] != y.shape[0]:
+            mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
+        mask = mask.squeeze(1).squeeze(1)
+        y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
+        y_lens = mask.sum(dim=1).tolist()
         for block in self.blocks:
             x = auto_grad_checkpoint(block, x, y, t0, y_lens, **kwargs)  # (N, T, D) #support grad checkpoint
         x = self.final_layer(x, t)  # (N, T, patch_size ** 2 * out_channels)

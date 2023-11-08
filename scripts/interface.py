@@ -64,8 +64,6 @@ def generate_img(prompt, sampler, sample_steps, scale):
 
     caption_embs, emb_masks = llm_embed_model.get_text_embeddings(prompts)
     caption_embs = caption_embs[:, None]
-    masked_embs, keep_index = mask_feature(caption_embs, emb_masks)
-    masked_embs = masked_embs.cuda()
 
     null_y = model.y_embedder.y_embedding[None].repeat(len(prompts), 1, 1)[:, None]
 
@@ -75,8 +73,8 @@ def generate_img(prompt, sampler, sample_steps, scale):
         # Create sampling noise:
         n = len(prompts)
         z = torch.randn(n, 4, latent_size_h, latent_size_w, device=device).repeat(2, 1, 1, 1)
-        model_kwargs = dict(y=torch.cat([masked_embs, null_y[:, :, :keep_index, :]]),
-                            cfg_scale=scale, data_info={'img_hw': hw, 'aspect_ratio': ar})
+        model_kwargs = dict(y=torch.cat([caption_embs, null_y]),
+                            cfg_scale=scale, data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
         diffusion = IDDPM(str(sample_steps))
         samples = diffusion.p_sample_loop(
             model.forward_with_cfg, z.shape, z, clip_denoised=False, model_kwargs=model_kwargs, progress=True,
@@ -87,10 +85,10 @@ def generate_img(prompt, sampler, sample_steps, scale):
         # Create sampling noise:
         n = len(prompts)
         z = torch.randn(n, 4, latent_size_h, latent_size_w, device=device)
-        model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar})
+        model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
         dpm_solver = DPMS(model.forward_with_dpmsolver,
-                          condition=masked_embs,
-                          uncondition=null_y[:, :, :keep_index, :],
+                          condition=caption_embs,
+                          uncondition=null_y,
                           cfg_scale=scale,
                           model_kwargs=model_kwargs)
         samples = dpm_solver.sample(
