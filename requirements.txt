@@ -2,7 +2,7 @@ torch==2.0.0+cu117
 torchvision==0.15.1+cu117
 torchaudio==2.0.1
 mmcv==1.7.0
-diffusers==0.20.2
+diffusers>=0.22.2
 timm==0.6.12
 accelerate==0.17.0
 tensorboard
@@ -12,7 +12,7 @@ sentencepiece~=0.1.97
 ftfy~=6.1.1
 beautifulsoup4~=4.11.1
 protobuf==3.20.2
-gradio==3.38.0
+gradio==4.1.1
 yapf==0.40.1
 opencv-python
 ftfy

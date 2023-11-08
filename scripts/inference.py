@@ -13,7 +13,7 @@ import torch
 from torchvision.utils import save_image
 from diffusers.models import AutoencoderKL
 
-from diffusion.model.utils import prepare_prompt_ar, resize_img, mask_feature
+from diffusion.model.utils import prepare_prompt_ar, mask_feature
 from diffusion import IDDPM, DPMS
 from scripts.download import find_model
 from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2

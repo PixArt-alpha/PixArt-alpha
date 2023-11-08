@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import List, Union
 import gradio as gr
 from gradio.components import Textbox, Image
-from diffusion.model.utils import prepare_prompt_ar, resize_img, mask_feature
+from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor, mask_feature
 from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2
 from diffusion.model.t5 import T5Embedder
 from torchvision.utils import _log_api_usage_once, make_grid
@@ -102,7 +102,7 @@ def generate_img(prompt, sampler, sample_steps, scale):
         )
     samples = vae.decode(samples / 0.18215).sample
     torch.cuda.empty_cache()
-    samples = resize_img(samples, hw, custom_hw)
+    samples = resize_and_crop_tensor(samples, custom_hw[0,1], custom_hw[0,0])
     display_model_info = f'Model path: {args.model_path},\nBase image size: {args.image_size}, \nSampling Algo: {sampler}'
     return ndarr_image(samples, normalize=True, value_range=(-1, 1)), prompt_show, display_model_info
 
@@ -143,7 +143,13 @@ if __name__ == '__main__':
             {args.image_size}px
         </div>
     """
-    description = '## If PixArt-α is helpful, please help to ⭐ the [Github Repo](https://github.com/PixArt-alpha/PixArt) and recommend it to your friends 😊'
+    DESCRIPTION = """# PixArt-Alpha 1024px
+            ## If PixArt-Alpha is helpful, please help to ⭐ the [Github Repo](https://github.com/PixArt-alpha/PixArt) and recommend it to your friends 😊'
+            #### [PixArt-Alpha 1024px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-XL-2-1024-MS](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) checkpoint.
+            #### English prompts ONLY; 提示词仅限英文
+            """
+    if not torch.cuda.is_available():
+        DESCRIPTION += "\n<p>Running on CPU 🥶 This demo does not work on CPU.</p>"
 
     demo = gr.Interface(fn=generate_img,
                         inputs=[Textbox(label="Note: If you want to specify a aspect ratio or determine a customized height and width, "
@@ -171,7 +177,7 @@ if __name__ == '__main__':
                                  Textbox(label="clean prompt"),
                                  Textbox(label="model info")],
                         title=title,
-                        description=description,
+                        description=DESCRIPTION,
                         examples=examples
                         )
-    demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True, enable_queue=True)
+    demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True)

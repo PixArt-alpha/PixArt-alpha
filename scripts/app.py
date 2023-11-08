@@ -13,8 +13,6 @@ from diffusers import PixArtAlphaPipeline
 import torch
 from typing import Tuple
 from datetime import datetime
-from diffusion.data.datasets import ASPECT_RATIO_1024_TEST
-from diffusion.model.utils import resize_and_crop_img
 
 
 DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/logo.png)
@@ -121,13 +119,6 @@ if torch.cuda.is_available():
         print("Model Compiled!")
 
 
-def prepare_prompt_hw(height, width, ratios):
-    ar = float(height/width)
-    closest_ratio = min(ratios.keys(), key=lambda ratio: abs(float(ratio) - ar))
-    default_hw = ratios[closest_ratio]
-    return int(default_hw[0]), int(default_hw[1])
-
-
 def save_image(img):
     unique_name = str(uuid.uuid4()) + '.png'
     save_path = os.path.join(f'output/online_demo_img/{datetime.now().date()}')
@@ -159,22 +150,19 @@ def generate(
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator().manual_seed(seed)
 
-    # preparing for image size
-    bin_height, bin_width = prepare_prompt_hw(height=height, width=width, ratios=ASPECT_RATIO_1024_TEST)
     if not use_negative_prompt:
         negative_prompt = None  # type: ignore
     prompt, negative_prompt = apply_style(style, prompt, negative_prompt)
     image = pipe(
         prompt=prompt,
-        width=bin_width,
-        height=bin_height,
+        width=width,
+        height=height,
         guidance_scale=guidance_scale,
         num_inference_steps=num_inference_steps,
         generator=generator,
         output_type="pil",
     ).images[0]
 
-    image = resize_and_crop_img(image, width, height)
     image_path = save_image(image)
     print(image_path)
     return [image_path], seed
