@@ -19,6 +19,7 @@ DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-a
         # PixArt-Alpha 1024px
         #### [PixArt-Alpha 1024px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-XL-2-1024-MS](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) checkpoint.
         #### English prompts ONLY; 提示词仅限英文
+        Don't want to queue? Try [Google Colab Demo](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing). It's slower but still free.
         """
 if not torch.cuda.is_available():
     DESCRIPTION += "\n<p>Running on CPU 🥶 This demo does not work on CPU.</p>"
@@ -114,6 +115,9 @@ if torch.cuda.is_available():
         pipe.to(device)
         print("Loaded on Device!")
 
+    # speed-up T5
+    pipe.text_encoder.to_bettertransformer()
+
     if USE_TORCH_COMPILE:
         pipe.transformer = torch.compile(pipe.transformer, mode="reduce-overhead", fullgraph=True)
         print("Model Compiled!")
@@ -176,6 +180,7 @@ examples = [
     "beautiful lady, freckles, big smile, blue eyes, short ginger hair, dark makeup, wearing a floral blue vest top, soft light, dark grey background",
     "professional portrait photo of an anthropomorphic cat wearing fancy gentleman hat and jacket walking in autumn forest.",
     "an astronaut sitting in a diner, eating fries, cinematic, analog film",
+    "Albert Einstein in a surrealist Cyberpunk 2077 world, hyperrealistic",
 ]
 
 with gr.Blocks(css="scripts/style.css") as demo:
@@ -229,7 +234,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
             step=1,
             value=0,
         )
-        randomize_seed = gr.Checkbox(label="Randomize seed", value=False)
+        randomize_seed = gr.Checkbox(label="Randomize seed", value=True)
         with gr.Row(visible=True):
             width = gr.Slider(
                 label="Width",
@@ -246,15 +251,15 @@ with gr.Blocks(css="scripts/style.css") as demo:
                 value=1024,
             )
         with gr.Row():
-            guidance_scale_base = gr.Slider(
-                label="Guidance scale for base",
+            guidance_scale = gr.Slider(
+                label="Guidance scale",
                 minimum=1,
                 maximum=20,
                 step=0.1,
                 value=4.5,
             )
-            num_inference_steps_base = gr.Slider(
-                label="Number of inference steps for base",
+            num_inference_steps = gr.Slider(
+                label="Number of inference steps",
                 minimum=10,
                 maximum=100,
                 step=1,
@@ -273,7 +278,6 @@ with gr.Blocks(css="scripts/style.css") as demo:
         fn=lambda x: gr.update(visible=x),
         inputs=use_negative_prompt,
         outputs=negative_prompt,
-        queue=False,
         api_name=False,
     )
 
@@ -292,9 +296,9 @@ with gr.Blocks(css="scripts/style.css") as demo:
             seed,
             width,
             height,
-            guidance_scale_base,
-            num_inference_steps_base,
-            randomize_seed
+            guidance_scale,
+            num_inference_steps,
+            randomize_seed,
         ],
         outputs=[result, seed],
         api_name="run",
