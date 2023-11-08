@@ -241,6 +241,8 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
 - [x] Diffusers version & Hugging Face demo
 - [x] Google Colab example
 - [ ] SAM-LLaVA caption dataset
+- [ ] ControlNet code
+- [ ] DALLE3 VAE integration
 
 [//]: # (.mp4)
 
