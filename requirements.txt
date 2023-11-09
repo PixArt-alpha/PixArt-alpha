@@ -19,3 +19,4 @@ ftfy
 bs4
 einops
 xformers
+optimum

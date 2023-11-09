@@ -13,6 +13,8 @@ from diffusers import PixArtAlphaPipeline
 import torch
 from typing import Tuple
 from datetime import datetime
+from diffusion.data import ASPECT_RATIO_1024_TEST
+from diffusion.model.utils import  resize_and_crop_img
 
 
 DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/logo.png)
@@ -103,7 +105,8 @@ def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str
 
 if torch.cuda.is_available():
     pipe = PixArtAlphaPipeline.from_pretrained(
-        "PixArt-alpha/PixArt-XL-2-1024-MS",
+        'output_cv/t2iditMS-xl2-img1024_singlebr_MJ1-5_ls2_vae_lr2e5_continue2/pixart_alpha_1024px_22000_diffusers', # for 98 demo
+        # "PixArt-alpha/PixArt-XL-2-1024-MS",
         torch_dtype=torch.float16,
         variant="fp16",
         use_safetensors=True,
@@ -138,6 +141,13 @@ def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
     return seed
 
 
+def classify_height_width_bin(height: int, width: int, ratios: dict):
+    ar = float(height / width)
+    closest_ratio = min(ratios.keys(), key=lambda ratio: abs(float(ratio) - ar))
+    default_hw = ratios[closest_ratio]
+    return int(default_hw[0]), int(default_hw[1])
+
+
 def generate(
         prompt: str,
         negative_prompt: str = "",
@@ -149,6 +159,7 @@ def generate(
         guidance_scale: float = 4.5,
         num_inference_steps: int = 20,
         randomize_seed: bool = False,
+        use_bin_classifier: bool = True,
         progress=gr.Progress(track_tqdm=True),
 ):
     seed = int(randomize_seed_fn(seed, randomize_seed))
@@ -157,6 +168,11 @@ def generate(
     if not use_negative_prompt:
         negative_prompt = None  # type: ignore
     prompt, negative_prompt = apply_style(style, prompt, negative_prompt)
+
+    if use_bin_classifier:
+        orig_height, orig_width = height, width
+        height, width = classify_height_width_bin(height, width, ratios=ASPECT_RATIO_1024_TEST)
+
     image = pipe(
         prompt=prompt,
         width=width,
@@ -167,6 +183,8 @@ def generate(
         output_type="pil",
     ).images[0]
 
+    if use_bin_classifier:
+        image = resize_and_crop_img(image, orig_width, orig_height)
     image_path = save_image(image)
     print(image_path)
     return [image_path], seed
