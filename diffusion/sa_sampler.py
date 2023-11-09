@@ -87,8 +87,8 @@ class SASolverSampler(object):
 
         sasolver = SASolver(model_fn, ns, algorithm_type="data_prediction")
 
-        tau_t = lambda t: eta if ns.edm_inverse_sigma(torch.tensor(0.05, device=device)) <= t <= ns.edm_inverse_sigma(torch.tensor(50, device=device)) else 0
+        tau_t = lambda t: eta if 0.2 <= t <= 0.8 else 0
 
-        x = sasolver.sample(mode='few_steps', x=img, tau=tau_t, steps=S, skip_type='karras', skip_order=1, predictor_order=3, corrector_order=4, pc_mode='PEC', return_intermediate=False)
+        x = sasolver.sample(mode='few_steps', x=img, tau=tau_t, steps=S, skip_type='time', skip_order=1, predictor_order=2, corrector_order=2, pc_mode='PEC', return_intermediate=False)
 
         return x.to(device), None

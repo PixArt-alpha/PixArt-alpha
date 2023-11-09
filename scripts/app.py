@@ -15,6 +15,7 @@ from typing import Tuple
 from datetime import datetime
 from diffusion.data.datasets import ASPECT_RATIO_1024_TEST
 from diffusion.model.utils import resize_and_crop_img
+from diffusion.sa_solver_diffusers import SASolverScheduler
 
 
 DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/logo.png)
@@ -151,6 +152,7 @@ def generate(
         seed: int = 0,
         width: int = 1024,
         height: int = 1024,
+        schedule: str = 'DPM-Solver',
         guidance_scale: float = 4.5,
         num_inference_steps: int = 20,
         randomize_seed: bool = False,
@@ -158,6 +160,9 @@ def generate(
 ):
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator().manual_seed(seed)
+
+    if schedule == "SA-Solver":
+        pipe.scheduler = SASolverScheduler.from_config(pipe.scheduler.config, algorithm_type='data_prediction')
 
     # preparing for image size
     bin_height, bin_width = prepare_prompt_hw(height=height, width=width, ratios=ASPECT_RATIO_1024_TEST)
@@ -218,7 +223,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
             choices=SCHEDULE_NAME,
             value=DEFAULT_SCHEDULE_NAME,
             label="Sampler Schedule",
-            visible=False,
+            visible=True,
         )
         style_selection = gr.Radio(
             show_label=True,
@@ -304,6 +309,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
             seed,
             width,
             height,
+            schedule,
             guidance_scale_base,
             num_inference_steps_base,
             randomize_seed

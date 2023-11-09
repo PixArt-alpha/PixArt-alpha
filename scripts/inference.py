@@ -110,7 +110,7 @@ def visualize(items, bs, sample_steps, cfg_scale):
                     S=30,
                     batch_size=n,
                     shape=(4, latent_size_h, latent_size_w),
-                    eta=0.3,
+                    eta=1,
                     conditioning=masked_embs,
                     unconditional_conditioning=null_y[:, :, :keep_index, :],
                     unconditional_guidance_scale=cfg_scale,
