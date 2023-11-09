@@ -106,9 +106,11 @@ def generate_img(prompt, sampler, sample_steps, scale):
 
 
 if __name__ == '__main__':
+    from diffusion.utils.logger import get_root_logger
     args = get_args()
     set_env()
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    logger = get_root_logger()
 
     assert args.image_size in [512, 1024], "We only provide pre-trained models for 256x256, 512x512 and 1024x1024 resolutions."
     lewei_scale = {512: 1, 1024: 2}
@@ -121,8 +123,8 @@ if __name__ == '__main__':
     state_dict = find_model(args.model_path)
     del state_dict['state_dict']['pos_embed']
     missing, unexpected = model.load_state_dict(state_dict['state_dict'], strict=False)
-    print('Missing keys: ', missing)
-    print('Unexpected keys', unexpected)
+    logger.warning(f'Missing keys: {missing}')
+    logger.warning(f'Unexpected keys: {unexpected}')
     model.eval()
     base_ratios = eval(f'ASPECT_RATIO_{args.image_size}_TEST')
 

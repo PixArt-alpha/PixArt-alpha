@@ -52,14 +52,19 @@ def visualize(items, bs, sample_steps, cfg_scale):
 
         prompts = []
         if bs == 1:
-            prompt_clean, _, hw, ar, custom_hw = prepare_prompt_ar(chunk[0], base_ratios, device=device)  # ar for aspect ratio
-            prompts.append(prompt_clean)
-            latent_size_h, latent_size_w = int(hw[0, 0] // 8), int(hw[0, 1] // 8)
+            prompt_clean, _, hw, ar, custom_hw = prepare_prompt_ar(chunk[0], base_ratios, device=device, show=False)  # ar for aspect ratio
+            if args.image_size == 1024:
+                latent_size_h, latent_size_w = int(hw[0, 0] // 8), int(hw[0, 1] // 8)
+            else:
+                hw = torch.tensor([[args.image_size, args.image_size]], dtype=torch.float, device=device).repeat(bs, 1)
+                ar = torch.tensor([[1.]], device=device).repeat(bs, 1)
+                latent_size_h, latent_size_w = latent_size, latent_size
+            prompts.append(prompt_clean.strip())
         else:
             hw = torch.tensor([[args.image_size, args.image_size]], dtype=torch.float, device=device).repeat(bs, 1)
             ar = torch.tensor([[1.]], device=device).repeat(bs, 1)
             for prompt in chunk:
-                prompts.append(prepare_prompt_ar(prompt, base_ratios, device=device)[0].strip())
+                prompts.append(prepare_prompt_ar(prompt, base_ratios, device=device, show=False)[0].strip())
             latent_size_h, latent_size_w = latent_size, latent_size
 
         null_y = model.y_embedder.y_embedding[None].repeat(len(prompts), 1, 1)[:, None]

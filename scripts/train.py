@@ -175,6 +175,7 @@ if __name__ == '__main__':
     if args.cloud:
         config.data_root = '/data/data'
     if args.resume_from is not None:
+        config.load_from = None
         config.resume_from = dict(
             checkpoint=args.resume_from,
             load_ema=False,
@@ -247,9 +248,8 @@ if __name__ == '__main__':
 
     if config.load_from is not None:
         missing, unexpected = load_checkpoint(config.load_from, model, load_ema=config.get('load_ema', False))
-        if accelerator.is_main_process:
-            print('Warning Missing keys: ', missing)
-            print('Warning Unexpected keys', unexpected)
+        logger.warning(f'Missing keys: {missing}')
+        logger.warning(f'Unexpected keys: {unexpected}')
 
     ema_update(model_ema, model, 0.)
     if not config.data.load_vae_feat:
@@ -298,9 +298,8 @@ if __name__ == '__main__':
                                                            lr_scheduler=lr_scheduler,
                                                            )
 
-        if accelerator.is_main_process:
-            print('Warning Missing keys: ', missing)
-            print('Warning Unexpected keys', unexpected)
+        logger.warning(f'Missing keys: {missing}')
+        logger.warning(f'Unexpected keys: {unexpected}')
     # Prepare everything
     # There is no specific order to remember, you just need to unpack the
     # objects in the same order you gave them to the prepare method.
