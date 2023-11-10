@@ -106,8 +106,7 @@ def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str
 
 if torch.cuda.is_available():
     pipe = PixArtAlphaPipeline.from_pretrained(
-        'output_cv/t2iditMS-xl2-img512_singlebr_MJ1-13_ls1_vae_lr2e5_continue2/pixart_alpha_512px_284000_diffusers',
-        # "PixArt-alpha/PixArt-XL-2-512x512",
+        "PixArt-alpha/PixArt-XL-2-512x512",
         torch_dtype=torch.float16,
         variant="fp16",
         use_safetensors=True,
