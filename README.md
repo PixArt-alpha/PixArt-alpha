@@ -32,7 +32,7 @@ Fast training diffusion models with transformers. You can find more visualizatio
 ---
 
 ## 🚩 **New Features/Updates**
-- ✅ Nov. 10, 2023. Support DALL-E 3 Consistency Decoder.
+- ✅ Nov. 10, 2023. Support DALL-E 3 Consistency Decoder in 🧨 diffusers.
 - ✅ Nov. 06, 2023. Release pretrained weights with 🧨 diffusers integration, Hugging Face demo, and Google Colab example.
 - ✅ Nov. 03, 2023. Release the LLaVA-captioning inference code.
 - ✅ Oct. 27, 2023. Release the training & feature extraction code.
@@ -249,9 +249,10 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
 - [x] Model zoo 
 - [x] Diffusers version & Hugging Face demo
 - [x] Google Colab example
+- [x] DALLE3 VAE integration
 - [ ] SAM-LLaVA caption dataset
 - [ ] ControlNet code
-- [ ] DALLE3 VAE integration
+- [ ] SA-Solver code
 
 [//]: # (.mp4)
 
