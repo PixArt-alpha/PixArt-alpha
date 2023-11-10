@@ -9,12 +9,12 @@ import random
 import gradio as gr
 import numpy as np
 import uuid
-from diffusers import PixArtAlphaPipeline
+from diffusers import ConsistencyDecoderVAE, AutoencoderKL, PixArtAlphaPipeline
 import torch
 from typing import Tuple
 from datetime import datetime
-from diffusion.data import ASPECT_RATIO_1024_TEST
-from diffusion.model.utils import  resize_and_crop_img
+from diffusion.data.datasets import ASPECT_RATIO_1024_TEST
+from diffusion.model.utils import resize_and_crop_img
 
 
 DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/logo.png)
@@ -96,6 +96,7 @@ DEFAULT_STYLE_NAME = "(No style)"
 SCHEDULE_NAME = ["DPM-Solver", "SA-Solver"]
 DEFAULT_SCHEDULE_NAME = "DPM-Solver"
 
+
 def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str, str]:
     p, n = styles.get(style_name, styles[DEFAULT_STYLE_NAME])
     if not negative:
@@ -105,12 +106,15 @@ def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str
 
 if torch.cuda.is_available():
     pipe = PixArtAlphaPipeline.from_pretrained(
-        'output_cv/t2iditMS-xl2-img1024_singlebr_MJ1-5_ls2_vae_lr2e5_continue2/pixart_alpha_1024px_22000_diffusers', # for 98 demo
-        # "PixArt-alpha/PixArt-XL-2-1024-MS",
+        "PixArt-alpha/PixArt-XL-2-1024-MS",
         torch_dtype=torch.float16,
         variant="fp16",
         use_safetensors=True,
     )
+
+    if os.getenv('CONSISTENCY_DECODER', False):
+        print("Using DALL-E 3 Consistency Decoder")
+        pipe.vae = ConsistencyDecoderVAE.from_pretrained("openai/consistency-decoder", torch_dtype=torch.float16)
 
     if ENABLE_CPU_OFFLOAD:
         pipe.enable_model_cpu_offload()
@@ -252,7 +256,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
             step=1,
             value=0,
         )
-        randomize_seed = gr.Checkbox(label="Randomize seed", value=True)
+        randomize_seed = gr.Checkbox(label="Randomize seed", value=False)
         with gr.Row(visible=True):
             width = gr.Slider(
                 label="Width",
@@ -314,6 +318,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
             seed,
             width,
             height,
+            schedule,
             guidance_scale,
             num_inference_steps,
             randomize_seed,

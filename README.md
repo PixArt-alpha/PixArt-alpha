@@ -32,6 +32,7 @@ Fast training diffusion models with transformers. You can find more visualizatio
 ---
 
 ## 🚩 **New Features/Updates**
+- ✅ Nov. 10, 2023. Support DALL-E 3 Consistency Decoder.
 - ✅ Nov. 06, 2023. Release pretrained weights with 🧨 diffusers integration, Hugging Face demo, and Google Colab example.
 - ✅ Nov. 03, 2023. Release the LLaVA-captioning inference code.
 - ✅ Oct. 27, 2023. Release the training & feature extraction code.
@@ -193,10 +194,15 @@ And then:
 
 ```python
 import torch
-from diffusers import PixArtAlphaPipeline
+import os
+from diffusers import PixArtAlphaPipeline, ConsistencyDecoderVAE, AutoencoderKL
 
 # You can replace the checkpoint id with "PixArt-alpha/PixArt-XL-2-512x512" too.
-pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-XL-2-1024-MS", torch_dtype=torch.float16)
+pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-XL-2-1024-MS", torch_dtype=torch.float16, variant="fp16", use_safetensors=True)
+
+# If use DALL-E 3 Consistency Decoder
+# pipe.vae = ConsistencyDecoderVAE.from_pretrained("openai/consistency-decoder", torch_dtype=torch.float16)
+
 # Enable memory optimizations.
 pipe.enable_model_cpu_offload()
 
