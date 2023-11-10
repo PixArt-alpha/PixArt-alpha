@@ -9,26 +9,26 @@ import random
 import gradio as gr
 import numpy as np
 import uuid
-from diffusers import ConsistencyDecoderVAE, AutoencoderKL, PixArtAlphaPipeline
+from diffusers import PixArtAlphaPipeline
 import torch
 from typing import Tuple
 from datetime import datetime
-from diffusion.data.datasets import ASPECT_RATIO_1024_TEST
+from diffusion.data.datasets import ASPECT_RATIO_512_TEST
 from diffusion.model.utils import resize_and_crop_img
+from diffusers import ConsistencyDecoderVAE
 
 
 DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/logo.png)
-        # PixArt-Alpha 1024px
-        #### [PixArt-Alpha 1024px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-XL-2-1024-MS](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) checkpoint.
+        # PixArt-Alpha 512px
+        #### [PixArt-Alpha 512px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-XL-2-512x512](https://huggingface.co/PixArt-alpha/PixArt-XL-2-512x512) checkpoint.
         #### English prompts ONLY; 提示词仅限英文
-        Don't want to queue? Try [Google Colab Demo](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing). It's slower but still free.
         """
 if not torch.cuda.is_available():
     DESCRIPTION += "\n<p>Running on CPU 🥶 This demo does not work on CPU.</p>"
 
 MAX_SEED = np.iinfo(np.int32).max
 CACHE_EXAMPLES = torch.cuda.is_available() and os.getenv("CACHE_EXAMPLES", "1") == "1"
-MAX_IMAGE_SIZE = int(os.getenv("MAX_IMAGE_SIZE", "2048"))
+MAX_IMAGE_SIZE = int(os.getenv("MAX_IMAGE_SIZE", "1024"))
 USE_TORCH_COMPILE = os.getenv("USE_TORCH_COMPILE", "0") == "1"
 ENABLE_CPU_OFFLOAD = os.getenv("ENABLE_CPU_OFFLOAD", "0") == "1"
 PORT = int(os.getenv("DEMO_PORT", "15432"))
@@ -106,7 +106,8 @@ def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str
 
 if torch.cuda.is_available():
     pipe = PixArtAlphaPipeline.from_pretrained(
-        "PixArt-alpha/PixArt-XL-2-1024-MS",
+        'output_cv/t2iditMS-xl2-img512_singlebr_MJ1-13_ls1_vae_lr2e5_continue2/pixart_alpha_512px_284000_diffusers',
+        # "PixArt-alpha/PixArt-XL-2-512x512",
         torch_dtype=torch.float16,
         variant="fp16",
         use_safetensors=True,
@@ -130,9 +131,16 @@ if torch.cuda.is_available():
         print("Model Compiled!")
 
 
+def prepare_prompt_hw(height, width, ratios):
+    ar = float(height/width)
+    closest_ratio = min(ratios.keys(), key=lambda ratio: abs(float(ratio) - ar))
+    default_hw = ratios[closest_ratio]
+    return int(default_hw[0]), int(default_hw[1])
+
+
 def save_image(img):
     unique_name = str(uuid.uuid4()) + '.png'
-    save_path = os.path.join(f'output/online_demo_img/{datetime.now().date()}')
+    save_path = os.path.join(f'output/online_demo_img512/{datetime.now().date()}')
     os.makedirs(save_path, exist_ok=True)
     unique_name = os.path.join(save_path, unique_name)
     img.save(unique_name)
@@ -158,8 +166,9 @@ def generate(
         style: str = DEFAULT_STYLE_NAME,
         use_negative_prompt: bool = False,
         seed: int = 0,
-        width: int = 1024,
-        height: int = 1024,
+        width: int = 512,
+        height: int = 512,
+        schedule: str = 'DPM-Solver',
         guidance_scale: float = 4.5,
         num_inference_steps: int = 20,
         randomize_seed: bool = False,
@@ -169,13 +178,15 @@ def generate(
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator().manual_seed(seed)
 
+    # preparing for image size
+    bin_height, bin_width = prepare_prompt_hw(height=height, width=width, ratios=ASPECT_RATIO_512_TEST)
     if not use_negative_prompt:
         negative_prompt = None  # type: ignore
     prompt, negative_prompt = apply_style(style, prompt, negative_prompt)
 
     if use_bin_classifier:
         orig_height, orig_width = height, width
-        height, width = classify_height_width_bin(height, width, ratios=ASPECT_RATIO_1024_TEST)
+        height, width = classify_height_width_bin(height, width, ratios=ASPECT_RATIO_512_TEST)
 
     image = pipe(
         prompt=prompt,
@@ -225,7 +236,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
         result = gr.Gallery(label="Result", columns=1, show_label=False)
     with gr.Accordion("Advanced options", open=False):
         with gr.Row():
-            use_negative_prompt = gr.Checkbox(label="Use negative prompt", value=False)
+            use_negative_prompt = gr.Checkbox(label="Use negative prompt", value=False, visible=False)
         schedule = gr.Radio(
             show_label=True,
             container=True,
@@ -263,14 +274,14 @@ with gr.Blocks(css="scripts/style.css") as demo:
                 minimum=256,
                 maximum=MAX_IMAGE_SIZE,
                 step=32,
-                value=1024,
+                value=512,
             )
             height = gr.Slider(
                 label="Height",
                 minimum=256,
                 maximum=MAX_IMAGE_SIZE,
                 step=32,
-                value=1024,
+                value=512,
             )
         with gr.Row():
             guidance_scale = gr.Slider(
