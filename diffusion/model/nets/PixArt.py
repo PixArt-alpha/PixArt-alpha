@@ -133,7 +133,9 @@ class PixArt(nn.Module):
         t = self.t_embedder(t)  # (N, D)
         t0 = self.t_block(t)
         y = self.y_embedder(y, self.training)  # (N, 1, L, D)
-        if self.training:
+        if mask is not None:
+            if mask.shape[0] != y.shape[0]:
+                mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
             mask = mask.squeeze(1).squeeze(1)
             y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
             y_lens = mask.sum(dim=1).tolist()
@@ -154,14 +156,14 @@ class PixArt(nn.Module):
         model_out = self.forward(x, t, y, mask)
         return model_out.chunk(2, dim=1)[0]
 
-    def forward_with_cfg(self, x, t, y, cfg_scale, **kwargs):
+    def forward_with_cfg(self, x, t, y, cfg_scale, mask=None, **kwargs):
         """
         Forward pass of PixArt, but also batches the unconditional forward pass for classifier-free guidance.
         """
         # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
         half = x[: len(x) // 2]
         combined = torch.cat([half, half], dim=0)
-        model_out = self.forward(combined, t, y, kwargs)
+        model_out = self.forward(combined, t, y, mask, kwargs)
         model_out = model_out['x'] if isinstance(model_out, dict) else model_out
         eps, rest = model_out[:, :3], model_out[:, 3:]
         cond_eps, uncond_eps = torch.split(eps, len(eps) // 2, dim=0)

@@ -465,45 +465,22 @@ def prepare_prompt_ar(prompt, ratios, device='cpu', show=True):
     return prompt_clean, prompt_show, torch.tensor(default_hw, device=device)[None], torch.tensor([float(closest_ratio)], device=device)[None], torch.tensor(custom_hw, device=device)[None]
 
 
-def resize_img(samples, hw, custom_hw):
-    if (hw != custom_hw).all():
-        if custom_hw[0,0] / hw[0,0] > custom_hw[0,1] / hw[0,1]:
-            resize_size = int(custom_hw[0,0]), int(hw[0,1] * custom_hw[0,0] / hw[0,0])
-        elif custom_hw[0,0] / hw[0,0] > custom_hw[0,1] / hw[0,1]:
-            resize_size = int(hw[0,0] * custom_hw[0,1] / hw[0,1]), int(custom_hw[0,1])
-        else:
-            resize_size = int(custom_hw[0,0]), int(custom_hw[0,1])
+def resize_and_crop_tensor(samples: torch.Tensor, new_width: int, new_height: int):
+    orig_hw = torch.tensor([samples.shape[2], samples.shape[3]], dtype=torch.int)
+    custom_hw = torch.tensor([int(new_height), int(new_width)], dtype=torch.int)
+
+    if (orig_hw != custom_hw).all():
+        ratio = max(custom_hw[0] / orig_hw[0], custom_hw[1] / orig_hw[1])
+        resized_width = int(orig_hw[1] * ratio)
+        resized_height = int(orig_hw[0] * ratio)
+
         transform = T.Compose([
-        T.Resize(resize_size),  # Image.BICUBIC
-        T.CenterCrop(resize_size),
+            T.Resize((resized_height, resized_width)),
+            T.CenterCrop(custom_hw.tolist())
         ])
         return transform(samples)
     else:
         return samples
-
-# def resize_and_crop_tensor(samples: torch.Tensor, custom_hw):
-#     orig_hw = samples.shape[2:]
-#     if (orig_hw != custom_hw).all():
-#         ratio = max(custom_hw[0,0] / orig_hw[0,0], custom_hw[0, 1] / orig_hw[0, 1])
-#         resized_width = int(orig_hw[0,1] * ratio)
-#         resized_height = int(orig_hw[0,0] * ratio)
-#         transform = T.Compose([
-#             T.Resize((resized_height, resized_width)),
-#             T.CenterCrop(custom_hw[0])
-#         ])
-#         # if custom_hw[0,0] / hw[0,0] > custom_hw[0,1] / hw[0,1]:
-#         #     resize_size = int(custom_hw[0,0]), int(hw[0,1] * custom_hw[0,0] / hw[0,0])
-#         # elif custom_hw[0,0] / hw[0,0] > custom_hw[0,1] / hw[0,1]:
-#         #     resize_size = int(hw[0,0] * custom_hw[0,1] / hw[0,1]), int(custom_hw[0,1])
-#         # else:
-#         #     resize_size = int(custom_hw[0,0]), int(custom_hw[0,1])
-#         # transform = T.Compose([
-#         # T.Resize(resize_size),  # Image.BICUBIC
-#         # T.CenterCrop(resize_size),
-#         # ])
-#         return transform(samples)
-#     else:
-#         return samples
 
 
 def resize_and_crop_img(img: Image, new_width, new_height):

@@ -13,7 +13,7 @@ import torch
 from torchvision.utils import save_image
 from diffusers.models import AutoencoderKL
 
-from diffusion.model.utils import prepare_prompt_ar, mask_feature
+from diffusion.model.utils import prepare_prompt_ar
 from diffusion import IDDPM, DPMS, SASolverSampler
 from scripts.download import find_model
 from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2
@@ -52,14 +52,19 @@ def visualize(items, bs, sample_steps, cfg_scale):
 
         prompts = []
         if bs == 1:
-            prompt_clean, _, hw, ar, custom_hw = prepare_prompt_ar(chunk[0], base_ratios, device=device)  # ar for aspect ratio
-            prompts.append(prompt_clean)
-            latent_size_h, latent_size_w = int(hw[0, 0] // 8), int(hw[0, 1] // 8)
+            prompt_clean, _, hw, ar, custom_hw = prepare_prompt_ar(chunk[0], base_ratios, device=device, show=False)  # ar for aspect ratio
+            if args.image_size == 1024:
+                latent_size_h, latent_size_w = int(hw[0, 0] // 8), int(hw[0, 1] // 8)
+            else:
+                hw = torch.tensor([[args.image_size, args.image_size]], dtype=torch.float, device=device).repeat(bs, 1)
+                ar = torch.tensor([[1.]], device=device).repeat(bs, 1)
+                latent_size_h, latent_size_w = latent_size, latent_size
+            prompts.append(prompt_clean.strip())
         else:
             hw = torch.tensor([[args.image_size, args.image_size]], dtype=torch.float, device=device).repeat(bs, 1)
             ar = torch.tensor([[1.]], device=device).repeat(bs, 1)
             for prompt in chunk:
-                prompts.append(prepare_prompt_ar(prompt, base_ratios, device=device)[0].strip())
+                prompts.append(prepare_prompt_ar(prompt, base_ratios, device=device, show=False)[0].strip())
             latent_size_h, latent_size_w = latent_size, latent_size
 
         null_y = model.y_embedder.y_embedding[None].repeat(len(prompts), 1, 1)[:, None]
@@ -67,16 +72,14 @@ def visualize(items, bs, sample_steps, cfg_scale):
         with torch.no_grad():
             caption_embs, emb_masks = t5.get_text_embeddings(prompts)
             caption_embs = caption_embs.float()[:, None]
-            masked_embs, keep_index = mask_feature(caption_embs, emb_masks)
             print(f'finish embedding')
 
             if args.sampling_algo == 'iddpm':
                 # Create sampling noise:
                 n = len(prompts)
                 z = torch.randn(n, 4, latent_size_h, latent_size_w, device=device).repeat(2, 1, 1, 1)
-
-                model_kwargs = dict(y=torch.cat([masked_embs, null_y[:, :, :keep_index, :]]),
-                                    cfg_scale=cfg_scale, data_info={'img_hw': hw, 'aspect_ratio': ar})
+                model_kwargs = dict(y=torch.cat([caption_embs, null_y]),
+                                    cfg_scale=cfg_scale, data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
                 diffusion = IDDPM(str(sample_steps))
                 # Sample images:
                 samples = diffusion.p_sample_loop(
@@ -88,10 +91,10 @@ def visualize(items, bs, sample_steps, cfg_scale):
                 # Create sampling noise:
                 n = len(prompts)
                 z = torch.randn(n, 4, latent_size_h, latent_size_w, device=device)
-                model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar})
+                model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
                 dpm_solver = DPMS(model.forward_with_dpmsolver,
-                                  condition=masked_embs,
-                                  uncondition=null_y[:, :, :keep_index, :],
+                                  condition=caption_embs,
+                                  uncondition=null_y,
                                   cfg_scale=cfg_scale,
                                   model_kwargs=model_kwargs)
                 samples = dpm_solver.sample(
@@ -104,21 +107,21 @@ def visualize(items, bs, sample_steps, cfg_scale):
             elif args.sampling_algo == 'sa-solver':
                 # Create sampling noise:
                 n = len(prompts)
-                model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar})
+                model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
                 sa_solver = SASolverSampler(model.forward_with_dpmsolver, device=device)
                 samples = sa_solver.sample(
                     S=30,
                     batch_size=n,
                     shape=(4, latent_size_h, latent_size_w),
                     eta=1,
-                    conditioning=masked_embs,
-                    unconditional_conditioning=null_y[:, :, :keep_index, :],
+                    conditioning=caption_embs,
+                    unconditional_conditioning=null_y,
                     unconditional_guidance_scale=cfg_scale,
                     model_kwargs=model_kwargs,
                 )[0]
         samples = vae.decode(samples / 0.18215).sample
         torch.cuda.empty_cache()
-        # Save and display images:
+        # Save images:
         os.umask(0o000)  # file permission: 666; dir permission: 777
         for i, sample in enumerate(samples):
             save_path = os.path.join(save_root, f"{prompts[i][:100]}.jpg")

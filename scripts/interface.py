@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import List, Union
 import gradio as gr
 from gradio.components import Textbox, Image
-from diffusion.model.utils import prepare_prompt_ar, resize_img, mask_feature
+from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor, mask_feature
 from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2
 from diffusion.model.t5 import T5Embedder
 from torchvision.utils import _log_api_usage_once, make_grid
@@ -64,8 +64,6 @@ def generate_img(prompt, sampler, sample_steps, scale):
 
     caption_embs, emb_masks = llm_embed_model.get_text_embeddings(prompts)
     caption_embs = caption_embs[:, None]
-    masked_embs, keep_index = mask_feature(caption_embs, emb_masks)
-    masked_embs = masked_embs.cuda()
 
     null_y = model.y_embedder.y_embedding[None].repeat(len(prompts), 1, 1)[:, None]
 
@@ -75,8 +73,8 @@ def generate_img(prompt, sampler, sample_steps, scale):
         # Create sampling noise:
         n = len(prompts)
         z = torch.randn(n, 4, latent_size_h, latent_size_w, device=device).repeat(2, 1, 1, 1)
-        model_kwargs = dict(y=torch.cat([masked_embs, null_y[:, :, :keep_index, :]]),
-                            cfg_scale=scale, data_info={'img_hw': hw, 'aspect_ratio': ar})
+        model_kwargs = dict(y=torch.cat([caption_embs, null_y]),
+                            cfg_scale=scale, data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
         diffusion = IDDPM(str(sample_steps))
         samples = diffusion.p_sample_loop(
             model.forward_with_cfg, z.shape, z, clip_denoised=False, model_kwargs=model_kwargs, progress=True,
@@ -87,10 +85,10 @@ def generate_img(prompt, sampler, sample_steps, scale):
         # Create sampling noise:
         n = len(prompts)
         z = torch.randn(n, 4, latent_size_h, latent_size_w, device=device)
-        model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar})
+        model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
         dpm_solver = DPMS(model.forward_with_dpmsolver,
-                          condition=masked_embs,
-                          uncondition=null_y[:, :, :keep_index, :],
+                          condition=caption_embs,
+                          uncondition=null_y,
                           cfg_scale=scale,
                           model_kwargs=model_kwargs)
         samples = dpm_solver.sample(
@@ -117,15 +115,17 @@ def generate_img(prompt, sampler, sample_steps, scale):
         )[0]
     samples = vae.decode(samples / 0.18215).sample
     torch.cuda.empty_cache()
-    samples = resize_img(samples, hw, custom_hw)
+    samples = resize_and_crop_tensor(samples, custom_hw[0,1], custom_hw[0,0])
     display_model_info = f'Model path: {args.model_path},\nBase image size: {args.image_size}, \nSampling Algo: {sampler}'
     return ndarr_image(samples, normalize=True, value_range=(-1, 1)), prompt_show, display_model_info
 
 
 if __name__ == '__main__':
+    from diffusion.utils.logger import get_root_logger
     args = get_args()
     set_env()
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    logger = get_root_logger()
 
     assert args.image_size in [512, 1024], "We only provide pre-trained models for 256x256, 512x512 and 1024x1024 resolutions."
     lewei_scale = {512: 1, 1024: 2}
@@ -138,8 +138,8 @@ if __name__ == '__main__':
     state_dict = find_model(args.model_path)
     del state_dict['state_dict']['pos_embed']
     missing, unexpected = model.load_state_dict(state_dict['state_dict'], strict=False)
-    print('Missing keys: ', missing)
-    print('Unexpected keys', unexpected)
+    logger.warning(f'Missing keys: {missing}')
+    logger.warning(f'Unexpected keys: {unexpected}')
     model.eval()
     base_ratios = eval(f'ASPECT_RATIO_{args.image_size}_TEST')
 
@@ -158,7 +158,13 @@ if __name__ == '__main__':
             {args.image_size}px
         </div>
     """
-    description = '## If PixArt-α is helpful, please help to ⭐ the [Github Repo](https://github.com/PixArt-alpha/PixArt) and recommend it to your friends 😊'
+    DESCRIPTION = """# PixArt-Alpha 1024px
+            ## If PixArt-Alpha is helpful, please help to ⭐ the [Github Repo](https://github.com/PixArt-alpha/PixArt) and recommend it to your friends 😊'
+            #### [PixArt-Alpha 1024px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-XL-2-1024-MS](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) checkpoint.
+            #### English prompts ONLY; 提示词仅限英文
+            """
+    if not torch.cuda.is_available():
+        DESCRIPTION += "\n<p>Running on CPU 🥶 This demo does not work on CPU.</p>"
 
     demo = gr.Interface(fn=generate_img,
                         inputs=[Textbox(label="Note: If you want to specify a aspect ratio or determine a customized height and width, "
@@ -186,7 +192,7 @@ if __name__ == '__main__':
                                  Textbox(label="clean prompt"),
                                  Textbox(label="model info")],
                         title=title,
-                        description=description,
+                        description=DESCRIPTION,
                         examples=examples
                         )
-    demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True, enable_queue=True)
+    demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True)
