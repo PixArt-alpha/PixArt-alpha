@@ -174,8 +174,6 @@ def generate(
     if schedule == "SA-Solver":
         pipe.scheduler = SASolverScheduler.from_config(pipe.scheduler.config, algorithm_type='data_prediction')
 
-    # preparing for image size
-    bin_height, bin_width = prepare_prompt_hw(height=height, width=width, ratios=ASPECT_RATIO_1024_TEST)
     if not use_negative_prompt:
         negative_prompt = None  # type: ignore
     prompt, negative_prompt = apply_style(style, prompt, negative_prompt)
