@@ -32,6 +32,8 @@ Fast training diffusion models with transformers. You can find more visualizatio
 ---
 
 ## 🚩 **New Features/Updates**
+- ✅ Nov. 16, 2023. Diffusers support random resolution and batch images generation now. Besides, 
+running `Pixart` in under 8GB GPU VRAM is available in 🧨 [diffusers](https://github.com/huggingface/diffusers/blob/docs/8bit-inference-pixart/docs/source/en/api/pipelines/pixart.md).
 - ✅ Nov. 10, 2023. Support DALL-E 3 Consistency Decoder in 🧨 diffusers.
 - ✅ Nov. 06, 2023. Release pretrained weights with 🧨 diffusers integration, Hugging Face demo, and Google Colab example.
 - ✅ Nov. 03, 2023. Release the LLaVA-captioning inference code.
@@ -162,9 +164,8 @@ SA1B
 
 ```
 
-
 # 💻 How to Test
-Inference requires at least `23GB` of GPU memory using this repo, while `11GB` using in 🧨 [diffusers](#using-in--diffusers).
+Inference requires at least `23GB` of GPU memory using this repo, while `11GB and 8GB` using in 🧨 [diffusers](#using-in--diffusers).
 
 Currently support:
 - [x] [IDDPM](https://arxiv.org/abs/2102.09672)
@@ -172,7 +173,7 @@ Currently support:
 - [x] [SA-Solver (waiting for official release)](https://arxiv.org/abs/2309.05019)
 - [ ] [DPM-Solver-v3](https://arxiv.org/abs/2310.13268v2)
 
-## Quick start with [Gradio](https://www.gradio.app/guides/quickstart)
+## 1. Quick start with [Gradio](https://www.gradio.app/guides/quickstart)
 
 To get started, first install the required dependencies, then run on your local machine:
 
@@ -182,7 +183,8 @@ python scripts/interface.py --model_path path/to/model.pth --image_size=1024 --p
 Let's have a look at a simple example using the `http://your-server-ip:12345`.
 
 
-## Using in 🧨 diffusers
+## 2. Integration in diffusers
+### 1). Using in 🧨 diffusers
 
 Make sure you have the updated versions of the following libraries:
 
@@ -209,12 +211,14 @@ pipe.enable_model_cpu_offload()
 prompt = "A small cactus with a happy face in the Sahara desert."
 image = pipe(prompt).images[0]
 ```
-
+This integration allows running the pipeline with a batch size of 4 under 11 GBs of GPU VRAM. 
 Check out the [documentation](https://huggingface.co/docs/diffusers/main/en/api/pipelines/pixart) to learn more.
 
-This integration allows running the pipeline with a batch size of 4 under 11 GBs of GPU VRAM. GPU VRAM consumption under 10 GB will soon be supported, too. Stay tuned. 
+### 2). Running the `PixArtAlphaPipeline` in under 8GB GPU VRAM
 
-### Gradio with diffusers (Faster)
+GPU VRAM consumption under 8 GB is supported now, please refer to [documentation](asset/docs/pixart.md) for more information.
+
+### 3). Gradio with diffusers (Faster)
 
 To get started, first install the required dependencies, then run on your local machine:
 
@@ -226,15 +230,14 @@ Let's have a look at a simple example using the `http://your-server-ip:12345`.
 
 You can also click [here](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing) to have a free trial on Google Colab.
 
-## Online Demo [![Hugging Face PixArt](https://img.shields.io/static/v1?label=Demo&message=HuggingFace%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
+## 3. Online Demo [![Hugging Face PixArt](https://img.shields.io/static/v1?label=Demo&message=HuggingFace%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
 ![Online Demo sample](asset/images/sample.png)
 
 # ✏️ How to LLaVA captioning
-Thanks to the code base of [
-LLaVA-Lightning-MPT](https://huggingface.co/liuhaotian/LLaVA-Lightning-MPT-7B-preview), 
+Thanks to the code base of [LLaVA-Lightning-MPT](https://huggingface.co/liuhaotian/LLaVA-Lightning-MPT-7B-preview), 
 we can caption the LAION and SAM dataset with the following launching code:
 ```bash
-python scripts/VLM_caption_lightning.py --output output/dir/ --data-root data/root/path --index path/to/data.json
+python tools/VLM_caption_lightning.py --output output/dir/ --data-root data/root/path --index path/to/data.json
 ```
 We present auto-labeling with custom prompts for LAION (left) and SAM (right). The words highlighted in green represent the original caption in LAION, while those marked in red indicate the detailed captions labeled by LLaVA.
 
@@ -250,6 +253,7 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
 - [x] Diffusers version & Hugging Face demo
 - [x] Google Colab example
 - [x] DALLE3 VAE integration
+- [x] Inference under 8GB GPU VRAM with diffusers
 - [ ] SAM-LLaVA caption dataset
 - [ ] ControlNet code
 - [ ] SA-Solver code
