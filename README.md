@@ -32,7 +32,8 @@ Fast training diffusion models with transformers. You can find more visualizatio
 ---
 
 ## 🚩 **New Features/Updates**
-- ✅ Nov. 16, 2023. Running `Pixart` in under 8GB GPU VRAM is available in 🧨 [diffusers](https://github.com/huggingface/diffusers/blob/docs/8bit-inference-pixart/docs/source/en/api/pipelines/pixart.md).
+- ✅ Nov. 16, 2023. Diffusers support random resolution and batch images generation now. Besides, 
+running `Pixart` in under 8GB GPU VRAM is available in 🧨 [diffusers](https://github.com/huggingface/diffusers/blob/docs/8bit-inference-pixart/docs/source/en/api/pipelines/pixart.md).
 - ✅ Nov. 10, 2023. Support DALL-E 3 Consistency Decoder in 🧨 diffusers.
 - ✅ Nov. 06, 2023. Release pretrained weights with 🧨 diffusers integration, Hugging Face demo, and Google Colab example.
 - ✅ Nov. 03, 2023. Release the LLaVA-captioning inference code.

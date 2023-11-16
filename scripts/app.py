@@ -93,7 +93,7 @@ STYLE_NAMES = list(styles.keys())
 DEFAULT_STYLE_NAME = "(No style)"
 SCHEDULE_NAME = ["DPM-Solver", "SA-Solver"]
 DEFAULT_SCHEDULE_NAME = "DPM-Solver"
-
+NUM_IMAGES_PER_PROMPT = 1
 
 def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str, str]:
     p, n = styles.get(style_name, styles[DEFAULT_STYLE_NAME])
@@ -104,8 +104,7 @@ def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str
 
 if torch.cuda.is_available():
     pipe = PixArtAlphaPipeline.from_pretrained(
-        # "PixArt-alpha/PixArt-XL-2-1024-MS",
-        'output_cv/t2iditMS-xl2-img1024_singlebr_MJ1-5_ls2_vae_lr2e5_continue2/pixart_alpha_1024px_22000_diffusers', # for 98 demo
+        "PixArt-alpha/PixArt-XL-2-1024-MS",
         torch_dtype=torch.float16,
         variant="fp16",
         use_safetensors=True,
@@ -173,7 +172,7 @@ def generate(
         negative_prompt = None  # type: ignore
     prompt, negative_prompt = apply_style(style, prompt, negative_prompt)
 
-    image = pipe(
+    images = pipe(
         prompt=prompt,
         width=width,
         height=height,
@@ -181,23 +180,25 @@ def generate(
         num_inference_steps=num_inference_steps,
         generator=generator,
         use_resolution_binning=use_resolution_binning,
+        num_images_per_prompt=NUM_IMAGES_PER_PROMPT,
         output_type="pil",
-    ).images[0]
+    ).images
 
-    image_path = save_image(image)
-    print(image_path)
-    return [image_path], seed
+    image_paths = [save_image(img) for img in images]
+    print(image_paths)
+    return image_paths, seed
 
 
 examples = [
     "A small cactus with a happy face in the Sahara desert.",
+    "an astronaut sitting in a diner, eating fries, cinematic, analog film",
     "Pirate ship trapped in a cosmic maelstrom nebula, rendered in cosmic beach whirlpool engine, volumetric lighting, spectacular, ambient lights, light pollution, cinematic atmosphere, art nouveau style, illustration art artwork by SenseiJaye, intricate detail.",
     "stars, water, brilliantly, gorgeous large scale scene, a little girl, in the style of dreamy realism, light gold and amber, blue and pink, brilliantly illuminated in the background.",
-    "3d digital art of an adorable ghost, glowing within, holding a heart shaped pumpkin, Halloween, super cute, spooky haunted house background",
-    "beautiful lady, freckles, big smile, blue eyes, short ginger hair, dark makeup, wearing a floral blue vest top, soft light, dark grey background",
     "professional portrait photo of an anthropomorphic cat wearing fancy gentleman hat and jacket walking in autumn forest.",
-    "an astronaut sitting in a diner, eating fries, cinematic, analog film",
-    "Albert Einstein in a surrealist Cyberpunk 2077 world, hyperrealistic",
+    "beautiful lady, freckles, big smile, blue eyes, short ginger hair, dark makeup, wearing a floral blue vest top, soft light, dark grey background",
+    "Spectacular Tiny World in the Transparent Jar On the Table, interior of the Great Hall, Elaborate, Carved Architecture, Anatomy, Symetrical, Geometric and Parameteric Details, Precision Flat line Details, Pattern, Dark fantasy, Dark errie mood and ineffably mysterious mood, Technical design, Intricate Ultra Detail, Ornate Detail, Stylized and Futuristic and Biomorphic Details, Architectural Concept, Low contrast Details, Cinematic Lighting, 8k, by moebius, Fullshot, Epic, Fullshot, Octane render, Unreal ,Photorealistic, Hyperrealism",
+    "anthropomorphic profile of the white snow owl Crystal priestess , art deco painting, pretty and expressive eyes, ornate costume, mythical, ethereal, intricate, elaborate, hyperrealism, hyper detailed, 3D, 8K, Ultra Realistic, high octane, ultra resolution, amazing detail, perfection, In frame, photorealistic, cinematic lighting, visual clarity, shading , Lumen Reflections, Super-Resolution, gigapixel, color grading, retouch, enhanced, PBR, Blender, V-ray, Procreate, zBrush, Unreal Engine 5, cinematic, volumetric, dramatic, neon lighting, wide angle lens ,no digital painting blur",
+    "The parametric hotel lobby is a sleek and modern space with plenty of natural light. The lobby is spacious and open with a variety of seating options. The front desk is a sleek white counter with a parametric design. The walls are a light blue color with parametric patterns. The floor is a light wood color with a parametric design. There are plenty of plants and flowers throughout the space. The overall effect is a calm and relaxing space. occlusion, moody, sunset, concept art, octane rendering, 8k, highly detailed, concept art, highly detailed, beautiful scenery, cinematic, beautiful light, hyperreal, octane render, hdr, long exposure, 8K, realistic, fog, moody, fire and explosions, smoke, 50mm f2.8",
 ]
 
 with gr.Blocks(css="scripts/style.css") as demo:
@@ -217,7 +218,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
                 container=False,
             )
             run_button = gr.Button("Run", scale=0)
-        result = gr.Gallery(label="Result", columns=1, show_label=False)
+        result = gr.Gallery(label="Result", columns=NUM_IMAGES_PER_PROMPT, show_label=False)
     with gr.Accordion("Advanced options", open=False):
         with gr.Row():
             use_negative_prompt = gr.Checkbox(label="Use negative prompt", value=False, visible=False)
@@ -251,7 +252,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
             step=1,
             value=0,
         )
-        randomize_seed = gr.Checkbox(label="Randomize seed", value=False)
+        randomize_seed = gr.Checkbox(label="Randomize seed", value=True)
         with gr.Row(visible=True):
             width = gr.Slider(
                 label="Width",
