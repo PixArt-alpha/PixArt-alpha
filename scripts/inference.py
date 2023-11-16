@@ -15,7 +15,7 @@ from diffusers.models import AutoencoderKL
 
 from diffusion.model.utils import prepare_prompt_ar
 from diffusion import IDDPM, DPMS, SASolverSampler
-from scripts.download import find_model
+from tools.download import find_model
 from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2
 from diffusion.model.t5 import T5Embedder
 from diffusion.data.datasets import get_chunks
@@ -30,7 +30,7 @@ def get_args():
     parser.add_argument('--model_path', default='output/pretrained_models/PixArt-XL-2-1024x1024.pth', type=str)
     parser.add_argument('--bs', default=1, type=int)
     parser.add_argument('--cfg_scale', default=4.5, type=float)
-    parser.add_argument('--sampling_algo', default='dpms', type=str, choices=['iddpm', 'dpms'])
+    parser.add_argument('--sampling_algo', default='dpm-solver', type=str, choices=['iddpm', 'dpm-solver', 'sa-solver'])
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--dataset', default='custom', type=str)
     parser.add_argument('--step', default=-1, type=int)
@@ -87,7 +87,7 @@ def visualize(items, bs, sample_steps, cfg_scale):
                     device=device
                 )
                 samples, _ = samples.chunk(2, dim=0)  # Remove null class samples
-            elif args.sampling_algo == 'dpms':
+            elif args.sampling_algo == 'dpm-solver':
                 # Create sampling noise:
                 n = len(prompts)
                 z = torch.randn(n, 4, latent_size_h, latent_size_w, device=device)
@@ -110,7 +110,7 @@ def visualize(items, bs, sample_steps, cfg_scale):
                 model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
                 sa_solver = SASolverSampler(model.forward_with_dpmsolver, device=device)
                 samples = sa_solver.sample(
-                    S=30,
+                    S=25,
                     batch_size=n,
                     shape=(4, latent_size_h, latent_size_w),
                     eta=1,
@@ -135,12 +135,12 @@ if __name__ == '__main__':
     seed = args.seed
     set_env(seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    assert args.sampling_algo in ['iddpm', 'dpms']
+    assert args.sampling_algo in ['iddpm', 'dpm-solver', 'sa-solver']
 
     # only support fixed latent size currently
     latent_size = args.image_size // 8
     lewei_scale = {512: 1, 1024: 2}     # trick for positional embedding interpolation
-    sample_steps_dict = {'iddpm': 100, 'dpms': 20}
+    sample_steps_dict = {'iddpm': 100, 'dpm-solver': 20, 'sa-solver': 25}
     sample_steps = args.step if args.step != -1 else sample_steps_dict[args.sampling_algo]
 
     # model setting

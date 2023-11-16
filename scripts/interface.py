@@ -101,15 +101,15 @@ def generate_img(prompt, sampler, sample_steps, scale):
     elif sampler == 'sa-solver':
         # Create sampling noise:
         n = len(prompts)
-        model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar})
+        model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
         sa_solver = SASolverSampler(model.forward_with_dpmsolver, device=device)
         samples = sa_solver.sample(
-            S=25,
+            S=sample_steps,
             batch_size=n,
             shape=(4, latent_size_h, latent_size_w),
-            eta=0.3,
-            conditioning=masked_embs,
-            unconditional_conditioning=null_y[:, :, :keep_index, :],
+            eta=1,
+            conditioning=caption_embs,
+            unconditional_conditioning=null_y,
             unconditional_guidance_scale=scale,
             model_kwargs=model_kwargs,
         )[0]
@@ -162,6 +162,7 @@ if __name__ == '__main__':
             ## If PixArt-Alpha is helpful, please help to ⭐ the [Github Repo](https://github.com/PixArt-alpha/PixArt) and recommend it to your friends 😊'
             #### [PixArt-Alpha 1024px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-XL-2-1024-MS](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) checkpoint.
             #### English prompts ONLY; 提示词仅限英文
+            Don't want to queue? Try [OpenXLab](https://openxlab.org.cn/apps/detail/PixArt-alpha/PixArt-alpha) or [Google Colab Demo](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing).
             """
     if not torch.cuda.is_available():
         DESCRIPTION += "\n<p>Running on CPU 🥶 This demo does not work on CPU.</p>"
@@ -171,8 +172,7 @@ if __name__ == '__main__':
                                              "use --ar h:w (or --aspect_ratio h:w) or --hw h:w. If no aspect ratio or hw is given, all setting will be default.",
                                        placeholder="Please enter your prompt. \n"),
                                 gr.Radio(
-                                    choices=["dpm-solver"],
-                                    # choices=["iddpm", "dpm-solver"],
+                                    choices=["iddpm", "dpm-solver"],
                                     label=f"Sampler",
                                     interactive=True,
                                     value='dpm-solver',

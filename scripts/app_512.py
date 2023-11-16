@@ -16,6 +16,7 @@ from datetime import datetime
 from diffusion.data.datasets import ASPECT_RATIO_512_TEST
 from diffusion.model.utils import resize_and_crop_img
 from diffusers import ConsistencyDecoderVAE
+from diffusion.sa_solver_diffusers import SASolverScheduler
 
 
 DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/logo.png)
@@ -108,8 +109,7 @@ def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str
 
 if torch.cuda.is_available():
     pipe = PixArtAlphaPipeline.from_pretrained(
-        # "PixArt-alpha/PixArt-XL-2-512x512",
-        'output_cv/t2iditMS-xl2-img512_singlebr_MJ1-13_ls1_vae_lr2e5_continue2/pixart_alpha_512px_284000_diffusers',
+        "PixArt-alpha/PixArt-XL-2-512x512",
         torch_dtype=torch.float16,
         variant="fp16",
         use_safetensors=True,
@@ -171,8 +171,10 @@ def generate(
         width: int = 512,
         height: int = 512,
         schedule: str = 'DPM-Solver',
-        guidance_scale: float = 4.5,
-        num_inference_steps: int = 20,
+        dpms_guidance_scale: float = 4.5,
+        sas_guidance_scale: float = 3,
+        dpms_inference_steps: int = 20,
+        sas_inference_steps: int = 25,
         randomize_seed: bool = False,
         use_resolution_binning: bool = True,
         progress=gr.Progress(track_tqdm=True),
@@ -180,8 +182,13 @@ def generate(
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator().manual_seed(seed)
 
-    # preparing for image size
-    bin_height, bin_width = prepare_prompt_hw(height=height, width=width, ratios=ASPECT_RATIO_512_TEST)
+    num_inference_steps = dpms_inference_steps
+    guidance_scale = dpms_guidance_scale
+    if schedule == "SA-Solver":
+        pipe.scheduler = SASolverScheduler.from_config(pipe.scheduler.config, algorithm_type='data_prediction', tau_func=lambda t: 1 if 200 <= t <= 800 else 0, predictor_order=2, corrector_order=2)
+        num_inference_steps = sas_inference_steps
+        guidance_scale = sas_guidance_scale
+
     if not use_negative_prompt:
         negative_prompt = None  # type: ignore
     prompt, negative_prompt = apply_style(style, prompt, negative_prompt)
@@ -249,7 +256,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
             choices=SCHEDULE_NAME,
             value=DEFAULT_SCHEDULE_NAME,
             label="Sampler Schedule",
-            visible=False,
+            visible=True,
         )
         style_selection = gr.Radio(
             show_label=True,
@@ -289,19 +296,34 @@ with gr.Blocks(css="scripts/style.css") as demo:
                 value=512,
             )
         with gr.Row():
-            guidance_scale = gr.Slider(
-                label="Guidance scale",
+            dpms_guidance_scale = gr.Slider(
+                label="DPM-Solver Guidance scale",
                 minimum=1,
                 maximum=20,
                 step=0.1,
                 value=4.5,
             )
-            num_inference_steps = gr.Slider(
-                label="Number of inference steps",
+            dpms_inference_steps = gr.Slider(
+                label="DPM-Solver inference steps",
                 minimum=10,
                 maximum=100,
                 step=1,
                 value=20,
+            )
+        with gr.Row():
+            sas_guidance_scale = gr.Slider(
+                label="SA-Solver Guidance scale",
+                minimum=1,
+                maximum=20,
+                step=0.1,
+                value=3,
+            )
+            sas_inference_steps = gr.Slider(
+                label="SA-Solver inference steps",
+                minimum=10,
+                maximum=100,
+                step=1,
+                value=25,
             )
 
     gr.Examples(
@@ -335,8 +357,10 @@ with gr.Blocks(css="scripts/style.css") as demo:
             width,
             height,
             schedule,
-            guidance_scale,
-            num_inference_steps,
+            dpms_guidance_scale,
+            sas_guidance_scale,
+            dpms_inference_steps,
+            sas_inference_steps,
             randomize_seed,
         ],
         outputs=[result, seed],
