@@ -8,12 +8,12 @@ import torch
 from torchvision.utils import save_image
 from diffusion import IDDPM, DPMS
 from diffusers.models import AutoencoderKL
-from download import find_model
+from tools.download import find_model
 from datetime import datetime
 from typing import List, Union
 import gradio as gr
 from gradio.components import Textbox, Image
-from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor, mask_feature
+from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor
 from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2
 from diffusion.model.t5 import T5Embedder
 from torchvision.utils import _log_api_usage_once, make_grid

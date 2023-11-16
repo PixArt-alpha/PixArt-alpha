@@ -15,10 +15,10 @@ from diffusers.models import AutoencoderKL
 
 from diffusion.model.utils import prepare_prompt_ar
 from diffusion import IDDPM, DPMS
-from scripts.download import find_model
+from tools.download import find_model
 from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2
 from diffusion.model.t5 import T5Embedder
-from diffusion.data.datasets import ASPECT_RATIO_512_TEST, ASPECT_RATIO_1024_TEST, get_chunks
+from diffusion.data.datasets import get_chunks
 
 
 def get_args():

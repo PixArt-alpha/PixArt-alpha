@@ -19,9 +19,10 @@ from diffusers import ConsistencyDecoderVAE
 
 
 DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/logo.png)
-        # PixArt-Alpha 512px
-        #### [PixArt-Alpha 512px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-XL-2-512x512](https://huggingface.co/PixArt-alpha/PixArt-XL-2-512x512) checkpoint.
+        # PixArt-Alpha 1024px
+        #### [PixArt-Alpha 1024px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-XL-2-1024-MS](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) checkpoint.
         #### English prompts ONLY; 提示词仅限英文
+        Don't want to queue? Try [OpenXLab](https://openxlab.org.cn/apps/detail/PixArt-alpha/PixArt-alpha) or [Google Colab Demo](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing).
         """
 if not torch.cuda.is_available():
     DESCRIPTION += "\n<p>Running on CPU 🥶 This demo does not work on CPU.</p>"
@@ -171,22 +172,15 @@ def generate(
         guidance_scale: float = 4.5,
         num_inference_steps: int = 20,
         randomize_seed: bool = False,
-        use_bin_classifier: bool = True,
+        use_resolution_binning: bool = True,
         progress=gr.Progress(track_tqdm=True),
 ):
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator().manual_seed(seed)
 
-    # preparing for image size
-    bin_height, bin_width = prepare_prompt_hw(height=height, width=width, ratios=ASPECT_RATIO_512_TEST)
     if not use_negative_prompt:
         negative_prompt = None  # type: ignore
     prompt, negative_prompt = apply_style(style, prompt, negative_prompt)
-
-    if use_bin_classifier:
-        orig_height, orig_width = height, width
-        height, width = classify_height_width_bin(height, width, ratios=ASPECT_RATIO_512_TEST)
-
     image = pipe(
         prompt=prompt,
         width=width,
@@ -194,11 +188,10 @@ def generate(
         guidance_scale=guidance_scale,
         num_inference_steps=num_inference_steps,
         generator=generator,
+        use_resolution_binning=use_resolution_binning,
         output_type="pil",
     ).images[0]
 
-    if use_bin_classifier:
-        image = resize_and_crop_img(image, orig_width, orig_height)
     image_path = save_image(image)
     print(image_path)
     return [image_path], seed
