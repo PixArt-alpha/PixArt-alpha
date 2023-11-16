@@ -20,6 +20,7 @@ DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-a
         # PixArt-Alpha 1024px
         #### [PixArt-Alpha 1024px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-XL-2-1024-MS](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) checkpoint.
         #### English prompts ONLY; 提示词仅限英文
+        ### You can change the DPM-Solver inference steps from 10 to 20, if you didn't get satisfied results.
         Don't want to queue? Try [OpenXLab](https://openxlab.org.cn/apps/detail/PixArt-alpha/PixArt-alpha) or [Google Colab Demo](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing).
         """
 if not torch.cuda.is_available():
@@ -107,7 +108,6 @@ if torch.cuda.is_available():
     pipe = PixArtAlphaPipeline.from_pretrained(
         "PixArt-alpha/PixArt-XL-2-1024-MS",
         torch_dtype=torch.float16,
-        variant="fp16",
         use_safetensors=True,
     )
 
@@ -291,7 +291,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
                 minimum=10,
                 maximum=100,
                 step=1,
-                value=20,
+                value=10,
             )
         with gr.Row():
             sas_guidance_scale = gr.Slider(
