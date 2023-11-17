@@ -9,7 +9,7 @@ import random
 import gradio as gr
 import numpy as np
 import uuid
-from diffusers import ConsistencyDecoderVAE, PixArtAlphaPipeline
+from diffusers import ConsistencyDecoderVAE, PixArtAlphaPipeline, DPMSolverMultistepScheduler
 import torch
 from typing import Tuple
 from datetime import datetime
@@ -20,8 +20,8 @@ DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-a
         # PixArt-Alpha 1024px
         #### [PixArt-Alpha 1024px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-XL-2-1024-MS](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) checkpoint.
         #### English prompts ONLY; 提示词仅限英文
-        ### You can change the DPM-Solver inference steps from 10 to 20, if you didn't get satisfied results.
         Don't want to queue? Try [OpenXLab](https://openxlab.org.cn/apps/detail/PixArt-alpha/PixArt-alpha) or [Google Colab Demo](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing).
+        ### <span style='color: red;'>You may change the DPM-Solver inference steps from 10 to 20, if you didn't get satisfied results.
         """
 if not torch.cuda.is_available():
     DESCRIPTION += "\n<p>Running on CPU 🥶 This demo does not work on CPU.</p>"
@@ -144,13 +144,6 @@ def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
     return seed
 
 
-def classify_height_width_bin(height: int, width: int, ratios: dict):
-    ar = float(height / width)
-    closest_ratio = min(ratios.keys(), key=lambda ratio: abs(float(ratio) - ar))
-    default_hw = ratios[closest_ratio]
-    return int(default_hw[0]), int(default_hw[1])
-
-
 def generate(
         prompt: str,
         negative_prompt: str = "",
@@ -171,12 +164,18 @@ def generate(
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator().manual_seed(seed)
 
-    num_inference_steps = dpms_inference_steps
-    guidance_scale = dpms_guidance_scale
-    if schedule == "SA-Solver":
-        pipe.scheduler = SASolverScheduler.from_config(pipe.scheduler.config, algorithm_type='data_prediction', tau_func=lambda t: 1 if 200 <= t <= 800 else 0, predictor_order=2, corrector_order=2)
+    if schedule == 'DPM-Solver':
+        if not isinstance(pipe.scheduler, DPMSolverMultistepScheduler):
+            pipe.scheduler = DPMSolverMultistepScheduler()
+        num_inference_steps = dpms_inference_steps
+        guidance_scale = dpms_guidance_scale
+    elif schedule == "SA-Solver":
+        if not isinstance(pipe.scheduler, SASolverScheduler):
+            pipe.scheduler = SASolverScheduler.from_config(pipe.scheduler.config, algorithm_type='data_prediction', tau_func=lambda t: 1 if 200 <= t <= 800 else 0, predictor_order=2, corrector_order=2)
         num_inference_steps = sas_inference_steps
         guidance_scale = sas_guidance_scale
+    else:
+        raise ValueError(f"Unknown schedule: {schedule}")
 
     if not use_negative_prompt:
         negative_prompt = None  # type: ignore
@@ -189,8 +188,8 @@ def generate(
         guidance_scale=guidance_scale,
         num_inference_steps=num_inference_steps,
         generator=generator,
-        use_resolution_binning=use_resolution_binning,
         num_images_per_prompt=NUM_IMAGES_PER_PROMPT,
+        use_resolution_binning=use_resolution_binning,
         output_type="pil",
     ).images
 
@@ -250,7 +249,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
             label="Image Style",
         )
         negative_prompt = gr.Text(
-            label="Negative prompt (no use now)",
+            label="Negative prompt",
             max_lines=1,
             placeholder="Enter a negative prompt",
             visible=False,
@@ -282,14 +281,14 @@ with gr.Blocks(css="scripts/style.css") as demo:
             dpms_guidance_scale = gr.Slider(
                 label="DPM-Solver Guidance scale",
                 minimum=1,
-                maximum=20,
+                maximum=10,
                 step=0.1,
                 value=4.5,
             )
             dpms_inference_steps = gr.Slider(
                 label="DPM-Solver inference steps",
-                minimum=10,
-                maximum=100,
+                minimum=5,
+                maximum=40,
                 step=1,
                 value=10,
             )
@@ -297,14 +296,14 @@ with gr.Blocks(css="scripts/style.css") as demo:
             sas_guidance_scale = gr.Slider(
                 label="SA-Solver Guidance scale",
                 minimum=1,
-                maximum=20,
+                maximum=10,
                 step=0.1,
                 value=3,
             )
             sas_inference_steps = gr.Slider(
                 label="SA-Solver inference steps",
                 minimum=10,
-                maximum=100,
+                maximum=40,
                 step=1,
                 value=25,
             )

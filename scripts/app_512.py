@@ -9,13 +9,12 @@ import random
 import gradio as gr
 import numpy as np
 import uuid
-from diffusers import PixArtAlphaPipeline
+from diffusers import PixArtAlphaPipeline, ConsistencyDecoderVAE, DPMSolverMultistepScheduler
 import torch
 from typing import Tuple
 from datetime import datetime
 from diffusion.data.datasets import ASPECT_RATIO_512_TEST
 from diffusion.model.utils import resize_and_crop_img
-from diffusers import ConsistencyDecoderVAE
 from diffusion.sa_solver_diffusers import SASolverScheduler
 
 
@@ -182,12 +181,18 @@ def generate(
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator().manual_seed(seed)
 
-    num_inference_steps = dpms_inference_steps
-    guidance_scale = dpms_guidance_scale
-    if schedule == "SA-Solver":
-        pipe.scheduler = SASolverScheduler.from_config(pipe.scheduler.config, algorithm_type='data_prediction', tau_func=lambda t: 1 if 200 <= t <= 800 else 0, predictor_order=2, corrector_order=2)
+    if schedule == 'DPM-Solver':
+        if not isinstance(pipe.scheduler, DPMSolverMultistepScheduler):
+            pipe.scheduler = DPMSolverMultistepScheduler()
+        num_inference_steps = dpms_inference_steps
+        guidance_scale = dpms_guidance_scale
+    elif schedule == "SA-Solver":
+        if not isinstance(pipe.scheduler, SASolverScheduler):
+            pipe.scheduler = SASolverScheduler.from_config(pipe.scheduler.config, algorithm_type='data_prediction', tau_func=lambda t: 1 if 200 <= t <= 800 else 0, predictor_order=2, corrector_order=2)
         num_inference_steps = sas_inference_steps
         guidance_scale = sas_guidance_scale
+    else:
+        raise ValueError(f"Unknown schedule: {schedule}")
 
     if not use_negative_prompt:
         negative_prompt = None  # type: ignore
@@ -299,14 +304,14 @@ with gr.Blocks(css="scripts/style.css") as demo:
             dpms_guidance_scale = gr.Slider(
                 label="DPM-Solver Guidance scale",
                 minimum=1,
-                maximum=20,
+                maximum=10,
                 step=0.1,
                 value=4.5,
             )
             dpms_inference_steps = gr.Slider(
                 label="DPM-Solver inference steps",
-                minimum=10,
-                maximum=100,
+                minimum=5,
+                maximum=40,
                 step=1,
                 value=20,
             )
@@ -314,14 +319,14 @@ with gr.Blocks(css="scripts/style.css") as demo:
             sas_guidance_scale = gr.Slider(
                 label="SA-Solver Guidance scale",
                 minimum=1,
-                maximum=20,
+                maximum=10,
                 step=0.1,
                 value=3,
             )
             sas_inference_steps = gr.Slider(
                 label="SA-Solver inference steps",
                 minimum=10,
-                maximum=100,
+                maximum=40,
                 step=1,
                 value=25,
             )
