@@ -9,17 +9,18 @@ import datetime
 import time
 import warnings
 warnings.filterwarnings("ignore")  # ignore warning
+
+from mmcv.runner import LogBuffer
+from copy import deepcopy
+from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
+
 import torch
 import torch.nn as nn
 from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import DistributedType
-from diffusers.models import AutoencoderKL
 from torch.utils.data import RandomSampler
-from mmcv.runner import LogBuffer
-from copy import deepcopy
 
 from diffusion import IDDPM
-from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
 from diffusion.utils.dist_utils import synchronize, get_world_size, clip_grad_norm_
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 from diffusion.model.builder import build_model
@@ -27,7 +28,8 @@ from diffusion.utils.logger import get_root_logger
 from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 from diffusion.utils.lr_scheduler import build_lr_scheduler
-from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspectRatioBatchSampler
+from diffusion.model.t5 import T5Embedder
+from diffusion.utils.data_sampler import AspectRatioBatchSampler
 
 def set_fsdp_env():
     os.environ["ACCELERATE_USE_FSDP"] = 'true'
@@ -53,28 +55,24 @@ def train():
     start_step = start_epoch * len(train_dataloader)
     global_step = 0
     total_steps = len(train_dataloader) * config.num_epochs
+    # txt related
+    prompt = config.data.prompt if isinstance(config.data.prompt, list) else [config.data.prompt]
+    llm_embed_model = T5Embedder(device="cpu", local_cache=True, cache_dir='output/pretrained_models/t5_ckpts', torch_dtype=torch.float)
+    prompt_embs, attention_mask = llm_embed_model.get_text_embeddings(prompt)
+    prompt_embs, attention_mask = prompt_embs[None].cuda(), attention_mask[None].cuda()
+    del llm_embed_model
 
-    load_vae_feat = getattr(train_dataloader.dataset, 'load_vae_feat', False)
     # Now you train the model
     for epoch in range(start_epoch + 1, config.num_epochs + 1):
         data_time_start= time.time()
         data_time_all = 0
         for step, batch in enumerate(train_dataloader):
             data_time_all += time.time() - data_time_start
-            if load_vae_feat:
-                z = batch[0]
-            else:
-                with torch.no_grad():
-                    with torch.cuda.amp.autocast(enabled=config.mixed_precision == 'fp16'):
-                        posterior = vae.encode(batch[0]).latent_dist
-                        if config.sample_posterior:
-                            z = posterior.sample()
-                        else:
-                            z = posterior.mode()
+            z = batch[0]
             clean_images = z * config.scale_factor
-            y = batch[1]
-            y_mask = batch[2]
-            data_info = batch[3]
+            y = prompt_embs
+            y_mask = attention_mask
+            data_info = batch[1]
 
             # Sample a random timestep for each image
             bs = clean_images.shape[0]
@@ -98,7 +96,7 @@ def train():
             if grad_norm is not None:
                 logs.update(grad_norm=accelerator.gather(grad_norm).mean().item())
             log_buffer.update(logs)
-            if (step + 1) % config.log_interval == 0 or (step + 1) == 1:
+            if (step + 1) % config.log_interval == 0:
                 t = (time.time() - last_tic) / config.log_interval
                 t_d = data_time_all / config.log_interval
                 avg_time = (time.time() - time_start) / (global_step + 1)
@@ -106,7 +104,7 @@ def train():
                 eta_epoch = str(datetime.timedelta(seconds=int(avg_time * (len(train_dataloader) - step - 1))))
                 # avg_loss = sum(loss_buffer) / len(loss_buffer)
                 log_buffer.average()
-                info = f"Step/Epoch [{(epoch-1)*len(train_dataloader)+step+1}/{epoch}][{step + 1}/{len(train_dataloader)}]:total_eta: {eta}, " \
+                info = f"Steps [{(epoch-1)*len(train_dataloader)+step+1}][{step + 1}/{len(train_dataloader)}]:total_eta: {eta}, " \
                        f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, s:({model.module.h}, {model.module.w}), "
                 info += ', '.join([f"{k}:{v:.4f}" for k, v in log_buffer.output.items()])
                 logger.info(info)
@@ -153,12 +151,16 @@ def train():
 def parse_args():
     parser = argparse.ArgumentParser(description="Process some integers.")
     parser.add_argument("config", type=str, help="config")
-    parser.add_argument("--cloud", action='store_true', default=False, help="cloud or local machine")
     parser.add_argument('--work-dir', help='the dir to save logs and models')
     parser.add_argument('--resume-from', help='the dir to save logs and models')
     parser.add_argument('--local-rank', type=int, default=-1)
     parser.add_argument('--local_rank', type=int, default=-1)
     parser.add_argument('--debug', action='store_true')
+
+    parser.add_argument('--save_step', type=int, default=100)
+    parser.add_argument('--lr', type=float, default=5e-6)
+    parser.add_argument('--train_class', type=str)
+    parser.add_argument('--prompt', type=str, default='a photo of sks dog')
     args = parser.parse_args()
     return args
 
@@ -169,19 +171,19 @@ if __name__ == '__main__':
     if args.work_dir is not None:
         # update configs according to CLI args if args.work_dir is not None
         config.work_dir = args.work_dir
-    if args.cloud:
-        config.data_root = '/data/data'
     if args.resume_from is not None:
-        config.load_from = None
         config.resume_from = dict(
             checkpoint=args.resume_from,
             load_ema=False,
             resume_optimizer=True,
             resume_lr_scheduler=True)
     if args.debug:
-        config.log_interval = 20
-        config.train_batch_size = 8
-        config.valid_num = 100
+        config.log_interval = 1
+        config.train_batch_size = 1
+
+        config.save_model_steps=args.save_step
+        config.data.update({'prompt': [args.prompt], 'root': args.train_class})
+        config.optimizer.update({'lr': args.lr})
 
     os.umask(0o000)  # file permission: 666; dir permission: 777
     os.makedirs(config.work_dir, exist_ok=True)
@@ -232,7 +234,9 @@ if __name__ == '__main__':
                   "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config':config}
 
     # build models
-    train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
+    train_diffusion = IDDPM(str(config.train_sampling_steps))
+    eval_diffusion = IDDPM(str(config.eval_sampling_steps))
+
     model = build_model(config.model,
                         config.grad_checkpointing,
                         config.get('fp32_attention', False),
@@ -240,17 +244,17 @@ if __name__ == '__main__':
                         learn_sigma=learn_sigma,
                         pred_sigma=pred_sigma,
                         **model_kwargs).train()
-    logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
+    logger.info(f"{config.model} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
     model_ema = deepcopy(model).eval()
 
     if config.load_from is not None:
         missing, unexpected = load_checkpoint(config.load_from, model, load_ema=config.get('load_ema', False))
-        logger.warning(f'Missing keys: {missing}')
-        logger.warning(f'Unexpected keys: {unexpected}')
+        # model.reparametrize()
+        if accelerator.is_main_process:
+            print('Warning Missing keys: ', missing)
+            print('Warning Unexpected keys', unexpected)
 
     ema_update(model_ema, model, 0.)
-    if not config.data.load_vae_feat:
-        vae = AutoencoderKL.from_pretrained(config.vae_pretrained).cuda()
 
     # prepare for FSDP clip grad norm calculation
     if accelerator.distributed_type == DistributedType.FSDP:
@@ -258,13 +262,13 @@ if __name__ == '__main__':
             m.clip_grad_norm_ = types.MethodType(clip_grad_norm_, m)
 
     # build dataloader
+    logger.warning(f"Training prompt: {config.data['prompt']}, Training data class: {config.data['root']}")
     set_data_root(config.data_root)
     dataset = build_dataset(config.data, resolution=image_size, aspect_ratio_type=config.aspect_ratio_type)
     if config.multi_scale:
         batch_sampler = AspectRatioBatchSampler(sampler=RandomSampler(dataset), dataset=dataset,
                                                 batch_size=config.train_batch_size, aspect_ratios=dataset.aspect_ratio, drop_last=True,
-                                                ratio_nums=dataset.ratio_nums, config=config, valid_num=config.valid_num)
-        # used for balanced sampling
+                                                ratio_nums=dataset.ratio_nums, config=config, valid_num=1)
         # batch_sampler = BalancedAspectRatioBatchSampler(sampler=RandomSampler(dataset), dataset=dataset,
         #                                                 batch_size=config.train_batch_size, aspect_ratios=dataset.aspect_ratio,
         #                                                 ratio_nums=dataset.ratio_nums)
@@ -295,8 +299,9 @@ if __name__ == '__main__':
                                                            lr_scheduler=lr_scheduler,
                                                            )
 
-        logger.warning(f'Missing keys: {missing}')
-        logger.warning(f'Unexpected keys: {unexpected}')
+        if accelerator.is_main_process:
+            print('Warning Missing keys: ', missing)
+            print('Warning Unexpected keys', unexpected)
     # Prepare everything
     # There is no specific order to remember, you just need to unpack the
     # objects in the same order you gave them to the prepare method.

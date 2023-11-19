@@ -131,6 +131,7 @@ All models will be automatically downloaded. You can also choose to download man
 ALSO find all models in [OpenXLab_PixArt-alpha](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-alpha)
 
 # 🔥 How to Train
+## 1. PixArt Training
 Here we take SAM dataset training config as an example, but of course, you can also prepare your own dataset following this method.
 
 You **ONLY** need to change the **config** file in [config](./configs/pixart_config) and **dataloader** in [dataset](./diffusion/data/datasets).
@@ -163,6 +164,11 @@ SA1B
 │  │  │  ├──......
 
 ```
+
+## 2. PixArt + DreamBooth Training
+
+Following the `Pixart + DreamBooth` [training guidance](asset/docs/pixart-dreambooth.md)
+
 
 # 💻 How to Test
 Inference requires at least `23GB` of GPU memory using this repo, while `11GB and 8GB` using in 🧨 [diffusers](#using-in--diffusers).

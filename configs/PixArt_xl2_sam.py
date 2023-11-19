@@ -6,8 +6,8 @@ eval_batch_size = 16
 use_fsdp=False   # if use FSDP mode
 
 # model setting
-model = 'T2IDiT_XL_2'
-aspect_ratio_type = None         # base aspect ratio [ASPECT_RATIO_512 or ASPECT_RATIO_256]
+model = 'PixArt_XL_2'
+aspect_ratio_type = None         # base aspect ratio [ASPECT_RATIO_512 or ASPECT_RATIO_1024]
 multi_scale = False     # if use multiscale dataset model training
 lewei_scale = 1.0
 # training setting
