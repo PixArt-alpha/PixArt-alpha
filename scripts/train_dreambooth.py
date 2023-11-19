@@ -118,10 +118,9 @@ def train():
             data_time_start= time.time()
 
             synchronize()
-            # After each epoch you optionally sample some demo images with evaluate() and save the model
             if accelerator.is_main_process:
                 if ((epoch - 1) * len(train_dataloader) + step + 1) % config.save_model_steps == 0:
-                    os.umask(0o000)  # file permission: 666; dir permission: 777
+                    os.umask(0o000)
                     save_checkpoint(os.path.join(config.work_dir, 'checkpoints'),
                                     epoch=epoch,
                                     step=(epoch - 1) * len(train_dataloader) + step + 1,
@@ -133,10 +132,9 @@ def train():
             synchronize()
 
         synchronize()
-        # After each epoch you optionally sample some demo images with evaluate() and save the model
         if accelerator.is_main_process:
             if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
-                os.umask(0o000)  # file permission: 666; dir permission: 777
+                os.umask(0o000)
                 save_checkpoint(os.path.join(config.work_dir, 'checkpoints'),
                                 epoch=epoch,
                                 step=(epoch - 1) * len(train_dataloader) + step + 1,
@@ -185,7 +183,7 @@ if __name__ == '__main__':
         config.data.update({'prompt': [args.prompt], 'root': args.train_class})
         config.optimizer.update({'lr': args.lr})
 
-    os.umask(0o000)  # file permission: 666; dir permission: 777
+    os.umask(0o000)
     os.makedirs(config.work_dir, exist_ok=True)
 
     init_handler = InitProcessGroupKwargs()
