@@ -207,7 +207,7 @@ if __name__ == '__main__':
         mixed_precision=config.mixed_precision,
         gradient_accumulation_steps=config.gradient_accumulation_steps,
         log_with="tensorboard",
-        logging_dir=os.path.join(config.work_dir, "logs"),
+        project_dir=os.path.join(config.work_dir, "logs"),
         fsdp_plugin=fsdp_plugin,
         even_batches=even_batches,
         kwargs_handlers=[init_handler]
