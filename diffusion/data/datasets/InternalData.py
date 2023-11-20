@@ -46,7 +46,7 @@ class InternalData(Dataset):
         for json_file in image_list_json:
             meta_data = self.load_json(os.path.join(self.root, 'partition', json_file))
             self.ori_imgs_nums += len(meta_data)
-            meta_data_clean = [item for item in meta_data if (item['path'] not in noe and item['ratio'] <= 4)]
+            meta_data_clean = [item for item in meta_data if item['ratio'] <= 4]
             self.meta_data_clean.extend(meta_data_clean)
             self.img_samples.extend([os.path.join(self.root.replace('InternalData', "InternalImgs"), item['path']) for item in meta_data_clean])
             self.txt_feat_samples.extend([os.path.join(self.root, 'caption_features', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npz')) for item in meta_data_clean])
@@ -137,5 +137,8 @@ class InternalData(Dataset):
     def __len__(self):
         return len(self.img_samples)
 
-    def __getattr__(self, attr):
-        return None
+    def __getattr__(self, name):
+        if name == "set_epoch":
+            return lambda epoch: None
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+

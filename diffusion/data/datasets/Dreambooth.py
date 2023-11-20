@@ -71,8 +71,10 @@ class DreamBooth(Dataset):
     def __len__(self):
         return len(self.img_samples)
 
-    def __getattr__(self, attr):
-        return None
+    def __getattr__(self, name):
+        if name == "set_epoch":
+            return lambda epoch: None
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def get_data_info(self, idx):
         return {'height': self.resolution, 'width': self.resolution}
