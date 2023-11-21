@@ -1,4 +1,4 @@
-## SA-Solver: Stochastic Adams Solver for Fast Sampling of Diffusion Models (Neurips 2023) ['arxiv'](https://arxiv.org/pdf/2309.05019.pdf)
+## SA-Solver: Stochastic Adams Solver for Fast Sampling of Diffusion Models (Neurips 2023) [arxiv](https://arxiv.org/pdf/2309.05019.pdf)
 
 SA-Solver is a stochastic diffusion sampler based on Stochastic Adams Method. It is training-free and can be employed into pretrained diffusion models. It is a multistep SDE solver that can do fast stochastic sampling. 
 
