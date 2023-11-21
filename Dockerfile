@@ -5,8 +5,6 @@ FROM nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu22.04
 
 WORKDIR /workspace
 
-ADD . .
-
 RUN apt-get update && \
     apt-get install -y \
         git \
@@ -18,12 +16,14 @@ RUN apt-get update && \
         libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Who needs conda?
+ADD requirements.txt .
 
 RUN pip install torch==2.0.0+cu117 torchvision==0.15.1+cu117 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu117 && \
     pip install -r requirements.txt
 
-CMD "python scripts/interface.py --port=12345"
+ADD . .
+
+CMD ["/usr/bin/python", "/workspace/scripts/interface.py" ,"--port=12345", "--t5_path", "output/pretrained_models", "--model_path", "output/pretrained_models/PixArt-XL-2-1024-MS.pth"]
 
 # Build with
 # docker build . -t pixart
