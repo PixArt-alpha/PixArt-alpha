@@ -14,6 +14,7 @@ class NoiseScheduleVP:
             continuous_beta_1=20.,
             dtype=torch.float32,
     ):
+        """Thanks to DPM-Solver for their code base"""
         """Create a wrapper class for the forward SDE (VP type).
         ***
         Update: We support discrete-time diffusion models by implementing a picewise linear interpolation for log_alpha_t.
@@ -181,8 +182,9 @@ def model_wrapper(
         classifier_fn=None,
         classifier_kwargs={},
 ):
+    """Thanks to DPM-Solver for their code base"""
     """Create a wrapper function for the noise prediction model.
-    DPM-Solver needs to solve the continuous-time diffusion ODEs. For DPMs trained on discrete-time labels, we need to
+    SA-Solver needs to solve the continuous-time diffusion SDEs. For DPMs trained on discrete-time labels, we need to
     firstly wrap the model function to a noise prediction model that accepts the continuous time as the input.
     We support four types of the diffusion model by setting `model_type`:
         1. "noise": noise prediction model. (Trained by predicting noise).
@@ -233,7 +235,7 @@ def model_wrapper(
             t_input = get_model_input_time(t_continuous)
             return noise_pred(model, x, t_input, **model_kwargs)
     ``
-    where `t_continuous` is the continuous time labels (i.e. epsilon to T). And we use `model_fn` for DPM-Solver.
+    where `t_continuous` is the continuous time labels (i.e. epsilon to T). And we use `model_fn` for SA-Solver.
     ===============================================================
     Args:
         model: A diffusion model with the corresponding format described above.
@@ -331,6 +333,11 @@ class SASolver:
             thresholding_max_val=1.,
             dynamic_thresholding_ratio=0.995
     ):
+        """
+        Construct a SA-Solver
+        The default value for algorithm_type is "data_prediction" and we recommend not to change it to 
+        "noise_prediction". For details, please see Appendix A.2.4 in SA-Solver paper https://arxiv.org/pdf/2309.05019.pdf
+        """
 
         self.model = lambda x, t: model_fn(x, t.expand((x.shape[0])))
         self.noise_schedule = noise_schedule
@@ -408,7 +415,7 @@ class SASolver:
             t = self.noise_schedule.edm_inverse_sigma(sigma_steps)
             return t
         else:
-            raise ValueError("Unsupported skip_type {}, need to be 'logSNR' or 'time'".format(skip_type))
+            raise ValueError("Unsupported skip_type {}, need to be 'logSNR' or 'time' or 'karras'".format(skip_type))
 
     def denoise_to_zero_fn(self, x, s):
         """
@@ -419,6 +426,9 @@ class SASolver:
     def get_coefficients_exponential_negative(self, order, interval_start, interval_end):
         """
         Calculate the integral of exp(-x) * x^order dx from interval_start to interval_end
+        For calculating the coefficient of gradient terms after the lagrange interpolation,
+        see Eq.(15) and Eq.(18) in SA-Solver paper https://arxiv.org/pdf/2309.05019.pdf
+        For noise_prediction formula.
         """
         assert order in [0, 1, 2, 3], "order is only supported for 0, 1, 2 and 3"
 
@@ -439,6 +449,9 @@ class SASolver:
     def get_coefficients_exponential_positive(self, order, interval_start, interval_end, tau):
         """
         Calculate the integral of exp(x(1+tau^2)) * x^order dx from interval_start to interval_end
+        For calculating the coefficient of gradient terms after the lagrange interpolation,
+        see Eq.(15) and Eq.(18) in SA-Solver paper https://arxiv.org/pdf/2309.05019.pdf
+        For data_prediction formula.
         """
         assert order in [0, 1, 2, 3], "order is only supported for 0, 1, 2 and 3"
 
@@ -465,6 +478,7 @@ class SASolver:
     def lagrange_polynomial_coefficient(self, order, lambda_list):
         """
         Calculate the coefficient of lagrange polynomial
+        For lagrange interpolation
         """
         assert order in [0, 1, 2, 3]
         assert order == len(lambda_list) - 1
@@ -525,6 +539,9 @@ class SASolver:
                     ]
 
     def get_coefficients_fn(self, order, interval_start, interval_end, lambda_list, tau):
+        """
+        Calculate the coefficient of gradients.
+        """
         assert order in [1, 2, 3, 4]
         assert order == len(lambda_list), 'the length of lambda list must be equal to the order'
         coefficients = []
@@ -543,7 +560,9 @@ class SASolver:
         return coefficients
 
     def adams_bashforth_update(self, order, x, tau, model_prev_list, t_prev_list, noise, t):
-
+        """
+        SA-Predictor, without the "rescaling" trick in Appendix D in SA-Solver paper https://arxiv.org/pdf/2309.05019.pdf
+        """
         assert order in [1, 2, 3, 4], "order of stochastic adams bashforth method is only supported for 1, 2, 3 and 4"
 
         # get noise schedule
@@ -581,6 +600,9 @@ class SASolver:
         return x_t
 
     def adams_moulton_update(self, order, x, tau, model_prev_list, t_prev_list, noise, t):
+        """
+        SA-Corrector, without the "rescaling" trick in Appendix D in SA-Solver paper https://arxiv.org/pdf/2309.05019.pdf
+        """
 
         assert order in [1, 2, 3, 4], "order of stochastic adams bashforth method is only supported for 1, 2, 3 and 4"
 
@@ -620,6 +642,9 @@ class SASolver:
         return x_t
 
     def adams_bashforth_update_few_steps(self, order, x, tau, model_prev_list, t_prev_list, noise, t):
+        """
+        SA-Predictor, with the "rescaling" trick in Appendix D in SA-Solver paper https://arxiv.org/pdf/2309.05019.pdf
+        """
 
         assert order in [1, 2, 3, 4], "order of stochastic adams bashforth method is only supported for 1, 2, 3 and 4"
 
@@ -673,6 +698,9 @@ class SASolver:
         return x_t
 
     def adams_moulton_update_few_steps(self, order, x, tau, model_prev_list, t_prev_list, noise, t):
+        """
+        SA-Corrector, without the "rescaling" trick in Appendix D in SA-Solver paper https://arxiv.org/pdf/2309.05019.pdf
+        """
 
         assert order in [1, 2, 3, 4], "order of stochastic adams bashforth method is only supported for 1, 2, 3 and 4"
 
@@ -727,6 +755,12 @@ class SASolver:
     def sample_few_steps(self, x, tau, steps=5, t_start=None, t_end=None, skip_type='time', skip_order=1,
                          predictor_order=3, corrector_order=4, pc_mode='PEC', return_intermediate=False
                          ):
+        """
+        For the PC-mode, please refer to the wiki page 
+        https://en.wikipedia.org/wiki/Predictor%E2%80%93corrector_method#PEC_mode_and_PECE_mode
+        'PEC' needs one model evaluation per step while 'PECE' needs two model evaluations
+        We recommend use pc_mode='PEC' for NFEs is limited. 'PECE' mode is only for test with sufficient NFEs.
+        """
 
         skip_first_step = False
         skip_final_step = True
@@ -877,6 +911,12 @@ class SASolver:
     def sample_more_steps(self, x, tau, steps=20, t_start=None, t_end=None, skip_type='time', skip_order=1,
                           predictor_order=3, corrector_order=4, pc_mode='PEC', return_intermediate=False
                           ):
+        """
+        For the PC-mode, please refer to the wiki page 
+        https://en.wikipedia.org/wiki/Predictor%E2%80%93corrector_method#PEC_mode_and_PECE_mode
+        'PEC' needs one model evaluation per step while 'PECE' needs two model evaluations
+        We recommend use pc_mode='PEC' for NFEs is limited. 'PECE' mode is only for test with sufficient NFEs.
+        """
 
         skip_first_step = False
         skip_final_step = False
@@ -1026,6 +1066,19 @@ class SASolver:
     def sample(self, mode, x, tau, steps, t_start=None, t_end=None, skip_type='time', skip_order=1, predictor_order=3,
                corrector_order=4, pc_mode='PEC', return_intermediate=False
                ):
+        """
+        For the PC-mode, please refer to the wiki page 
+        https://en.wikipedia.org/wiki/Predictor%E2%80%93corrector_method#PEC_mode_and_PECE_mode
+        'PEC' needs one model evaluation per step while 'PECE' needs two model evaluations
+        We recommend use pc_mode='PEC' for NFEs is limited. 'PECE' mode is only for test with sufficient NFEs.
+
+        'few_steps' mode is recommended. The differences between 'few_steps' and 'more_steps' are as below:
+        1) 'few_steps' do not correct at final step and do not denoise to zero, while 'more_steps' do these two.
+        Thus the NFEs for 'few_steps' = steps, NFEs for 'more_steps' = steps + 2
+        For most of the experiments and tasks, we find these two operations do not have much help to sample quality.
+        2) 'few_steps' use a rescaling trick as in Appendix D in SA-Solver paper https://arxiv.org/pdf/2309.05019.pdf
+        We find it will slightly improve the sample quality especially in few steps.
+        """
         assert mode in ['few_steps', 'more_steps'], "mode must be either 'few_steps' or 'more_steps'"
         if mode == 'few_steps':
             return self.sample_few_steps(x=x, tau=tau, steps=steps, t_start=t_start, t_end=t_end, skip_type=skip_type,

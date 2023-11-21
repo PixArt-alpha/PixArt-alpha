@@ -177,7 +177,7 @@ Inference requires at least `23GB` of GPU memory using this repo, while `11GB an
 Currently support:
 - [x] [IDDPM](https://arxiv.org/abs/2102.09672)
 - [x] [DPM-Solver](https://arxiv.org/abs/2206.00927)
-- [x] [SA-Solver (waiting for official release)](https://arxiv.org/abs/2309.05019)
+- [x] [SA-Solver](https://arxiv.org/abs/2309.05019)
 - [ ] [DPM-Solver-v3](https://arxiv.org/abs/2310.13268v2)
 
 ## 1. Quick start with [Gradio](https://www.gradio.app/guides/quickstart)
@@ -212,12 +212,18 @@ pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-XL-2-1024-MS", t
 # If use DALL-E 3 Consistency Decoder
 # pipe.vae = ConsistencyDecoderVAE.from_pretrained("openai/consistency-decoder", torch_dtype=torch.float16)
 
+# If use SA-Solver sampler
+# from diffusion.sa_solver_diffusers import SASolverScheduler
+# pipe.scheduler = SASolverScheduler.from_config(pipe.scheduler.config)
+
 # Enable memory optimizations.
 pipe.enable_model_cpu_offload()
 
 prompt = "A small cactus with a happy face in the Sahara desert."
 image = pipe(prompt).images[0]
 ```
+Check out the [documentation](./asset/docs/sasolver.md) for more information abount SA-Solver Sampler.
+
 This integration allows running the pipeline with a batch size of 4 under 11 GBs of GPU VRAM. 
 Check out the [documentation](https://huggingface.co/docs/diffusers/main/en/api/pipelines/pixart) to learn more.
 
@@ -262,9 +268,10 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
 - [x] DALLE3 VAE integration
 - [x] Inference under 8GB GPU VRAM with diffusers
 - [x] Dreambooth Training code
+- [x] SA-Solver code
 - [ ] SAM-LLaVA caption dataset
 - [ ] ControlNet code
-- [ ] SA-Solver code
+
 
 [//]: # (.mp4)
 
