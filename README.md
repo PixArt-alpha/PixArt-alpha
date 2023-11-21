@@ -32,7 +32,8 @@ Fast training diffusion models with transformers. You can find more visualizatio
 ---
 
 ## 🚩 **New Features/Updates**
-- ✅ Nov. 19, 2023. Release `PixArt + Dreambooth` training scripts
+- ✅ Nov. 21, 2023. 💥 [SA-Sovler](https://arxiv.org/abs/2309.05019) official code first release [here](asset/docs/sasolver.md).
+- ✅ Nov. 19, 2023. Release `PixArt + Dreambooth` training scripts.
 - ✅ Nov. 16, 2023. Diffusers support `random resolution` and `batch images` generation now. Besides, 
 running `Pixart` in under 8GB GPU VRAM is available in 🧨 [diffusers](https://github.com/huggingface/diffusers/blob/docs/8bit-inference-pixart/docs/source/en/api/pipelines/pixart.md).
 - ✅ Nov. 10, 2023. Support DALL-E 3 Consistency Decoder in 🧨 diffusers.
