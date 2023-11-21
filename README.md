@@ -215,7 +215,7 @@ pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-XL-2-1024-MS", t
 
 # If use SA-Solver sampler
 # from diffusion.sa_solver_diffusers import SASolverScheduler
-# pipe.scheduler = SASolverScheduler.from_config(pipe.scheduler.config)
+# pipe.scheduler = SASolverScheduler.from_config(pipe.scheduler.config, algorithm_type='data_prediction')
 
 # Enable memory optimizations.
 pipe.enable_model_cpu_offload()
