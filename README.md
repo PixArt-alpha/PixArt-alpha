@@ -186,7 +186,7 @@ Currently support:
 To get started, first install the required dependencies. Make sure you've downloaded the [models](https://huggingface.co/PixArt-alpha/PixArt-alpha) to the output/pretrained_models folder, and then run on your local machine:
 
 ```bash
-python scripts/interface.py --port=12345
+DEMO_PORT=12345 python scripts/app.py
 ```
 
 As an alternative, a sample [Dockerfile](Dockerfile) is provided to make a runtime container that starts the Gradio app.
