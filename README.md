@@ -183,11 +183,19 @@ Currently support:
 
 ## 1. Quick start with [Gradio](https://www.gradio.app/guides/quickstart)
 
-To get started, first install the required dependencies, then run on your local machine:
+To get started, first install the required dependencies. Make sure you've downloaded the [models](https://huggingface.co/PixArt-alpha/PixArt-alpha) to the output/pretrained_models folder, and then run on your local machine:
 
 ```bash
-python scripts/interface.py --model_path path/to/model.pth --image_size=1024 --port=12345
+python scripts/interface.py --port=12345
 ```
+
+As an alternative, a sample [Dockerfile](Dockerfile) is provided to make a runtime container that starts the Gradio app.
+
+```bash
+docker build . -t pixart
+docker run --gpus all -it -p 12345:12345 -v <path_to_models>:/workspace/output/pretrained_models pixart
+```
+
 Let's have a look at a simple example using the `http://your-server-ip:12345`.
 
 

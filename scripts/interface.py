@@ -24,8 +24,8 @@ from asset.examples import examples
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--image_size', default=1024, type=int)
-    parser.add_argument('--model_path', default='output/pretrained_models/PixArt-XL-2-1024x1024.pth', type=str)
-    parser.add_argument('--t5_path', default='output/pretrained_models/t5_ckpts', type=str)
+    parser.add_argument('--model_path', default='output/pretrained_models/PixArt-XL-2-1024-MS.pth', type=str)
+    parser.add_argument('--t5_path', default='output/pretrained_models', type=str)
     parser.add_argument('--tokenizer_path', default='output/pretrained_models/sd-vae-ft-ema', type=str)
     parser.add_argument('--llm_model', default='t5', type=str)
     parser.add_argument('--port', default=7788, type=int)
