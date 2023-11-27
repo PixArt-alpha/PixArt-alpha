@@ -138,7 +138,7 @@ Here we take SAM dataset training config as an example, but of course, you can a
 
 You **ONLY** need to change the **config** file in [config](./configs/pixart_config) and **dataloader** in [dataset](./diffusion/data/datasets).
 ```bash
-python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 scripts/train.py configs/pixart_config/PixArt_xl2_img256_SAM.py --work-dir output/train_SAM_256
+python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 train_scripts/train.py configs/pixart_config/PixArt_xl2_img256_SAM.py --work-dir output/train_SAM_256
 ```
 
 The directory structure for SAM dataset is:
@@ -212,7 +212,6 @@ And then:
 
 ```python
 import torch
-import os
 from diffusers import PixArtAlphaPipeline, ConsistencyDecoderVAE, AutoencoderKL
 
 # You can replace the checkpoint id with "PixArt-alpha/PixArt-XL-2-512x512" too.
