@@ -34,7 +34,11 @@ Fast training diffusion models with transformers. You can find more visualizatio
 > <br>Huawei Noah’s Ark Lab, Dalian University of Technology, HKU, HKUST<br>
 
 ---
+## Breaking News 🔥🔥!!
+- (🔥 New) Nov. 27, 2023. 💥 <img src="asset/logo.png" width="10%" alt="" /> **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/hWT7caau" style="text-decoration:none;">
+<img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a> for discussions. Coders are welcome to contribute.
 
+---
 ## 🚩 **New Features/Updates**
 - ✅ Nov. 21, 2023. 💥 [SA-Sovler](https://arxiv.org/abs/2309.05019) official code first release [here](asset/docs/sasolver.md).
 - ✅ Nov. 19, 2023. Release `PixArt + Dreambooth` training scripts.
@@ -282,6 +286,7 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
 - [x] Inference under 8GB GPU VRAM with diffusers
 - [x] Dreambooth Training code
 - [x] SA-Solver code
+- [ ] PixArt-α-LCM will release soon
 - [ ] SAM-LLaVA caption dataset
 - [ ] ControlNet code
 
