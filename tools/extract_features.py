@@ -102,7 +102,7 @@ def extract_img_vae():
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test_class', default='action', type=str)
+    parser.add_argument("--multi_scale", action='store_true', default=False, help="multi-scale feature extraction")
     parser.add_argument('--start_index', default=0, type=int)
     parser.add_argument('--end_index', default=1000000, type=int)
     return parser.parse_args()
@@ -112,7 +112,10 @@ if __name__ == '__main__':
 
     args = get_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    image_resize = 512
+    if not args.multi_scale:
+        image_resize = 512
+    else:
+        raise ValueError('Multi-scale VAE feature will released soon')
     print('Extracting Image Resolution %s' % image_resize)
 
     # prepare extracted caption t5 features for training

@@ -280,6 +280,13 @@ Let's have a look at a simple example using the `http://your-server-ip:12345`.
 
 You can also click [here](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing) to have a free trial on Google Colab.
 
+### 4). Convert .pth checkpoint into diffusers version
+
+```bash
+python tools/convert_pth_to_diffusers.py --orig_ckpt_path path/to/pth --dump_path path/to/diffusers --only_transformer=True
+```
+
+
 ## 3. Online Demo [![Hugging Face PixArt](https://img.shields.io/static/v1?label=Demo&message=HuggingFace%20Gradio&color=orange)](https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha) 
 ![Online Demo sample](asset/images/sample.png)
 
@@ -292,6 +299,13 @@ python tools/VLM_caption_lightning.py --output output/dir/ --data-root data/root
 We present auto-labeling with custom prompts for LAION (left) and SAM (right). The words highlighted in green represent the original caption in LAION, while those marked in red indicate the detailed captions labeled by LLaVA.
 
 ![Dialog with LLaVA.](asset/images/LLaVA-dialog.png)
+
+# ✏️ How to extract T5 and VAE features
+
+Prepare T5 text feature and VAE image feature in advance will speed up the training process and save GPU memory.
+```bash
+python tools/extract_features.py
+```
 
 ## 💪To-Do List
 
