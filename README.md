@@ -12,12 +12,16 @@
   <a href="https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-alpha"><img src="https://img.shields.io/badge/Demo-OpenXLab-blueviolet"></a> &ensp;
   <a href="https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing"><img src="https://img.shields.io/static/v1?label=Free%20Trial&message=Google%20Colab&logo=google&color=orange"></a> &ensp;
   <a href="https://arxiv.org/abs/2310.00426"><img src="https://img.shields.io/static/v1?label=Paper&message=Arxiv&color=red&logo=arxiv"></a> &ensp;
+  <a href="https://discord.gg/hWT7caau"><img src="https://img.shields.io/static/v1?label=Discuss&message=Discord&color=purple&logo=discord"></a> &ensp;
 </div>
 
 ---
 
 This repo contains PyTorch model definitions, pre-trained weights and inference/sampling code for our paper exploring 
 Fast training diffusion models with transformers. You can find more visualizations on our [project page](https://pixart-alpha.github.io/).
+
+<img src="asset/logo.png" width="10%" alt="" /> **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/hWT7caau" style="text-decoration:none;">
+<img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a> for discussions. Coders are welcome to contribute.
 
 > [**PixArt-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis**](https://pixart-alpha.github.io/)<br>
 > [Junsong Chen*](https://lawrence-cj.github.io/), [Jincheng Yu*](https://lovesykun.cn/about.html), 
@@ -30,12 +34,16 @@ Fast training diffusion models with transformers. You can find more visualizatio
 > <br>Huawei Noah’s Ark Lab, Dalian University of Technology, HKU, HKUST<br>
 
 ---
+## Breaking News 🔥🔥!!
+- (🔥 New) Nov. 27, 2023. 💥 <img src="asset/logo.png" width="10%" alt="" /> **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/hWT7caau" style="text-decoration:none;">
+<img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a> for discussions. Coders are welcome to contribute.
 
+---
 ## 🚩 **New Features/Updates**
 - ✅ Nov. 21, 2023. 💥 [SA-Sovler](https://arxiv.org/abs/2309.05019) official code first release [here](asset/docs/sasolver.md).
 - ✅ Nov. 19, 2023. Release `PixArt + Dreambooth` training scripts.
 - ✅ Nov. 16, 2023. Diffusers support `random resolution` and `batch images` generation now. Besides, 
-running `Pixart` in under 8GB GPU VRAM is available in 🧨 [diffusers](https://github.com/huggingface/diffusers/blob/docs/8bit-inference-pixart/docs/source/en/api/pipelines/pixart.md).
+running `Pixart` in under 8GB GPU VRAM is available in 🧨 [diffusers](https://huggingface.co/docs/diffusers/main/en/api/pipelines/pixart).
 - ✅ Nov. 10, 2023. Support DALL-E 3 Consistency Decoder in 🧨 diffusers.
 - ✅ Nov. 06, 2023. Release pretrained weights with 🧨 diffusers integration, Hugging Face demo, and Google Colab example.
 - ✅ Nov. 03, 2023. Release the LLaVA-captioning inference code.
@@ -277,6 +285,7 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
 - [x] Inference under 8GB GPU VRAM with diffusers
 - [x] Dreambooth Training code
 - [x] SA-Solver code
+- [ ] PixArt-α-LCM will release soon
 - [ ] SAM-LLaVA caption dataset
 - [ ] ControlNet code
 
