@@ -80,20 +80,21 @@ We hope PixArt-α will provide new insights to the AIGC community and startups t
 
 # 🔥🔥🔥 Why PixArt-α? 
 ## Training Efficiency
-PixArt-α only takes 10.8% of Stable Diffusion v1.5's training time (675 vs. 6,250 A100 GPU days), saving nearly $300,000 ($26,000 vs. $320,000) and reducing 90% CO2 emissions. Moreover, compared with a larger SOTA model, RAPHAEL, our training cost is merely 1%.
-![Training Efficiency.](asset/images/efficiency.svg)
+PixArt-α only takes 12% of Stable Diffusion v1.5's training time (753 vs. 6,250 A100 GPU days), saving nearly $300,000 ($28,000 vs. $320,000) and reducing 90% CO2 emissions. Moreover, compared with a larger SOTA model, RAPHAEL, our training cost is merely 1%.
+![Training Efficiency.](asset/images/efficiency.png)
 
-| Method    | Type | #Params | #Images | A100 GPU days |
-|-----------|------|---------|---------|---------------|
-| DALL·E    | Diff | 12.0B   | 1.54B   |               |
-| GLIDE     | Diff | 5.0B    | 5.94B   |               |
-| LDM       | Diff | 1.4B    | 0.27B   |               |
-| DALL·E 2  | Diff | 6.5B    | 5.63B   | 41,66         |
-| SDv1.5    | Diff | 0.9B    | 3.16B   | 6,250         |
-| GigaGAN   | GAN  | 0.9B    | 0.98B   | 4,783         |
-| Imagen    | Diff | 3.0B    | 15.36B  | 7,132         |
-| RAPHAEL   | Diff | 3.0B    | 5.0B    | 60,000        |
-| PixArt-α  | Diff | 0.6B    | 0.025B  | 675           |
+| Method    | Type | #Params | #Images| FID-30K ↓        | A100 GPU days |
+|-----------|------|---------|--------|------------------|---------------|
+| DALL·E    | Diff | 12.0B   | 250M   | 27.50            |               |
+| GLIDE     | Diff | 5.0B    | 250M   | 12.24            |               |
+| LDM       | Diff | 1.4B    | 400M   | 12.64            |               |
+| DALL·E 2  | Diff | 6.5B    | 650M   | 10.39            | 41,66         |
+| SDv1.5    | Diff | 0.9B    | 2000M  | 9.62             | 6,250         |
+| GigaGAN   | GAN  | 0.9B    | 2700M  | 9.09             | 4,783         |
+| Imagen    | Diff | 3.0B    | 860M   | 7.27             | 7,132         |
+| RAPHAEL   | Diff | 3.0B    | 5000M+ | 6.61             | 60,000        |
+| PixArt-α  | Diff | 0.6B    | 25M    | 7.32 (zero-shot) | 753           |
+| PixArt-α  | Diff | 0.6B    | 25M    | 5.51 (COCO FT)   | 753           |
 
 ## High-quality Generation from PixArt-α
 
