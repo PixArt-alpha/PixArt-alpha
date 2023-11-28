@@ -155,22 +155,22 @@ The directory structure for SAM dataset is:
 cd ./data
 
 SA1B
-├──images/
+├──images/  (images are saved here)
 │  ├──sa_xxxxx.jpg
 │  ├──sa_xxxxx.jpg
 │  ├──......
-├──captions/
+├──captions/    (corresponding captions are saved here, same name as images)
 │  ├──sa_xxxxx.txt
 │  ├──sa_xxxxx.txt
-├──partition/
+├──partition/   (all image names are stored txt file where each line is a image name)
 │  ├──part0.txt
 │  ├──part1.txt
 │  ├──......
-├──caption_feature_wmask/
+├──caption_feature_wmask/   (run tools/extract_caption_feature.py to generate caption T5 features, same name as images except .npz extension)
 │  ├──sa_xxxxx.npz
 │  ├──sa_xxxxx.npz
 │  ├──......
-├──img_vae_feature/
+├──img_vae_feature/  (run tools/extract_img_vae_feature.py to generate image VAE features, same name as images except .npy extension)
 │  ├──train_vae_256/
 │  │  ├──noflip/
 │  │  │  ├──sa_xxxxx.npy
@@ -179,8 +179,7 @@ SA1B
 
 ```
 
-
-Here we prepare data_toy for better understanding
+**Here we prepare data_toy for better understanding**
 ```bash
 cd ./data
 
