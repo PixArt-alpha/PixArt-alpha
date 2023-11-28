@@ -158,6 +158,9 @@ SA1B
 │  ├──sa_xxxxx.jpg
 │  ├──sa_xxxxx.jpg
 │  ├──......
+├──captions/
+│  ├──sa_xxxxx.txt
+│  ├──sa_xxxxx.txt
 ├──partition/
 │  ├──part0.txt
 │  ├──part1.txt
@@ -174,6 +177,22 @@ SA1B
 │  │  │  ├──......
 
 ```
+
+
+Here we prepare data_toy for better understanding
+```bash
+cd ./data
+
+git lfs install
+git clone https://huggingface.co/datasets/PixArt-alpha/data_toy
+```
+Then, 
+[Here](https://huggingface.co/datasets/PixArt-alpha/data_toy/blob/main/part0.txt) is an example of partition/part0.txt file.
+
+---
+
+Besides, for json file guided [training](https://github.com/PixArt-alpha/PixArt-alpha/blob/fe0cb78065d64c18ecd8955a04e4f29138d47946/configs/pixart_config/PixArt_xl2_img1024_internalms.py#L3C2-L3C2),
+[here](https://huggingface.co/datasets/PixArt-alpha/data_toy/blob/main/data_info.json) is a toy json file for better understand.
 
 ## 2. PixArt + DreamBooth Training
 

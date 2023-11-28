@@ -20,12 +20,12 @@ from diffusers.models import AutoencoderKL
 
 def extract_caption_t5():
     t5 = T5Embedder(device="cuda", local_cache=True, cache_dir='data/t5_ckpts')
-    t5_save_root = 'data/InternalData_2k/t5_features'
+    t5_save_root = 'data/data_toy/caption_feature_wmask'
     t5_save_dir = t5_save_root
     os.makedirs(t5_save_dir, exist_ok=True)
     captions = set()
 
-    train_data_json = json.load(open('data/InternalData/InternalData_2k.json', 'r'))
+    train_data_json = json.load(open('data/data_toy/data_info.json', 'r'))
     train_data = train_data_json[args.start_index: args.end_index]
     with torch.no_grad():
         for item in tqdm(train_data):
@@ -53,10 +53,10 @@ def extract_caption_t5():
 def extract_img_vae():
     vae = AutoencoderKL.from_pretrained("output/pretrained_models/sd-vae-ft-ema").to(device)
 
-    train_data_json = json.load(open('data/InternalData/InternalData_2k.json', 'r'))
+    train_data_json = json.load(open('data/data_toy/data_info.json', 'r'))
     image_names = set()
 
-    vae_save_root = f'data/InternalData_2k/img_vae_features_{image_resize}'
+    vae_save_root = f'data/data_toy/img_vae_features_{image_resize}'
     os.umask(0o000)       # file permission: 666; dir permission: 777
     os.makedirs(vae_save_root, exist_ok=True)
 
@@ -86,7 +86,7 @@ def extract_img_vae():
         if os.path.exists(save_path):
             continue
         try:
-            img = Image.open(f'data/InternalData_imgs/{image_name}')
+            img = Image.open(f'data/data_toy/data_imgs/{image_name}')
             img = transform(img).to(device)[None]
 
             with torch.no_grad():

@@ -230,7 +230,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
         result = gr.Gallery(label="Result", columns=NUM_IMAGES_PER_PROMPT, show_label=False)
     with gr.Accordion("Advanced options", open=False):
         with gr.Row():
-            use_negative_prompt = gr.Checkbox(label="Use negative prompt", value=False, visible=False)
+            use_negative_prompt = gr.Checkbox(label="Use negative prompt", value=False, visible=True)
         schedule = gr.Radio(
             show_label=True,
             container=True,
@@ -252,7 +252,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
             label="Negative prompt",
             max_lines=1,
             placeholder="Enter a negative prompt",
-            visible=False,
+            visible=True,
         )
         seed = gr.Slider(
             label="Seed",
