@@ -2,15 +2,15 @@ from typing import Any, Iterator, Mapping, Union
 from torch import Tensor
 from torch.nn.modules.module import Module
 from torch.nn.parameter import Parameter
-from diffusion.model.nets import T2IMSDiTBlock, T2IDiTMS
+from diffusion.model.nets import PixArtMSBlock, PixArtMS
 from torch.nn import Module, Linear, init
 from copy import deepcopy
-from diffusion.model.nets.dit import get_2d_sincos_pos_embed
+from diffusion.model.nets.PixArt import get_2d_sincos_pos_embed
 import re
 import torch
 
-class ControlT2IDitBlock(Module):
-    def __init__(self, base_block: T2IMSDiTBlock) -> None:
+class ControlPixArtBlock(Module):
+    def __init__(self, base_block: PixArtMSBlock) -> None:
         super().__init__()
         self.base_block = base_block
         self.copied_block = deepcopy(base_block)
@@ -37,15 +37,15 @@ class ControlT2IDitBlock(Module):
             x = self.base_block(x, y, t, mask)
         return x + c if c is not None else x
 
-class ControlT2IDiT(Module):
-    def __init__(self, base_model: T2IDiTMS) -> None:
+class ControlPixArt(Module):
+    def __init__(self, base_model: PixArtMS) -> None:
         super().__init__()
         base_model.eval()
         for p in base_model.parameters():
             p.requires_grad_(False)
 
         for i in range(len(base_model.blocks)):
-            base_model.blocks[i] = ControlT2IDitBlock(base_model.blocks[i])
+            base_model.blocks[i] = ControlPixArtBlock(base_model.blocks[i])
 
         self.base_model = base_model
     

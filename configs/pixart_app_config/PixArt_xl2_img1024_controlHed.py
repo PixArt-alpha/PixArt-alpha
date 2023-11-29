@@ -1,4 +1,4 @@
-_base_ = ['../t2iDit_xl2_MJ.py']
+_base_ = ['../PixArt_xl2_internal.py']
 data_root = 'data'
 
 # data = dict(type='MJHed', root='MJData', image_list_json=['mj_4_new_debug.json'], transform='default_train', load_vae_feat=True)
@@ -8,7 +8,7 @@ image_size = 1024
 window_block_indexes = []
 window_size=0
 use_rel_pos=False
-model = 'T2IDiTMS_XL_2'
+model = 'PixArtMS_XL_2'
 fp32_attention = True
 load_from = 'output/t2iditMS-xl2-img1024_singlebr_MJ1-5_ls2_vae_lr2e5_continue/checkpoints/epoch_1_step_30000.pth'
 # load_from = None

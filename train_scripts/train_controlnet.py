@@ -35,13 +35,13 @@ from diffusion.utils.misc import set_random_seed, read_config, MoxingWorker, ini
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspectRatioBatchSampler
-from diffusion.model.nets import T2IDiTMS, ControlT2IDiT
+from diffusion.model.nets import PixArtMS, ControlPixArt
 
 def set_fsdp_env():
     os.environ["ACCELERATE_USE_FSDP"] = 'true'
     os.environ["FSDP_AUTO_WRAP_POLICY"] = 'TRANSFORMER_BASED_WRAP'
     os.environ["FSDP_BACKWARD_PREFETCH"] = 'BACKWARD_PRE'
-    os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = 'T2IDiTBlock'
+    os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = 'PixArtBlock'
 
 
 def ema_update(model_dest: nn.Module, model_src: nn.Module, rate):
@@ -250,7 +250,7 @@ if __name__ == '__main__':
     train_diffusion = IDDPM(str(config.train_sampling_steps))
     eval_diffusion = IDDPM(str(config.eval_sampling_steps))
 
-    model: T2IDiTMS = build_model(config.model,
+    model: PixArtMS = build_model(config.model,
                         config.grad_checkpointing,
                         config.get('fp32_attention', False),
                         input_size=latent_size,
@@ -265,7 +265,7 @@ if __name__ == '__main__':
             print('Warning Missing keys: ', missing)
             print('Warning Unexpected keys', unexpected)
 
-    model = ControlT2IDiT(model).train()
+    model = ControlPixArt(model).train()
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
 
     model_ema = deepcopy(model).eval()
