@@ -150,7 +150,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Process some integers.")
     parser.add_argument("config", type=str, help="config")
     parser.add_argument('--work-dir', help='the dir to save logs and models')
-    parser.add_argument('--resume-from', help='the dir to save logs and models')
+    parser.add_argument('--resume-from', help='the dir to resume the training')
+    parser.add_argument('--load-from', default=None, help='the dir to load a ckpt for training')
     parser.add_argument('--local-rank', type=int, default=-1)
     parser.add_argument('--local_rank', type=int, default=-1)
     parser.add_argument('--debug', action='store_true')
@@ -246,6 +247,8 @@ if __name__ == '__main__':
     model_ema = deepcopy(model).eval()
 
     if config.load_from is not None:
+        if args.load_from is not None:
+            config.load_from = args.load_from
         missing, unexpected = load_checkpoint(config.load_from, model, load_ema=config.get('load_ema', False))
         # model.reparametrize()
         if accelerator.is_main_process:

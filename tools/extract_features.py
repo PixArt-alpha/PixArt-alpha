@@ -37,7 +37,7 @@ def extract_caption_t5():
             if isinstance(caption, str):
                 caption = [caption]
 
-            save_path = os.path.join(t5_save_dir, '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npz'))
+            save_path = os.path.join(t5_save_dir, '_'.join(item['path'].rsplit('/', 1)).replace(args.img_extension, '.npz'))
             if os.path.exists(save_path):
                 continue
             try:
@@ -82,7 +82,7 @@ def extract_img_vae():
 
     os.umask(0o000)  # file permission: 666; dir permission: 777
     for image_name in tqdm(lines):
-        save_path = os.path.join(vae_save_dir, image_name.replace('.jpg', '.npy'))
+        save_path = os.path.join(vae_save_dir, image_name.replace(args.img_extension, '.npy'))
         if os.path.exists(save_path):
             continue
         try:
@@ -91,7 +91,7 @@ def extract_img_vae():
 
             with torch.no_grad():
                 posterior = vae.encode(img).latent_dist
-                z = torch.cat([posterior.mean, posterior.std], dim=1).detach().cpu().numpy()
+                z = torch.cat([posterior.mean, posterior.std], dim=1).detach().cpu().numpy().squeeze()
 
             np.save(save_path, z)
             print(save_path)
@@ -103,6 +103,7 @@ def extract_img_vae():
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--multi_scale", action='store_true', default=False, help="multi-scale feature extraction")
+    parser.add_argument('--img_extension', default='.png', type=str)
     parser.add_argument('--start_index', default=0, type=int)
     parser.add_argument('--end_index', default=1000000, type=int)
     return parser.parse_args()

@@ -17,6 +17,9 @@ from diffusers.models import AutoencoderKL
 from torch.utils.data import RandomSampler
 from mmcv.runner import LogBuffer
 from copy import deepcopy
+import numpy as np
+import torch.nn.functional as F
+from tqdm import tqdm
 
 from diffusion import IDDPM
 from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
@@ -28,6 +31,9 @@ from diffusion.utils.misc import set_random_seed, read_config, init_random_seed,
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspectRatioBatchSampler
+from diffusion.lcm_scheduler import LCMScheduler
+from torchvision.utils import save_image
+
 
 def set_fsdp_env():
     os.environ["ACCELERATE_USE_FSDP"] = 'true'
@@ -43,6 +49,87 @@ def ema_update(model_dest: nn.Module, model_src: nn.Module, rate):
         assert p_src is not p_dest
         p_dest.data.mul_(rate).add_((1 - rate) * p_src.data)
 
+
+def append_dims(x, target_dims):
+    """Appends dimensions to the end of a tensor until it has target_dims dimensions."""
+    dims_to_append = target_dims - x.ndim
+    if dims_to_append < 0:
+        raise ValueError(f"input has {x.ndim} dims but target_dims is {target_dims}, which is less")
+    return x[(...,) + (None,) * dims_to_append]
+
+
+# From LCMScheduler.get_scalings_for_boundary_condition_discrete
+def scalings_for_boundary_conditions(timestep, sigma_data=0.5, timestep_scaling=10.0):
+    c_skip = sigma_data**2 / ((timestep / 0.1) ** 2 + sigma_data**2)
+    c_out = (timestep / 0.1) / ((timestep / 0.1) ** 2 + sigma_data**2) ** 0.5
+    return c_skip, c_out
+
+
+def extract_into_tensor(a, t, x_shape):
+    b, *_ = t.shape
+    out = a.gather(-1, t)
+    return out.reshape(b, *((1,) * (len(x_shape) - 1)))
+
+
+class DDIMSolver:
+    def __init__(self, alpha_cumprods, timesteps=1000, ddim_timesteps=50):
+        # DDIM sampling parameters
+        step_ratio = timesteps // ddim_timesteps
+
+        self.ddim_timesteps = (np.arange(1, ddim_timesteps + 1) * step_ratio).round().astype(np.int64) - 1
+        self.ddim_alpha_cumprods = alpha_cumprods[self.ddim_timesteps]
+        self.ddim_alpha_cumprods_prev = np.asarray(
+            [alpha_cumprods[0]] + alpha_cumprods[self.ddim_timesteps[:-1]].tolist()
+        )
+        # convert to torch tensors
+        self.ddim_timesteps = torch.from_numpy(self.ddim_timesteps).long()
+        self.ddim_alpha_cumprods = torch.from_numpy(self.ddim_alpha_cumprods)
+        self.ddim_alpha_cumprods_prev = torch.from_numpy(self.ddim_alpha_cumprods_prev)
+
+    def to(self, device):
+        self.ddim_timesteps = self.ddim_timesteps.to(device)
+        self.ddim_alpha_cumprods = self.ddim_alpha_cumprods.to(device)
+        self.ddim_alpha_cumprods_prev = self.ddim_alpha_cumprods_prev.to(device)
+        return self
+
+    def ddim_step(self, pred_x0, pred_noise, timestep_index):
+        alpha_cumprod_prev = extract_into_tensor(self.ddim_alpha_cumprods_prev, timestep_index, pred_x0.shape)
+        dir_xt = (1.0 - alpha_cumprod_prev).sqrt() * pred_noise
+        x_prev = alpha_cumprod_prev.sqrt() * pred_x0 + dir_xt
+        return x_prev
+
+
+@torch.no_grad()
+def log_validation(model, step, device):
+    if hasattr(model, 'module'):
+        model = model.module
+    scheduler = LCMScheduler(beta_start=0.0001, beta_end=0.02, beta_schedule="linear", prediction_type="epsilon")
+    scheduler.set_timesteps(4, 50)
+    infer_timesteps = scheduler.timesteps
+
+    dog_embed = torch.load('data/tmp/dog.pth', map_location='cpu')
+    caption_embs, emb_masks = dog_embed['dog_text'].to(device), dog_embed['dog_mask'].to(device)
+    hw = torch.tensor([[1024, 1024]], dtype=torch.float, device=device).repeat(1, 1)
+    ar = torch.tensor([[1.]], device=device).repeat(1, 1)
+    # Create sampling noise:
+    infer_latents = torch.randn(1, 4, 1024, 1024, device=device)
+    model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
+    logger.info("Running validation... ")
+
+    # 7. LCM MultiStep Sampling Loop:
+    for i, t in tqdm(list(enumerate(infer_timesteps))):
+        ts = torch.full((1,), t, device=device, dtype=torch.long)
+
+        # model prediction (v-prediction, eps, x)
+        model_pred = model(infer_latents, ts, caption_embs, **model_kwargs)[:, :4]
+
+        # compute the previous noisy sample x_t -> x_t-1
+        infer_latents, denoised = scheduler.step(model_pred, i, t, infer_latents, return_dict=False)
+    samples = vae.decode(denoised / 0.18215).sample
+    torch.cuda.empty_cache()
+    save_image(samples[0], f'output_cv/vis/{step}.jpg', nrow=1, normalize=True, value_range=(-1, 1))
+
+
 def train():
     if config.get('debug_nan', False):
         DebugUnderflowOverflow(model)
@@ -55,6 +142,10 @@ def train():
     total_steps = len(train_dataloader) * config.num_epochs
 
     load_vae_feat = getattr(train_dataloader.dataset, 'load_vae_feat', False)
+
+    # Create uncond embeds for classifier free guidance
+    uncond_prompt_embeds = model.module.y_embedder.y_embedding.repeat(config.train_batch_size, 1, 1, 1)
+
     # Now you train the model
     for epoch in range(start_epoch + 1, config.num_epochs + 1):
         data_time_start= time.time()
@@ -71,27 +162,82 @@ def train():
                             z = posterior.sample()
                         else:
                             z = posterior.mode()
-            clean_images = z * config.scale_factor
+            latents = z * config.scale_factor
             y = batch[1]
             y_mask = batch[2]
             data_info = batch[3]
 
             # Sample a random timestep for each image
-            bs = clean_images.shape[0]
-            timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=clean_images.device).long()
             grad_norm = None
             with accelerator.accumulate(model):
                 # Predict the noise residual
                 optimizer.zero_grad()
-                loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info))
-                loss = loss_term['loss'].mean()
+                # Sample noise that we'll add to the latents
+                noise = torch.randn_like(latents)
+                bsz = latents.shape[0]
+
+                # Sample a random timestep for each image t_n ~ U[0, N - k - 1] without bias.
+                topk = config.train_sampling_steps // config.num_ddim_timesteps
+                index = torch.randint(0, config.num_ddim_timesteps, (bsz,), device=latents.device).long()
+                start_timesteps = solver.ddim_timesteps[index]
+                timesteps = start_timesteps - topk
+                timesteps = torch.where(timesteps < 0, torch.zeros_like(timesteps), timesteps)
+
+                # Get boundary scalings for start_timesteps and (end) timesteps.
+                c_skip_start, c_out_start = scalings_for_boundary_conditions(start_timesteps)
+                c_skip_start, c_out_start = [append_dims(x, latents.ndim) for x in [c_skip_start, c_out_start]]
+                c_skip, c_out = scalings_for_boundary_conditions(timesteps)
+                c_skip, c_out = [append_dims(x, latents.ndim) for x in [c_skip, c_out]]
+
+                # Sample a random guidance scale w from U[w_min, w_max] and embed it
+                # w = (config.w_max - config.w_min) * torch.rand((bsz,)) + config.w_min
+                w = config.cfg_scale * torch.ones((bsz,))
+                w = w.reshape(bsz, 1, 1, 1)
+                w = w.to(device=latents.device, dtype=latents.dtype)
+
+                # Get online LCM prediction on z_{t_{n + k}}, w, c, t_{n + k}
+                _, pred_x_0, noisy_model_input = train_diffusion.training_losses(model, latents, start_timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info), noise=noise)
+
+                model_pred = c_skip_start * noisy_model_input + c_out_start * pred_x_0
+
+                # Use the ODE solver to predict the kth step in the augmented PF-ODE trajectory after
+                # noisy_latents with both the conditioning embedding c and unconditional embedding 0
+                # Get teacher model prediction on noisy_latents and conditional embedding
+                with torch.no_grad():
+                    with torch.autocast("cuda"):
+                        cond_teacher_output, cond_pred_x0, _ = train_diffusion.training_losses(model_teacher, latents, start_timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info), noise=noise)
+
+                        # Get teacher model prediction on noisy_latents and unconditional embedding
+                        uncond_teacher_output, uncond_pred_x0, _ = train_diffusion.training_losses(model_teacher, latents, start_timesteps, model_kwargs=dict(y=uncond_prompt_embeds, mask=y_mask, data_info=data_info), noise=noise)
+
+                        # Perform "CFG" to get x_prev estimate (using the LCM paper's CFG formulation)
+                        pred_x0 = cond_pred_x0 + w * (cond_pred_x0 - uncond_pred_x0)
+                        pred_noise = cond_teacher_output + w * (cond_teacher_output - uncond_teacher_output)
+                        x_prev = solver.ddim_step(pred_x0, pred_noise, index)
+
+                # Get target LCM prediction on x_prev, w, c, t_n
+                with torch.no_grad():
+                    with torch.autocast("cuda", enabled=True):
+                        _, pred_x_0, _ = train_diffusion.training_losses(model_ema, x_prev.float(), timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info), skip_noise=True)
+
+                    target = c_skip * x_prev + c_out * pred_x_0
+
+                # Calculate loss
+                if config.loss_type == "l2":
+                    loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                elif config.loss_type == "huber":
+                    loss = torch.mean(torch.sqrt((model_pred.float() - target.float()) ** 2 + config.huber_c**2) - config.huber_c)
+
+                # Backpropagation on the online student model (`model`)
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
-                    grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.gradient_clip)
+                    accelerator.clip_grad_norm_(model.parameters(), config.gradient_clip)
                 optimizer.step()
                 lr_scheduler.step()
+                optimizer.zero_grad(set_to_none=True)
+
                 if accelerator.sync_gradients:
-                    ema_update(model_ema, model, config.ema_rate)
+                    ema_update(model_ema, model, config.ema_decay)
 
             lr = lr_scheduler.get_last_lr()[0]
             logs = {"loss": accelerator.gather(loss).mean().item()}
@@ -120,7 +266,9 @@ def train():
             data_time_start= time.time()
 
             synchronize()
+            torch.cuda.empty_cache()
             if accelerator.is_main_process:
+                # log_validation(model_ema, step, model.device)
                 if ((epoch - 1) * len(train_dataloader) + step + 1) % config.save_model_steps == 0:
                     os.umask(0o000)
                     save_checkpoint(os.path.join(config.work_dir, 'checkpoints'),
@@ -153,7 +301,8 @@ def parse_args():
     parser.add_argument("config", type=str, help="config")
     parser.add_argument("--cloud", action='store_true', default=False, help="cloud or local machine")
     parser.add_argument('--work-dir', help='the dir to save logs and models')
-    parser.add_argument('--resume-from', help='the dir to save logs and models')
+    parser.add_argument('--resume-from', help='the dir to resume the training')
+    parser.add_argument('--load-from', default=None, help='the dir to load a ckpt for training')
     parser.add_argument('--local-rank', type=int, default=-1)
     parser.add_argument('--local_rank', type=int, default=-1)
     parser.add_argument('--debug', action='store_true')
@@ -177,9 +326,10 @@ if __name__ == '__main__':
             resume_optimizer=True,
             resume_lr_scheduler=True)
     if args.debug:
-        config.log_interval = 20
-        config.train_batch_size = 8
+        config.log_interval = 1
+        config.train_batch_size = 11
         config.valid_num = 100
+        config.load_from = None
 
     os.umask(0o000)
     os.makedirs(config.work_dir, exist_ok=True)
@@ -230,7 +380,8 @@ if __name__ == '__main__':
                   "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config':config}
 
     # build models
-    train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
+    train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma,
+                            snr=config.snr_loss, return_startx=True)
     model = build_model(config.model,
                         config.grad_checkpointing,
                         config.get('fp32_attention', False),
@@ -239,14 +390,17 @@ if __name__ == '__main__':
                         pred_sigma=pred_sigma,
                         **model_kwargs).train()
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
-    model_ema = deepcopy(model).eval()
 
     if config.load_from is not None:
+        if args.load_from is not None:
+            config.load_from = args.load_from
         missing, unexpected = load_checkpoint(config.load_from, model, load_ema=config.get('load_ema', False))
         logger.warning(f'Missing keys: {missing}')
         logger.warning(f'Unexpected keys: {unexpected}')
 
-    ema_update(model_ema, model, 0.)
+    model_ema = deepcopy(model).eval()
+    model_teacher = deepcopy(model).eval()
+
     if not config.data.load_vae_feat:
         vae = AutoencoderKL.from_pretrained(config.vae_pretrained).cuda()
 
@@ -295,9 +449,13 @@ if __name__ == '__main__':
 
         logger.warning(f'Missing keys: {missing}')
         logger.warning(f'Unexpected keys: {unexpected}')
+
+    solver = DDIMSolver(train_diffusion.alphas_cumprod, timesteps=config.train_sampling_steps, ddim_timesteps=config.num_ddim_timesteps)
+    solver.to(accelerator.device)
     # Prepare everything
     # There is no specific order to remember, you just need to unpack the
     # objects in the same order you gave them to the prepare method.
-    model, model_ema = accelerator.prepare(model, model_ema)
+    model, model_ema, model_teacher = accelerator.prepare(model, model_ema, model_teacher)
+    # model, model_ema = accelerator.prepare(model, model_ema)
     optimizer, train_dataloader, lr_scheduler = accelerator.prepare(optimizer, train_dataloader, lr_scheduler)
     train()
