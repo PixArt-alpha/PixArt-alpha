@@ -32,8 +32,8 @@ def extract_caption_t5():
         for item in tqdm(train_data):
 
             caption = item['prompt'].strip()
-            if caption in captions:
-                continue
+            # if caption in captions:
+            #     continue
             captions.add(caption)
             if isinstance(caption, str):
                 caption = [caption]
