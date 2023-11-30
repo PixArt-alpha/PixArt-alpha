@@ -93,7 +93,7 @@ def extract_img_vae():
 
             with torch.no_grad():
                 posterior = vae.encode(img).latent_dist
-                z = torch.cat([posterior.mean, posterior.std], dim=1).detach().cpu().numpy()
+                z = torch.cat([posterior.mean, posterior.std], dim=1).detach().cpu().numpy().squeeze()
 
             np.save(save_path, z)
             print(save_path)
