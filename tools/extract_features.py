@@ -27,6 +27,7 @@ def extract_caption_t5():
 
     train_data_json = json.load(open(args.json_path, 'r'))
     train_data = train_data_json[args.start_index: args.end_index]
+    images_extension = "." + train_data[0]['path'].rsplit('.', 1)[-1]
     with torch.no_grad():
         for item in tqdm(train_data):
 
@@ -37,7 +38,7 @@ def extract_caption_t5():
             if isinstance(caption, str):
                 caption = [caption]
 
-            save_path = os.path.join(t5_save_dir, '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npz'))
+            save_path = os.path.join(t5_save_dir, '_'.join(item['path'].rsplit('/', 1)).replace(images_extension, '.npz'))
             if os.path.exists(save_path):
                 continue
             try:
@@ -84,7 +85,7 @@ def extract_img_vae():
 
     os.umask(0o000)  # file permission: 666; dir permission: 777
     for image_name in tqdm(lines):
-        save_path = os.path.join(vae_save_dir, image_name.replace('.jpg', '.npy'))
+        save_path = os.path.join(vae_save_dir, image_name.replace(images_extension, '.npy'))
         if os.path.exists(save_path):
             continue
         try:
