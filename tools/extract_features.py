@@ -19,13 +19,13 @@ from diffusers.models import AutoencoderKL
 
 
 def extract_caption_t5():
-    t5 = T5Embedder(device="cuda", local_cache=True, cache_dir='data/t5_ckpts')
-    t5_save_root = 'data/data_toy/caption_feature_wmask'
-    t5_save_dir = t5_save_root
+    t5 = T5Embedder(device="cuda", local_cache=True, cache_dir=f'{args.pretrained_models_dir}/t5_ckpts')
+    t5_save_dir = args.t5_save_root
     os.makedirs(t5_save_dir, exist_ok=True)
     captions = set()
 
-    train_data_json = json.load(open('data/data_toy/data_info.json', 'r'))
+
+    train_data_json = json.load(open(args.json_path, 'r'))
     train_data = train_data_json[args.start_index: args.end_index]
     with torch.no_grad():
         for item in tqdm(train_data):
@@ -51,12 +51,12 @@ def extract_caption_t5():
                 print(e)
 
 def extract_img_vae():
-    vae = AutoencoderKL.from_pretrained("output/pretrained_models/sd-vae-ft-ema").to(device)
+    vae = AutoencoderKL.from_pretrained(f'{args.pretrained_models_dir}/sd-vae-ft-ema').to(device)
 
-    train_data_json = json.load(open('data/data_toy/data_info.json', 'r'))
+    train_data_json = json.load(open(args.json_path, 'r'))
     image_names = set()
 
-    vae_save_root = f'data/data_toy/img_vae_features_{image_resize}'
+    vae_save_root = f'{args.vae_save_root}_{image_resize}'
     os.umask(0o000)       # file permission: 666; dir permission: 777
     os.makedirs(vae_save_root, exist_ok=True)
 
@@ -72,6 +72,8 @@ def extract_img_vae():
     lines.sort()
     lines = lines[args.start_index: args.end_index]
 
+    images_extension = "." + lines[0].rsplit('.', 1)[-1]
+
     transform = T.Compose([
         T.Lambda(lambda img: img.convert('RGB')),
         T.Resize(image_resize),  # Image.BICUBIC
@@ -86,7 +88,7 @@ def extract_img_vae():
         if os.path.exists(save_path):
             continue
         try:
-            img = Image.open(f'data/data_toy/data_imgs/{image_name}')
+            img = Image.open(f'{args.dataset_root}/{image_name}')
             img = transform(img).to(device)[None]
 
             with torch.no_grad():
@@ -105,6 +107,13 @@ def get_args():
     parser.add_argument("--multi_scale", action='store_true', default=False, help="multi-scale feature extraction")
     parser.add_argument('--start_index', default=0, type=int)
     parser.add_argument('--end_index', default=1000000, type=int)
+    
+    parser.add_argument('--json_path', required=True, type=str)
+    parser.add_argument('--t5_save_root', default='data/data_toy/caption_feature_wmask', type=str)
+    parser.add_argument('--vae_save_root', default='data/data_toy/img_vae_features', type=str)
+    parser.add_argument('--dataset_root', default='data/data_toy', type=str)
+
+    parser.add_argument('--pretrained_models_dir', default='output/pretrained_models', type=str)
     return parser.parse_args()
 
 
