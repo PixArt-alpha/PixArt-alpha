@@ -96,7 +96,6 @@ def extract_img_vae():
                 z = torch.cat([posterior.mean, posterior.std], dim=1).detach().cpu().numpy().squeeze()
 
             np.save(save_path, z)
-            print(save_path)
         except Exception as e:
             print(e)
             print(image_name)
