@@ -85,7 +85,7 @@ def extract_img_vae():
 
     os.umask(0o000)  # file permission: 666; dir permission: 777
     for image_name in tqdm(lines):
-        save_path = os.path.join(vae_save_dir, image_name.replace(images_extension, '.npy'))
+        save_path = os.path.join(vae_save_dir, '_'.join(image_name.rsplit('/', 1)).replace(images_extension, '.npy'))
         if os.path.exists(save_path):
             continue
         try:
