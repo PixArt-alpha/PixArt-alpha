@@ -22,7 +22,6 @@ def extract_caption_t5():
     t5 = T5Embedder(device="cuda", local_cache=True, cache_dir=f'{args.pretrained_models_dir}/t5_ckpts')
     t5_save_dir = args.t5_save_root
     os.makedirs(t5_save_dir, exist_ok=True)
-    captions = set()
 
 
     train_data_json = json.load(open(args.json_path, 'r'))
@@ -32,7 +31,6 @@ def extract_caption_t5():
         for item in tqdm(train_data):
 
             caption = item['prompt'].strip()
-            captions.add(caption)
             if isinstance(caption, str):
                 caption = [caption]
 
