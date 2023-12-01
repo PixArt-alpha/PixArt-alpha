@@ -22,19 +22,15 @@ def extract_caption_t5():
     t5 = T5Embedder(device="cuda", local_cache=True, cache_dir=f'{args.pretrained_models_dir}/t5_ckpts')
     t5_save_dir = args.t5_save_root
     os.makedirs(t5_save_dir, exist_ok=True)
-    captions = set()
 
 
     train_data_json = json.load(open(args.json_path, 'r'))
     train_data = train_data_json[args.start_index: args.end_index]
-    images_extension = "." + train_data[0]['path'].rsplit('.', 1)[-1]
+    _, images_extension = os.path.splitext(train_data[0]['path'])
     with torch.no_grad():
         for item in tqdm(train_data):
 
             caption = item['prompt'].strip()
-            # if caption in captions:
-            #     continue
-            captions.add(caption)
             if isinstance(caption, str):
                 caption = [caption]
 
@@ -57,7 +53,7 @@ def extract_img_vae():
     train_data_json = json.load(open(args.json_path, 'r'))
     image_names = set()
 
-    vae_save_root = f'{args.vae_save_root}_{image_resize}'
+    vae_save_root = f'{args.vae_save_root}_{image_resize}resolution'
     os.umask(0o000)       # file permission: 666; dir permission: 777
     os.makedirs(vae_save_root, exist_ok=True)
 
@@ -73,7 +69,7 @@ def extract_img_vae():
     lines.sort()
     lines = lines[args.start_index: args.end_index]
 
-    images_extension = "." + lines[0].rsplit('.', 1)[-1]
+    _, images_extension = os.path.splitext(lines[0])
 
     transform = T.Compose([
         T.Lambda(lambda img: img.convert('RGB')),
