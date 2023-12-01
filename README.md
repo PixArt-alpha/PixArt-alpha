@@ -42,6 +42,7 @@ At the same time, we update the codebase for better user experience and fix some
 
 ---
 ## 🚩 **New Features/Updates**
+- ✅ Dec. 01, 2023. Add a [Notebook folder](./notebooks) to help users get started with PixArt quickly! Thanks to @kopyl for his contribution!
 - ✅ Nov. 27, 2023. 💥 **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/hWT7caau" style="text-decoration:none;">
 <img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a> for discussions. Coders are welcome to contribute.
 - ✅ Nov. 21, 2023. 💥 [SA-Sovler](https://arxiv.org/abs/2309.05019) official code first release [here](asset/docs/sasolver.md).
