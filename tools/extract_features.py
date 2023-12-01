@@ -26,7 +26,7 @@ def extract_caption_t5():
 
     train_data_json = json.load(open(args.json_path, 'r'))
     train_data = train_data_json[args.start_index: args.end_index]
-    images_extension = "." + train_data[0]['path'].rsplit('.', 1)[-1]
+    _, images_extension = os.path.splitext(train_data[0]['path'])
     with torch.no_grad():
         for item in tqdm(train_data):
 
@@ -69,7 +69,7 @@ def extract_img_vae():
     lines.sort()
     lines = lines[args.start_index: args.end_index]
 
-    images_extension = "." + lines[0].rsplit('.', 1)[-1]
+    _, images_extension = os.path.splitext(lines[0])
 
     transform = T.Compose([
         T.Lambda(lambda img: img.convert('RGB')),
