@@ -8,7 +8,8 @@
 <div align="center">
   <a href="https://pixart-alpha.github.io/"><img src="https://img.shields.io/static/v1?label=Project%20Page&message=Github&color=blue&logo=github-pages"></a> &ensp;
   <a href="https://huggingface.co/docs/diffusers/main/en/api/pipelines/pixart"><img src="https://img.shields.io/static/v1?label=Usage&message=Diffusers&color=green&"></a> &ensp;
-  <a href="https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha"><img src="https://img.shields.io/static/v1?label=Demo&message=HuggingFace&color=yellow"></a> &ensp;
+  <a href="https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha"><img src="https://img.shields.io/static/v1?label=Demo PixArt&message=HuggingFace&color=yellow"></a> &ensp;
+  <a href="https://huggingface.co/spaces/PixArt-alpha/PixArt-LCM"><img src="https://img.shields.io/static/v1?label=Demo PixArt-LCM&message=HuggingFace&color=yellow"></a> &ensp;
   <a href="https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-alpha"><img src="https://img.shields.io/badge/Demo-OpenXLab-blueviolet"></a> &ensp;
   <a href="https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing"><img src="https://img.shields.io/static/v1?label=Free%20Trial&message=Google%20Colab&logo=google&color=orange"></a> &ensp;
   <a href="https://arxiv.org/abs/2310.00426"><img src="https://img.shields.io/static/v1?label=Paper&message=Arxiv&color=red&logo=arxiv"></a> &ensp;
@@ -35,11 +36,14 @@ Fast training diffusion models with transformers. You can find more visualizatio
 
 ---
 ## Breaking News 🔥🔥!!
-- (🔥 New) Nov. 27, 2023. 💥 <img src="asset/logo.png" width="10%" alt="" /> **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/hWT7caau" style="text-decoration:none;">
-<img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a> for discussions. Coders are welcome to contribute.
+- (🔥 New) Nov. 30, 2023. 💥 PixArt collaborates with [LCMs](https://github.com/luosiallen/latent-consistency-model) team to make the **fastest** [Training & Inference Text-to-Image Generation System](https://github.com/PixArt-alpha/PixArt-alpha).
+Here, [Training code](train_scripts/train_pixart_lcm.py) & [Inference code](scripts/inference_lcm.py) & [Weights](https://huggingface.co/PixArt-alpha/PixArt-LCM-XL-2-1024-MS) & [Demo](https://huggingface.co/spaces/PixArt-alpha/PixArt-LCM) are all released, we hope users will enjoy them. Refer to [docs](asset/docs/pixart_lcm.md) for more details.
+At the same time, we update the codebase for better user experience and fix some bugs in the newest version.
 
 ---
 ## 🚩 **New Features/Updates**
+- ✅ Nov. 27, 2023. 💥 **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/hWT7caau" style="text-decoration:none;">
+<img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a> for discussions. Coders are welcome to contribute.
 - ✅ Nov. 21, 2023. 💥 [SA-Sovler](https://arxiv.org/abs/2309.05019) official code first release [here](asset/docs/sasolver.md).
 - ✅ Nov. 19, 2023. Release `PixArt + Dreambooth` training scripts.
 - ✅ Nov. 16, 2023. Diffusers support `random resolution` and `batch images` generation now. Besides, 
@@ -147,7 +151,7 @@ Here we take SAM dataset training config as an example, but of course, you can a
 
 You **ONLY** need to change the **config** file in [config](./configs/pixart_config) and **dataloader** in [dataset](./diffusion/data/datasets).
 ```bash
-python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 scripts/train.py configs/pixart_config/PixArt_xl2_img256_SAM.py --work-dir output/train_SAM_256
+python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 train_scripts/train.py configs/pixart_config/PixArt_xl2_img256_SAM.py --work-dir output/train_SAM_256
 ```
 
 The directory structure for SAM dataset is:
@@ -198,6 +202,10 @@ Besides, for json file guided [training](https://github.com/PixArt-alpha/PixArt-
 
 Following the `Pixart + DreamBooth` [training guidance](asset/docs/pixart-dreambooth.md)
 
+## 3. PixArt +LCM Training
+
+Following the `PixArt + LCM` [training guidance](asset/docs/pixart_lcm.md)
+
 
 # 💻 How to Test
 Inference requires at least `23GB` of GPU memory using this repo, while `11GB and 8GB` using in 🧨 [diffusers](#using-in--diffusers).
@@ -239,11 +247,10 @@ And then:
 
 ```python
 import torch
-import os
 from diffusers import PixArtAlphaPipeline, ConsistencyDecoderVAE, AutoencoderKL
 
 # You can replace the checkpoint id with "PixArt-alpha/PixArt-XL-2-512x512" too.
-pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-XL-2-1024-MS", torch_dtype=torch.float16, variant="fp16", use_safetensors=True)
+pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-XL-2-1024-MS", torch_dtype=torch.float16, use_safetensors=True)
 
 # If use DALL-E 3 Consistency Decoder
 # pipe.vae = ConsistencyDecoderVAE.from_pretrained("openai/consistency-decoder", torch_dtype=torch.float16)
@@ -282,7 +289,7 @@ You can also click [here](https://colab.research.google.com/drive/1jZ5UZXk7tcpTf
 ### 4). Convert .pth checkpoint into diffusers version
 
 ```bash
-python tools/convert_pth_to_diffusers.py --orig_ckpt_path path/to/pth --dump_path path/to/diffusers --only_transformer=True
+python tools/convert_pixart_alpha_to_diffusers.py --image_size your_img_size --orig_ckpt_path path/to/pth --dump_path path/to/diffusers --only_transformer=True
 ```
 
 
@@ -319,7 +326,8 @@ python tools/extract_features.py
 - [x] Inference under 8GB GPU VRAM with diffusers
 - [x] Dreambooth Training code
 - [x] SA-Solver code
-- [ ] PixArt-α-LCM will release soon
+- [x] PixArt-α-LCM will release soon
+- [ ] PixArt-α-LCM-LoRA will release soon
 - [ ] SAM-LLaVA caption dataset
 - [ ] ControlNet code
 

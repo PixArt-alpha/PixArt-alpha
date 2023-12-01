@@ -54,7 +54,7 @@ class InternalDataMS(InternalData):
 
         image_list_json = image_list_json if isinstance(image_list_json, list) else [image_list_json]
         for json_file in image_list_json:
-            meta_data = self.load_json(os.path.join(self.root, 'partition', json_file))
+            meta_data = self.load_json(os.path.join(self.root, 'partition_filter', json_file))
             self.ori_imgs_nums += len(meta_data)
             meta_data_clean = [item for item in meta_data if item['ratio'] <= 4]
             self.meta_data_clean.extend(meta_data_clean)

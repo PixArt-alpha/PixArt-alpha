@@ -139,6 +139,7 @@ cython_debug
 .idea/
 cloud_tools/
 output/
+output_cv/
 
 # added by ylw
 *.pt

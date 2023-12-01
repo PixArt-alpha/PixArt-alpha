@@ -158,13 +158,15 @@ class GaussianDiffusion:
         model_mean_type,
         model_var_type,
         loss_type,
-        snr=False
+        snr=False,
+        return_startx=False,
     ):
 
         self.model_mean_type = model_mean_type
         self.model_var_type = model_var_type
         self.loss_type = loss_type
         self.snr = snr
+        self.return_startx = return_startx
 
         # Use float64 for accuracy.
         betas = np.array(betas, dtype=np.float64)
@@ -718,7 +720,7 @@ class GaussianDiffusion:
         output = th.where((t == 0), decoder_nll, kl)
         return {"output": output, "pred_xstart": out["pred_xstart"]}
 
-    def training_losses(self, model, x_start, t, model_kwargs=None, noise=None):
+    def training_losses(self, model, x_start, t, model_kwargs=None, noise=None, skip_noise=False):
         """
         Compute training losses for a single timestep.
         :param model: the model to evaluate loss on.
@@ -734,7 +736,10 @@ class GaussianDiffusion:
             model_kwargs = {}
         if noise is None:
             noise = th.randn_like(x_start)
-        x_t = self.q_sample(x_start, t, noise=noise)
+        if skip_noise:
+            x_t = x_start
+        else:
+            x_t = self.q_sample(x_start, t, noise=noise)
 
         terms = {}
 
@@ -755,6 +760,12 @@ class GaussianDiffusion:
                 output = model_output['x']
             else:
                 output = model_output
+
+            if self.return_startx and self.model_mean_type == ModelMeanType.EPSILON:
+                B, C = x_t.shape[:2]
+                assert output.shape == (B, C * 2, *x_t.shape[2:])
+                output = th.split(output, C, dim=1)[0]
+                return output, self._predict_xstart_from_eps(x_t=x_t, t=t, eps=output), x_t
 
             if self.model_var_type in [
                 ModelVarType.LEARNED,

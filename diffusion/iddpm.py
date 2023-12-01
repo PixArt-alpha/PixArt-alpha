@@ -17,6 +17,7 @@ def IDDPM(
         rescale_learned_sigmas=False,
         diffusion_steps=1000,
         snr=False,
+        return_startx=False,
 ):
     betas = gd.get_named_beta_schedule(noise_schedule, diffusion_steps)
     if use_kl:
@@ -47,5 +48,6 @@ def IDDPM(
         ),
         loss_type=loss_type,
         snr=snr,
+        return_startx=return_startx,
         # rescale_timesteps=rescale_timesteps,
     )
