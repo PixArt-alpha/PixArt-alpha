@@ -34,7 +34,6 @@ def extract_caption_t5():
             if isinstance(caption, str):
                 caption = [caption]
 
-
             save_path = os.path.join(t5_save_dir, '_'.join(item['path'].rsplit('/', 1)).replace(images_extension, '.npz'))
             if os.path.exists(save_path):
                 continue
@@ -102,7 +101,6 @@ def extract_img_vae():
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--multi_scale", action='store_true', default=False, help="multi-scale feature extraction")
-    parser.add_argument('--img_extension', default='.png', type=str)
     parser.add_argument('--start_index', default=0, type=int)
     parser.add_argument('--end_index', default=1000000, type=int)
     
