@@ -72,10 +72,10 @@ if __name__ == "__main__":
     model_names = set(model_names)
 
     # Download PixArt checkpoints
-    for model in model_names:
-        download_model(model)    # for vae_model in vae_models:
-    for vae_model in vae_models:
-        download_other(vae_model, vae_models, 'output/pretrained_models/')
     for t5_model in t5_models:
         download_other(t5_model, t5_models, 'output/pretrained_models/t5_ckpts')
+    for vae_model in vae_models:
+        download_other(vae_model, vae_models, 'output/pretrained_models/')
+    for model in model_names:
+        download_model(model)    # for vae_model in vae_models:
     print('Done.')
