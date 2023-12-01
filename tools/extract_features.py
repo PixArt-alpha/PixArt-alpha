@@ -57,7 +57,7 @@ def extract_img_vae():
     train_data_json = json.load(open(args.json_path, 'r'))
     image_names = set()
 
-    vae_save_root = f'{args.vae_save_root}_{image_resize}'
+    vae_save_root = f'{args.vae_save_root}_{image_resize}resolution'
     os.umask(0o000)       # file permission: 666; dir permission: 777
     os.makedirs(vae_save_root, exist_ok=True)
 
