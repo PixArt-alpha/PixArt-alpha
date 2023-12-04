@@ -10,6 +10,22 @@ an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express o
 specific language governing permissions and limitations under the License.
 -->
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/pixart-lcm2.png"  height=120>
+</p>
+
+## 🔥 Why Need PixArt-LCM
+Following [LCM LoRA](https://huggingface.co/blog/lcm_lora), we illustrative of the generation speed we achieve on various computers. Let us stress again how liberating it is to explore image generation so easily with PixArt-LCM.
+
+| Hardware                    | PixArt-LCM (4 steps)   | SDXL LoRA LCM (4 steps) | PixArt standard (14 steps) | SDXL standard (25 steps) |
+|-----------------------------|------------------------|-------------------------|----------------------------|---------------------------|
+| T4 (Google Colab Free Tier) | 3.3s                   | 8.4s                    | 16.0s                      | 26.5s                     |
+| A100 (80 GB)                | 0.51s                  | 1.2s                    | 2.2s                       | 3.8s                      |
+| V100 (32 GB)                | 1.2s                   | 1.2s                    | 5.5s                       | 7.7s                      |
+These tests were run with a batch size of 1 in all cases.
+
+For cards with a lot of capacity, such as A100, performance increases significantly when generating multiple images at once, which is usually the case for production workloads.
+
 ## Training the `PixArt + LCM` on your machine
 
 ```bash
@@ -39,7 +55,6 @@ And then:
 import torch
 from diffusers import PixArtAlphaPipeline, AutoencoderKL
 
-# You can replace the checkpoint id with "PixArt-alpha/PixArt-XL-2-512x512" too.
 pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-LCM-XL-2-1024-MS", torch_dtype=torch.float16, use_safetensors=True)
 
 # Enable memory optimizations.

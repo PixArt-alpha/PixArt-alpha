@@ -42,6 +42,7 @@ At the same time, we update the codebase for better user experience and fix some
 
 ---
 ## 🚩 **New Features/Updates**
+- ✅ Dec. 01, 2023. Add a [Notebook folder](./notebooks) to help users get started with PixArt quickly! Thanks to [@kopyl](https://github.com/kopyl) for his contribution!
 - ✅ Nov. 27, 2023. 💥 **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/hWT7caau" style="text-decoration:none;">
 <img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a> for discussions. Coders are welcome to contribute.
 - ✅ Nov. 21, 2023. 💥 [SA-Sovler](https://arxiv.org/abs/2309.05019) official code first release [here](asset/docs/sasolver.md).
@@ -122,7 +123,7 @@ PixArt-α only takes 12% of Stable Diffusion v1.5's training time (753 vs. 6,250
 
 # 🔧 Dependencies and Installation
 
-- Python >= 3.10 (Recommend to use [Anaconda](https://www.anaconda.com/download/#linux) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html))
+- Python >= 3.9 (Recommend to use [Anaconda](https://www.anaconda.com/download/#linux) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html))
 - [PyTorch >= 1.13.0+cu11.7](https://pytorch.org/)
 ```bash
 conda create -n pixart python==3.9.0
@@ -135,13 +136,13 @@ pip install -r requirements.txt
 # ⏬ Download Models
 All models will be automatically downloaded. You can also choose to download manually from this [url](https://huggingface.co/PixArt-alpha/PixArt-alpha).
 
-| Model            | #Params  | url                                                                             | Download in OpenXLab                           |
-|:-----------------|:---------|:--------------------------------------------------------------------------------|:-----------------------------------------------|
-| T5               | 4.3B     | [T5](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/t5-v1_1-xxl)    | [T5](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/t5-v1_1-xxl.zip)  |
-| VAE              | 80M      | [VAE](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/sd-vae-ft-ema) | [VAE](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/sd-vae-ft-ema.zip)   |
-| PixArt-α-SAM-256 | 0.6B     | [256](about:blank)                                                              | [256](about:blank)                          |
-| PixArt-α-512     | 0.6B     | [512](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-512x512.pth) or [diffuser version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-512x512)| [512](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-512x512.pth)   |
-| PixArt-α-1024    | 0.6B     | [1024](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-1024-MS.pth) or [diffuser version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS)|[1024](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-1024-MS.pth)  |
+| Model            | #Params  | url                                                                                                                                                                                             | Download in OpenXLab                           |
+|:-----------------|:---------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------|
+| T5               | 4.3B     | [T5](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/t5-v1_1-xxl)                                                                                                                    | [T5](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/t5-v1_1-xxl.zip)  |
+| VAE              | 80M      | [VAE](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/sd-vae-ft-ema)                                                                                                                 | [VAE](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/sd-vae-ft-ema.zip)   |
+| PixArt-α-SAM-256 | 0.6B     | [256](about:blank)                                                                                                                                                                              | [256](about:blank)                          |
+| PixArt-α-512     | 0.6B     | [PixArt-XL-2-512x512.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-512x512.pth) or [diffuser version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-512x512) | [512](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-512x512.pth)   |
+| PixArt-α-1024    | 0.6B     | [PixArt-XL-2-1024-MS.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-1024-MS.pth) or [diffuser version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) |[1024](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-1024-MS.pth)  |
 
 ALSO find all models in [OpenXLab_PixArt-alpha](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-alpha)
 
