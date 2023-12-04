@@ -94,7 +94,7 @@ def train():
                     ema_update(model_ema, model, config.ema_rate)
 
             lr = lr_scheduler.get_last_lr()[0]
-            logs = {"loss": accelerator.gather(loss).mean().item()}
+            logs = {args.loss_report_name: accelerator.gather(loss).mean().item()}
             if grad_norm is not None:
                 logs.update(grad_norm=accelerator.gather(grad_norm).mean().item())
             log_buffer.update(logs)
@@ -158,6 +158,25 @@ def parse_args():
     parser.add_argument('--local-rank', type=int, default=-1)
     parser.add_argument('--local_rank', type=int, default=-1)
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument(
+        "--report_to",
+        type=str,
+        default="tensorboard",
+        help=(
+            'The integration to report the results and logs to. Supported platforms are `"tensorboard"`'
+            ' (default), `"wandb"` and `"comet_ml"`. Use `"all"` to report to all integrations.'
+        ),
+    )
+    parser.add_argument(
+        "--tracker_project_name",
+        type=str,
+        default="text2image-fine-tune",
+        help=(
+            "The `project_name` argument passed to Accelerator.init_trackers for"
+            " more information see https://huggingface.co/docs/accelerate/v0.17.0/en/package_reference/accelerator#accelerate.Accelerator"
+        ),
+    )
+    parser.add_argument("--loss_report_name", type=str, default="loss")
     args = parser.parse_args()
     return args
 
@@ -205,7 +224,7 @@ if __name__ == '__main__':
     accelerator = Accelerator(
         mixed_precision=config.mixed_precision,
         gradient_accumulation_steps=config.gradient_accumulation_steps,
-        log_with="tensorboard",
+        log_with=args.report_to,
         project_dir=os.path.join(config.work_dir, "logs"),
         fsdp_plugin=fsdp_plugin,
         even_batches=even_batches,
@@ -285,7 +304,8 @@ if __name__ == '__main__':
     timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
 
     if accelerator.is_main_process:
-        accelerator.init_trackers(f"tb_{timestamp}")
+        tracker_config = dict(config)
+        accelerator.init_trackers(args.tracker_project_name, tracker_config)
 
     start_epoch = 0
     if config.resume_from is not None and config.resume_from['checkpoint'] is not None:
