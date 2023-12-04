@@ -38,7 +38,7 @@ def main(args):
     )
     converted_state_dict["adaln_single.emb.timestep_embedder.linear_2.bias"] = state_dict.pop("t_embedder.mlp.2.bias")
 
-    if args.image_size == 1024:
+    if args.image_size == 1024 and args.multi_scale_train:
         # Resolution.
         converted_state_dict["adaln_single.emb.resolution_embedder.linear_1.weight"] = state_dict.pop(
             "csize_embedder.mlp.0.weight"
@@ -180,6 +180,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("--multi_scale_train", default=None, type=str, required=False, help="If use Multi-Scale PixArtMS structure during training.")
     parser.add_argument("--orig_ckpt_path", default=None, type=str, required=False, help="Path to the checkpoint to convert.")
     parser.add_argument(
         "--image_size",
