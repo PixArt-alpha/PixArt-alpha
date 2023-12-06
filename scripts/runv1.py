@@ -13,7 +13,7 @@ def parse_args():
     # for train
     parser.add_argument("config", type=str, help="config")
     parser.add_argument('--work_dir', help='the dir to save logs and models')
-    parser.add_argument('--resume-from', help='the dir to save logs and models')
+    parser.add_argument('--resume_from', help='the dir to save logs and models')
     parser.add_argument('--model_name', help='load test checkpoint')
     parser.add_argument('--np', type=int, help="nproc_per_node, number of GPUs per node")  # specify when mode is multiple
     parser.add_argument("--test", action='store_true', default=False, help="if use test mode")
@@ -75,7 +75,7 @@ if not args.test:
     # 'scripts/train_imgnet.py',
     # 'scripts/train.py',
     if args.resume_from:
-        run_cmd += '--resume-from {} '.format(args.resume_from)
+        run_cmd += '--resume_from {} '.format(args.resume_from)
     # 'python -m torch.distributed.launch --nproc_per_node=8 --master_port=20004 --master_addr= --node_rank=0 scripts/train.py  --cloud --work_dir '
 
 else:
