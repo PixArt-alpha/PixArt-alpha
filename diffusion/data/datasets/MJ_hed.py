@@ -26,6 +26,7 @@ class MJHed(Dataset):
                  mask_ratio=0.0,
                  mask_type='null',
                  load_mask_index=False,
+                 train_ratio=1.0,
                  **kwargs):
         self.root = get_data_path(root)
         self.transform = transform
@@ -57,6 +58,13 @@ class MJHed(Dataset):
             self.txt_feat_samples.extend([os.path.join(self.root, 'caption_features', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npz')) for item in meta_data_clean])
             self.vae_feat_samples.extend([os.path.join(self.root, f'img_vae_features_{resolution}resolution/noflip', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npy')) for item in meta_data_clean])
             self.hed_feat_sample.extend([os.path.join(self.root, f'hed_feature_{resolution}', item['path'].replace('.png', '.npz')) for item in meta_data_clean])
+
+        total_sample = len(self.img_samples)
+        used_sample_num = int(total_sample * train_ratio)
+        self.img_samples = self.img_samples[:used_sample_num]
+        self.txt_feat_samples = self.txt_feat_samples[:used_sample_num]
+        self.vae_feat_samples = self.vae_feat_samples[:used_sample_num]
+        self.hed_feat_sample = self.hed_feat_sample[:used_sample_num]
 
         # Set loader and extensions
         if load_vae_feat:

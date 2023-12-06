@@ -166,7 +166,7 @@ def parse_args():
     parser.add_argument("config", type=str, help="config")
     parser.add_argument("--cloud", action='store_true', default=False, help="cloud or local machine")
     parser.add_argument('--work-dir', help='the dir to save logs and models')
-    parser.add_argument('--resume-from', help='the dir to save logs and models')
+    parser.add_argument('--resume_from', help='the dir to save logs and models')
     parser.add_argument('--local-rank', type=int, default=-1)
     parser.add_argument('--local_rank', type=int, default=-1)
     parser.add_argument('--debug', action='store_true')
@@ -263,7 +263,8 @@ if __name__ == '__main__':
                         pred_sigma=pred_sigma,
                         **model_kwargs)
 
-    if config.load_from is not None:
+    if config.load_from is not None and config.resume_from is None:
+        # load from pixart model
         missing, unexpected = load_checkpoint(config.load_from, model, load_ema=config.get('load_ema', False))
         # model.reparametrize()
         if accelerator.is_main_process:
@@ -291,7 +292,7 @@ if __name__ == '__main__':
 
     # build dataloader
     set_data_root(config.data_root)
-    dataset = build_dataset(config.data, resolution=image_size, aspect_ratio_type=config.aspect_ratio_type)
+    dataset = build_dataset(config.data, resolution=image_size, aspect_ratio_type=config.aspect_ratio_type, train_ratio=config.train_ratio)
     if config.multi_scale:
         batch_sampler = AspectRatioBatchSampler(sampler=RandomSampler(dataset), dataset=dataset,
                                                 batch_size=config.train_batch_size, aspect_ratios=dataset.aspect_ratio, drop_last=True,
@@ -302,7 +303,7 @@ if __name__ == '__main__':
         train_dataloader = build_dataloader(dataset, batch_sampler=batch_sampler, num_workers=config.num_workers)
     else:
         train_dataloader = build_dataloader(dataset, num_workers=config.num_workers, batch_size=config.train_batch_size, shuffle=True)
-    print("debug train_dataloader", train_dataloader)
+    # print("debug train_dataloader", train_dataloader)
 
     # build optimizer and lr scheduler
     lr_scale_ratio = 1

@@ -83,7 +83,7 @@ def generate_img(prompt, condition, strength, radius):
     else:
         c = None
 
-    save_promt_path = f'output/demo/online_demo_prompts/tested_prompts{datetime.now().date()}.txt'
+    save_promt_path = f'output_demo/demo/online_demo_prompts/tested_prompts{datetime.now().date()}.txt'
     with open(save_promt_path, 'a') as f:
         f.write(prompt + '\n')
     prompt_clean, prompt_show, hw, ar, custom_hw = prepare_prompt_ar(prompt, base_ratios, device=device)      # ar for aspect ratio
