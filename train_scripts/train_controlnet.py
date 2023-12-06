@@ -68,8 +68,6 @@ def train():
         data_time_start= time.time()
         data_time_all = 0
         for step, batch in enumerate(train_dataloader):
-            if step + 1 == 1320:
-                continue
             data_time_all += time.time() - data_time_start
             z = batch[0] # 4 x 4 x 128 x 128 z:vae output, 3x1024x1024->vae->4x128x128
             clean_images = z * config.scale_factor #vae needed scale factor
@@ -224,8 +222,7 @@ if __name__ == '__main__':
     if config.multi_scale:
         even_batches=False,
 
-    
-    ddp_kwargs = DistributedDataParallelKwargs()
+
     accelerator = Accelerator(
         mixed_precision=config.mixed_precision,
         gradient_accumulation_steps=config.gradient_accumulation_steps,
@@ -233,7 +230,7 @@ if __name__ == '__main__':
         project_dir=os.path.join(config.work_dir, "logs"),
         fsdp_plugin=fsdp_plugin,
         even_batches=even_batches,
-        kwargs_handlers=[init_handler, ddp_kwargs]
+        kwargs_handlers=[init_handler]
     )
 
     logger = get_root_logger(os.path.join(config.work_dir, 'train_log.log'))
@@ -266,15 +263,14 @@ if __name__ == '__main__':
                         pred_sigma=pred_sigma,
                         **model_kwargs)
 
-
-    model = ControlPixArtAll(model)
-
     if config.load_from is not None:
         missing, unexpected = load_checkpoint(config.load_from, model, load_ema=config.get('load_ema', False))
         # model.reparametrize()
         if accelerator.is_main_process:
             print('Warning Missing keys: ', missing)
             print('Warning Unexpected keys', unexpected)
+
+    model = ControlPixArtAll(model)
 
     model = model.train()
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
