@@ -180,7 +180,8 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--multi_scale_train", default=None, type=str, required=False, help="If use Multi-Scale PixArtMS structure during training.")
+    # set multi_scale_train=True if using PixArtMS structure during training else set it to False
+    parser.add_argument("--multi_scale_train", default=True, type=str, required=True, help="If use Multi-Scale PixArtMS structure during training.")
     parser.add_argument("--orig_ckpt_path", default=None, type=str, required=False, help="Path to the checkpoint to convert.")
     parser.add_argument(
         "--image_size",

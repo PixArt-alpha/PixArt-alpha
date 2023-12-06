@@ -304,7 +304,7 @@ You can also click [here](https://colab.research.google.com/drive/1jZ5UZXk7tcpTf
 ### 4). Convert .pth checkpoint into diffusers version
 
 ```bash
-python tools/convert_pixart_alpha_to_diffusers.py --image_size your_img_size --multi_scale_train True --orig_ckpt_path path/to/pth --dump_path path/to/diffusers --only_transformer=True
+python tools/convert_pixart_alpha_to_diffusers.py --image_size your_img_size --multi_scale_train (True if you use PixArtMS else False) --orig_ckpt_path path/to/pth --dump_path path/to/diffusers --only_transformer=True
 ```
 
 
