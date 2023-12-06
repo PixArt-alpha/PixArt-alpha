@@ -13,7 +13,8 @@ from typing import List, Union
 import gradio as gr
 from gradio.components import Textbox, Image, Slider
 from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor
-from diffusion.model.nets import PixArtMS_XL_2, ControlPixArt
+from diffusion.model.nets import PixArtMS_XL_2
+from diffusion.model.nets import ControlT2IDiT, ControlPixArt_Mid, ControlPixArtAll
 from diffusion.model.t5 import T5Embedder
 from torchvision.utils import _log_api_usage_once, make_grid
 from diffusion.data.datasets import *
@@ -73,7 +74,7 @@ def generate_img(prompt, condition, strength, radius):
         condition = hed(condition) * strength
         if radius > 0:
             condition[0] = TF.gaussian_blur(condition[0], kernel_size=radius)
-        TF.to_pil_image(condition[0]).save('/home/xieenze/test.png')
+        TF.to_pil_image(condition[0]).save('./test.png')
         # condition = TF.to_tensor(condition).unsqueeze(0).to(device)
         condition = TF.normalize(condition, [.5], [.5])
         condition = condition.repeat(1, 3, 1, 1)
@@ -145,7 +146,7 @@ def generate_img(prompt, condition, strength, radius):
         )[0]
     samples = vae.decode(samples / 0.18215).sample
     torch.cuda.empty_cache()
-    samples = resize_and_crop_tensor(samples, hw, custom_hw)
+    samples = resize_and_crop_tensor(samples, custom_hw[0,1], custom_hw[0,0])
     display_model_info = f'Model path: {args.model_path},\nBase image size: {args.image_size}, \nSampling Algo: {args.sampling_algo}'
     return ndarr_image(samples, normalize=True, value_range=(-1, 1)), prompt_show, display_model_info
 
@@ -158,7 +159,7 @@ if __name__ == '__main__':
     lewei_scale = {256: 1, 512: 1, 1024: 2}
     latent_size = args.image_size // 8
     model = PixArtMS_XL_2(input_size=latent_size, lewei_scale=lewei_scale[args.image_size])
-    model = ControlPixArt(model).to(device)
+    model = ControlPixArtAll(model).to(device)
     state_dict = find_model(args.model_path)['state_dict']
     if 'pos_embed' in state_dict:
         del state_dict['pos_embed']
@@ -175,7 +176,9 @@ if __name__ == '__main__':
     hed = HEDdetector(False).to(device)
 
     if args.llm_model == 't5':
+        print("begin load t5")
         llm_embed_model = T5Embedder(device=device, local_cache=True, cache_dir='data/t5_ckpts', torch_dtype=torch.float)
+        print("finish load t5")
     else:
         print(f'We support t5 only, please initialize the llm again')
         sys.exit()
@@ -187,6 +190,7 @@ if __name__ == '__main__':
     ])
     # prompt = 'dog'
     # generate_img(prompt)
+    
 
     demo = gr.Interface(fn=generate_img,
                         inputs=[Textbox(label="Begin your magic",
@@ -200,4 +204,4 @@ if __name__ == '__main__':
                         outputs=[Image(type="numpy", label="Img"),
                                  Textbox(label="clean prompt"),
                                  Textbox(label="model info")],)
-    demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True, enable_queue=True)
+    demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True, share=True)

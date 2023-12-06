@@ -64,103 +64,105 @@ def train():
     total_steps = len(train_dataloader) * config.num_epochs
 
     # Now you train the model
-    for epoch in range(start_epoch + 1, config.num_epochs + 1):
+    for epoch in range(1):
         data_time_start= time.time()
         data_time_all = 0
+
         for step, batch in enumerate(train_dataloader):
-            if step + 1 == 1320:
-                continue
+            if step % 100 == 0:
+                print("passed", step)
             data_time_all += time.time() - data_time_start
             z = batch[0] # 4 x 4 x 128 x 128 z:vae output, 3x1024x1024->vae->4x128x128
             clean_images = z * config.scale_factor #vae needed scale factor
             y = batch[1] # 4 x 1 x 120 x 4096 # T5 extracted feature of caption, 120 token, 4096
             y_mask = batch[2] # 4 x 1 x 1 x 120 # caption indicate whether valid
             data_info = batch[3]
+            
             # data_info contains img_hw, aspect_ratio, and mask(useless) and condition 
             # condition shape is 4 x 4 x 128 x 128
             
 
             # Sample a random timestep for each image
-            bs = clean_images.shape[0]
-            timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=clean_images.device).long()
-            grad_norm = None
-            with accelerator.accumulate(model):
-                # Predict the noise residual
-                optimizer.zero_grad()
-                loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info, c=data_info['condition'] * config.scale_factor))
-                loss = loss_term['loss'].mean()
-                accelerator.backward(loss)
-                # for n, p in model.named_parameters():
-                #     print(n, '\'s grad is None' if p.grad is None else f'\'s grad is not None {p.max()} {p.min()}')
-                if accelerator.sync_gradients:
-                    grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.gradient_clip)
-                optimizer.step()
-                lr_scheduler.step()
-                if accelerator.sync_gradients:
-                    ema_update(model_ema, model, config.ema_rate)
+        #     bs = clean_images.shape[0]
+        #     timesteps = torch.randint(0, config.train_sampling_steps, (bs,), device=clean_images.device).long()
+        #     grad_norm = None
+        #     with accelerator.accumulate(model):
+        #         # Predict the noise residual
+        #         optimizer.zero_grad()
+        #         loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info, c=data_info['condition'] * config.scale_factor))
+        #         loss = loss_term['loss'].mean()
+        #         accelerator.backward(loss)
+        #         # for n, p in model.named_parameters():
+        #         #     print(n, '\'s grad is None' if p.grad is None else f'\'s grad is not None {p.max()} {p.min()}')
+        #         if accelerator.sync_gradients:
+        #             grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.gradient_clip)
+        #         optimizer.step()
+        #         lr_scheduler.step()
+        #         if accelerator.sync_gradients:
+        #             ema_update(model_ema, model, config.ema_rate)
 
-            lr = lr_scheduler.get_last_lr()[0]
-            logs = {"loss": accelerator.gather(loss).mean().item()}
-            if grad_norm is not None:
-                logs.update(grad_norm=accelerator.gather(grad_norm).mean().item())
-            log_buffer.update(logs)
-            if (step + 1) % config.log_interval == 0 or (step + 1) == 1:
-                t = (time.time() - last_tic) / config.log_interval
-                t_d = data_time_all / config.log_interval
-                avg_time = (time.time() - time_start) / (global_step + 1)
-                eta = str(datetime.timedelta(seconds=int(avg_time * (total_steps - start_step - global_step - 1))))
-                eta_epoch = str(datetime.timedelta(seconds=int(avg_time * (len(train_dataloader) - step - 1))))
-                # avg_loss = sum(loss_buffer) / len(loss_buffer)
-                log_buffer.average()
-                info = f"Step/Epoch [{(epoch-1)*len(train_dataloader)+step+1}/{epoch}][{step + 1}/{len(train_dataloader)}]:total_eta: {eta}, " \
-                       f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, s:({model.module.h}, {model.module.w}), "
-                info += ', '.join([f"{k}:{v:.4f}" for k, v in log_buffer.output.items()])
-                logger.info(info)
-                last_tic = time.time()
-                log_buffer.clear()
-                data_time_all = 0
-            logs.update(lr=lr)
-            accelerator.log(logs, step=global_step + start_step)
+        #     lr = lr_scheduler.get_last_lr()[0]
+        #     logs = {"loss": accelerator.gather(loss).mean().item()}
+        #     if grad_norm is not None:
+        #         logs.update(grad_norm=accelerator.gather(grad_norm).mean().item())
+        #     log_buffer.update(logs)
+        #     if (step + 1) % config.log_interval == 0 or (step + 1) == 1:
+        #         t = (time.time() - last_tic) / config.log_interval
+        #         t_d = data_time_all / config.log_interval
+        #         avg_time = (time.time() - time_start) / (global_step + 1)
+        #         eta = str(datetime.timedelta(seconds=int(avg_time * (total_steps - start_step - global_step - 1))))
+        #         eta_epoch = str(datetime.timedelta(seconds=int(avg_time * (len(train_dataloader) - step - 1))))
+        #         # avg_loss = sum(loss_buffer) / len(loss_buffer)
+        #         log_buffer.average()
+        #         info = f"Step/Epoch [{(epoch-1)*len(train_dataloader)+step+1}/{epoch}][{step + 1}/{len(train_dataloader)}]:total_eta: {eta}, " \
+        #                f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, s:({model.module.h}, {model.module.w}), "
+        #         info += ', '.join([f"{k}:{v:.4f}" for k, v in log_buffer.output.items()])
+        #         logger.info(info)
+        #         last_tic = time.time()
+        #         log_buffer.clear()
+        #         data_time_all = 0
+        #     logs.update(lr=lr)
+        #     accelerator.log(logs, step=global_step + start_step)
 
-            # moxing tensorboard log to s3
-            # if (global_step + 1) % config.tensorboard_mox_interval == 0 and config.s3_work_dir is not None:
-            #     mox_worker.mox(os.path.join(config.work_dir, 'logs'),
-            #                    os.path.join(config.s3_work_dir, 'logs'))
-            if (global_step + 1) % 1000 == 0 and config.s3_work_dir is not None:
-                logger.info(f"s3_work_dir: {config.s3_work_dir}")
+        #     # moxing tensorboard log to s3
+        #     # if (global_step + 1) % config.tensorboard_mox_interval == 0 and config.s3_work_dir is not None:
+        #     #     mox_worker.mox(os.path.join(config.work_dir, 'logs'),
+        #     #                    os.path.join(config.s3_work_dir, 'logs'))
+        #     if (global_step + 1) % 1000 == 0 and config.s3_work_dir is not None:
+        #         logger.info(f"s3_work_dir: {config.s3_work_dir}")
 
-            global_step += 1
-            data_time_start= time.time()
+        #     global_step += 1
+        #     data_time_start= time.time()
 
-            synchronize()
-            # After each epoch you optionally sample some demo images with evaluate() and save the model
-            if accelerator.is_main_process:
-                if ((epoch - 1) * len(train_dataloader) + step + 1) % config.save_model_steps == 0:
-                    os.umask(0o000)  # file permission: 666; dir permission: 777
-                    save_checkpoint(os.path.join(config.work_dir, 'checkpoints'),
-                                    epoch=epoch,
-                                    step=(epoch - 1) * len(train_dataloader) + step + 1,
-                                    model=accelerator.unwrap_model(model),
-                                    model_ema=accelerator.unwrap_model(model_ema),
-                                    optimizer=optimizer,
-                                    lr_scheduler=lr_scheduler
-                                    )
-            synchronize()
+        #     synchronize()
+        #     # After each epoch you optionally sample some demo images with evaluate() and save the model
+        #     if accelerator.is_main_process:
+        #         if ((epoch - 1) * len(train_dataloader) + step + 1) % config.save_model_steps == 0:
+        #             os.umask(0o000)  # file permission: 666; dir permission: 777
+        #             save_checkpoint(os.path.join(config.work_dir, 'checkpoints'),
+        #                             epoch=epoch,
+        #                             step=(epoch - 1) * len(train_dataloader) + step + 1,
+        #                             model=accelerator.unwrap_model(model),
+        #                             model_ema=accelerator.unwrap_model(model_ema),
+        #                             optimizer=optimizer,
+        #                             lr_scheduler=lr_scheduler
+        #                             )
+        #     synchronize()
 
-        synchronize()
-        # After each epoch you optionally sample some demo images with evaluate() and save the model
-        if accelerator.is_main_process:
-            if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
-                os.umask(0o000)  # file permission: 666; dir permission: 777
-                save_checkpoint(os.path.join(config.work_dir, 'checkpoints'),
-                                epoch=epoch,
-                                step=(epoch - 1) * len(train_dataloader) + step + 1,
-                                model=accelerator.unwrap_model(model),
-                                model_ema=accelerator.unwrap_model(model_ema),
-                                optimizer=optimizer,
-                                lr_scheduler=lr_scheduler
-                                )
-        synchronize()
+        # synchronize()
+        # # After each epoch you optionally sample some demo images with evaluate() and save the model
+        # if accelerator.is_main_process:
+        #     if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
+        #         os.umask(0o000)  # file permission: 666; dir permission: 777
+        #         save_checkpoint(os.path.join(config.work_dir, 'checkpoints'),
+        #                         epoch=epoch,
+        #                         step=(epoch - 1) * len(train_dataloader) + step + 1,
+        #                         model=accelerator.unwrap_model(model),
+        #                         model_ema=accelerator.unwrap_model(model_ema),
+        #                         optimizer=optimizer,
+        #                         lr_scheduler=lr_scheduler
+        #                         )
+        # synchronize()
 
 
 def parse_args():
@@ -305,7 +307,7 @@ if __name__ == '__main__':
         #                                                 ratio_nums=dataset.ratio_nums)
         train_dataloader = build_dataloader(dataset, batch_sampler=batch_sampler, num_workers=config.num_workers)
     else:
-        train_dataloader = build_dataloader(dataset, num_workers=config.num_workers, batch_size=config.train_batch_size, shuffle=True)
+        train_dataloader = build_dataloader(dataset, num_workers=config.num_workers, batch_size=config.train_batch_size, shuffle=False)
     print("debug train_dataloader", train_dataloader)
 
     # build optimizer and lr scheduler

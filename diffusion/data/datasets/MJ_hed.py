@@ -5,11 +5,11 @@ import numpy as np
 import torch
 from torchvision.datasets.folder import default_loader, IMG_EXTENSIONS
 from torch.utils.data import Dataset
-from diffusers.utils import randn_tensor
+from diffusers.utils.torch_utils import randn_tensor
 from torchvision import transforms as T
 from diffusion.data.builder import get_data_path, DATASETS
 
-import json
+import json, time
 
 
 @DATASETS.register_module()
@@ -73,7 +73,7 @@ class MJHed(Dataset):
         npz_path = self.txt_feat_samples[index]
         npy_path = self.vae_feat_samples[index]
         hed_npz_path = self.hed_feat_sample[index]
-        data_info = {'img_hw': torch.tensor([self.meta_data_clean[index]['height'], self.meta_data_clean[index]['width']], dtype=torch.float32),
+        data_info = {'img_hw': torch.tensor([1024., 1024.], dtype=torch.float32),
                      'aspect_ratio': torch.tensor(1.)}
 
         if self.load_vae_feat:
@@ -96,6 +96,14 @@ class MJHed(Dataset):
         return img, txt_fea, attention_mask, data_info
 
     def __getitem__(self, idx):
+        # t1 = time.time()
+        # try: 
+        #     data = self.getdata(idx)
+        #     return data
+        # except:
+        #     print("invalid index", idx)
+        #     idx = np.random.randint(len(self))
+        #     return self.getdata(idx)
         for i in range(20):
             try:
                 data = self.getdata(idx)
@@ -103,6 +111,9 @@ class MJHed(Dataset):
             except Exception as e:
                 print(f"Error details: {str(e)}")
                 idx = np.random.randint(len(self))
+        # t2 = time.time()
+        # if t2 - t1 > 30:
+        #     print(idx)
         raise RuntimeError('Too many bad data.')
 
     def get_data_info(self, idx):
@@ -146,5 +157,7 @@ class MJHed(Dataset):
     def __len__(self):
         return len(self.img_samples)
 
-    def __getattr__(self, attr):
-        return None
+    def __getattr__(self, name):
+        if name == "set_epoch":
+            return lambda epoch: None
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
