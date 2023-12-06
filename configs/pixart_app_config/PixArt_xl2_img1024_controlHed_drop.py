@@ -20,7 +20,7 @@ lewei_scale = 2.0
 # training setting
 use_fsdp=False   # if use FSDP mode
 num_workers=10
-train_batch_size = 2 # 32  # max 96 for DiT-L/4 when grad_checkpoint
+train_batch_size = 3 # 32  # max 96 for DiT-L/4 when grad_checkpoint
 num_epochs = 100 # 3
 gradient_accumulation_steps = 1
 grad_checkpointing = True
