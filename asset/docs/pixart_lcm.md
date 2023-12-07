@@ -62,7 +62,7 @@ pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-LCM-XL-2-1024-MS
 pipe.enable_model_cpu_offload()
 
 prompt = "A small cactus with a happy face in the Sahara desert."
-image = pipe(prompt).images[0]
+image = pipe(prompt, guidance_scale=0., num_inference_steps=4).images[0]
 ```
 
 This integration allows running the pipeline with a batch size of 4 under 11 GBs of GPU VRAM. 
