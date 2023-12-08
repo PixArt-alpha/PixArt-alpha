@@ -174,6 +174,8 @@ def parse_args():
     parser.add_argument('--save_step', type=int, default=400)
     parser.add_argument('--lr', type=float, default=2e-4)
     parser.add_argument('--data_root', type=str, default=None)
+    parser.add_argument('--resume_optimizer', action='store_true')
+    parser.add_argument('--resume_lr_scheduler', action='store_true')
     args = parser.parse_args()
     return args
 
@@ -192,8 +194,8 @@ if __name__ == '__main__':
         config.resume_from = dict(
             checkpoint=args.resume_from,
             load_ema=False,
-            resume_optimizer=True,
-            resume_lr_scheduler=True)
+            resume_optimizer=args.resume_optimizer,
+            resume_lr_scheduler=args.resume_lr_scheduler)
     if args.debug:
         config.log_interval = 1
         config.train_batch_size = 2
