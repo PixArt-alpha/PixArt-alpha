@@ -25,7 +25,7 @@ num_epochs = 100 # 3
 gradient_accumulation_steps = 1
 grad_checkpointing = True
 gradient_clip = 0.01
-optimizer = dict(type='AdamW', lr=1e-5, weight_decay=3e-2, eps=1e-10) #2e-5
+optimizer = dict(type='AdamW', lr=2e-5, weight_decay=3e-2, eps=1e-10) #2e-5
 lr_schedule_args = dict(num_warmup_steps=0)
 
 eval_sampling_steps = 200
