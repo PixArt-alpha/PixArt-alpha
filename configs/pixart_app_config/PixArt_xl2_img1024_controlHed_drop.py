@@ -35,3 +35,4 @@ save_model_steps=1000
 work_dir = 'output_debug/debug'
 class_dropout_prob = 0.3
 train_ratio = 0.1
+auto_lr = None

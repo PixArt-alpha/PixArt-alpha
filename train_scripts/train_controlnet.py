@@ -191,7 +191,8 @@ if __name__ == '__main__':
     if args.data_root:
         config.data_root = args.data_root
     if args.resume_from is not None:
-        config.resume_from = dict(
+        config.resume_from = args.resume_from
+        resume_dict = dict(
             checkpoint=args.resume_from,
             load_ema=False,
             resume_optimizer=args.resume_optimizer,
@@ -323,8 +324,11 @@ if __name__ == '__main__':
         accelerator.init_trackers(f"tb_{timestamp}")
 
     start_epoch = 0
-    if config.resume_from is not None and config.resume_from['checkpoint'] is not None:
-        start_epoch, missing, unexpected = load_checkpoint(**config.resume_from,
+    if config.resume_from is not None:
+        if args.resume_optimizer == False or args.resume_lr_scheduler == False:
+            missing, unexpected = load_checkpoint(config.resume_from, model, load_ema=config.get('load_ema', False))
+        else:
+            start_epoch, missing, unexpected = load_checkpoint(**resume_dict,
                                                            model=model,
                                                            model_ema=model_ema,
                                                            optimizer=optimizer,
