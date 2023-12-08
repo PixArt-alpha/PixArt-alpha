@@ -22,19 +22,31 @@ from diffusion.model.hed import HEDdetector
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 from PIL import ImageFilter
+from PIL import Image as Image_PIL
+from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow #MoxingWorker
+from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
+import os
+import numpy as np 
+
+
+vae_scale = 0.18215
 
 def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("config", type=str, help="config")
     parser.add_argument('--num_sampling_steps', default=14, type=int)
     parser.add_argument('--cfg_scale', default=4.5, type=int)
     parser.add_argument('--image_size', default=1024, type=int)
     parser.add_argument('--model_path', type=str)
+    parser.add_argument('--exp_id', type=str)
+    parser.add_argument('--step', type=int)
     parser.add_argument('--tokenizer_path', default='output/pretrained_models/sd-vae-ft-ema', type=str)
 
     parser.add_argument('--txt_feature_root', default='data/SA1B/caption_feature', type=str)
     parser.add_argument('--txt_feature_path', default='data/SA1B/partition/part0.txt', type=str)
 
     parser.add_argument('--llm_model', default='t5', type=str)
+    parser.add_argument('--test_mode', default='inference', type=str, help='choose from train or inference mode')
 
     parser.add_argument('--sampling_algo', default='dpm-solver', type=str, choices=['iddpm', 'dpm-solver', 'sa-solver'])
 
@@ -66,8 +78,8 @@ def mask_feature(emb, mask):
         masked_feature= emb * mask[:, None, :, None]
         return masked_feature, emb.shape[2]
 
-@torch.inference_mode()
-def generate_img(prompt, condition, strength, radius):
+
+def prepare_input_test(prompt, condition, strength, radius):
     torch.cuda.empty_cache()
     if condition is not None:
         condition = condition_transform(condition).unsqueeze(0).to(device)
@@ -77,16 +89,37 @@ def generate_img(prompt, condition, strength, radius):
         TF.to_pil_image(condition[0]).save('./test.png')
         # condition = TF.to_tensor(condition).unsqueeze(0).to(device)
         condition = TF.normalize(condition, [.5], [.5])
-        condition = condition.repeat(1, 3, 1, 1)
+        condition = condition.repeat(1, 3, 1, 1) 
         posterior = vae.encode(condition).latent_dist
         c = posterior.sample()
-        c = c * 0.18215
     else:
         c = None
+        
+    if c is not None:
+        c = c * vae_scale
 
     save_promt_path = f'output_demo/demo/online_demo_prompts/tested_prompts{datetime.now().date()}.txt'
     with open(save_promt_path, 'a') as f:
         f.write(prompt + '\n')
+
+    return c, prompt
+
+def prepare_input_train(data_info):
+    # prepare condition
+    prompt = data_info['prompt']
+    condition = data_info['condition'].to(device)
+    # TF.to_pil_image(condition[0]).save('./test.png')
+    c_vis = vae.decode(condition)['sample']
+    c = condition * vae_scale
+    
+    prompt = data_info['prompt'][0].split("/")[-1]
+    
+    return c, prompt, c_vis
+
+
+
+@torch.inference_mode()
+def sample_image(c, prompt):
     prompt_clean, prompt_show, hw, ar, custom_hw = prepare_prompt_ar(prompt, base_ratios, device=device)      # ar for aspect ratio
     prompt_clean = prompt_clean.strip()
     if isinstance(prompt_clean, str):
@@ -96,6 +129,7 @@ def generate_img(prompt, condition, strength, radius):
     caption_embs = caption_embs[:, None]
 
     null_y = model.y_embedder.y_embedding[None].repeat(len(prompts), 1, 1)[:, None]
+
 
     latent_size_h, latent_size_w = int(hw[0, 0]//8), int(hw[0, 1]//8)
     # Sample images:
@@ -130,6 +164,28 @@ def generate_img(prompt, condition, strength, radius):
             skip_type="time_uniform",
             method="multistep",
         )
+        samples = vae.decode(samples / vae_scale).sample
+        torch.cuda.empty_cache()
+        samples = resize_and_crop_tensor(samples, custom_hw[0,1], custom_hw[0,0])
+
+        # unconditional output
+        model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks, c=None)
+        dpm_solver = DPMS(model.forward_with_dpmsolver,
+                          condition=caption_embs,
+                          uncondition=null_y,
+                          cfg_scale=args.cfg_scale,
+                          model_kwargs=model_kwargs)
+        samples_uncon = dpm_solver.sample(
+            z,
+            steps=args.num_sampling_steps,
+            order=2,
+            skip_type="time_uniform",
+            method="multistep",
+        )
+        samples_uncon = vae.decode(samples_uncon / vae_scale).sample
+        torch.cuda.empty_cache()
+        samples_uncon = resize_and_crop_tensor(samples_uncon, custom_hw[0,1], custom_hw[0,0])
+
     elif args.sampling_algo == 'sa-solver':
         # Create sampling noise:
         n = len(prompts)
@@ -145,14 +201,14 @@ def generate_img(prompt, condition, strength, radius):
             unconditional_guidance_scale=args.cfg_scale,
             model_kwargs=model_kwargs,
         )[0]
-    samples = vae.decode(samples / 0.18215).sample
-    torch.cuda.empty_cache()
-    samples = resize_and_crop_tensor(samples, custom_hw[0,1], custom_hw[0,0])
+    
     display_model_info = f'Model path: {args.model_path},\nBase image size: {args.image_size}, \nSampling Algo: {args.sampling_algo}'
-    return ndarr_image(samples, normalize=True, value_range=(-1, 1)), prompt_show, display_model_info
+    return ndarr_image(samples, normalize=True, value_range=(-1, 1)), ndarr_image(samples_uncon, normalize=True, value_range=(-1, 1)), prompt_show, display_model_info
+
 
 if __name__ == '__main__':
     args = get_args()
+    config = read_config(args.config)
     set_env()
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -189,20 +245,47 @@ if __name__ == '__main__':
         T.CenterCrop(args.image_size),
         T.ToTensor(),
     ])
-    # prompt = 'dog'
-    # generate_img(prompt)
     
+    # the mode is train | inference | demo
+    if args.test_mode in ['train', 'inference']:
+        # loading training dataset
+        set_data_root(config.data_root)
+        dataset = build_dataset(config.data, resolution=config.image_size, aspect_ratio_type=config.aspect_ratio_type, train_ratio=0.001, mode=args.test_mode)
+        train_dataloader = build_dataloader(dataset, num_workers=1, batch_size=1, shuffle=False)
+        cnt = 0
+        output_folder = f'output_demo/demo/exp_{args.exp_id}_mode_{args.test_mode}/'
+        os.makedirs(output_folder, exist_ok=True)
+        output_folder = f'{output_folder}/step_{args.step}/'
+        os.makedirs(output_folder, exist_ok=True)
+        save_promt_path = f'{output_folder}/prompt.txt'
+        save_image_path = f'{output_folder}/images/'
+        os.makedirs(save_image_path, exist_ok=True)
+        
+        for index, batch in enumerate(train_dataloader):
+            if cnt > 50:
+                break
+            data_info = batch[3]
+            c, prompt, c_vis = prepare_input_train(data_info)
+            image, image_uncon, prompt_show, display_info = sample_image(c, prompt)
+            with open(save_promt_path, 'a') as f:
+                f.write(f"number_{index}_{prompt}\n")
+            c_vis = c_vis.permute(0, 2, 3, 1)[0].cpu()
+            c_vis = (c_vis*255).clip(0, 255).int().numpy()
+            vis = np.concatenate([c_vis, image, image_uncon], axis=1)
+            Image_PIL.fromarray(vis.astype(np.uint8)).save(f'{save_image_path}/{index:04d}.png')
+            cnt = cnt + 1
+    else:
+        demo = gr.Interface(fn=generate_img,
+                            inputs=[Textbox(label="Begin your magic",
+                                        placeholder="Please enter your prompt. \n"
+                                                    "If you want to specify a aspect ratio or determine a customized height and width, "
+                                                    "use --ar h:w (or --aspect_ratio h:w) or --hw h:w. If no aspect ratio or hw is given, all setting will be default."),
+                                    Image(type="pil", label="Condition"),
+                                    Slider(minimum=0., maximum=1., value=1., label='edge strength'),
+                                    Slider(minimum=-1., maximum=99., value=-1, step=2, label='radius'),
+                                    ],
+                            outputs=[Image(type="numpy", label="Img"),
+                                    Textbox(label="clean prompt"),
+                                    Textbox(label="model info")],)
+        demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True, share=True)
 
-    demo = gr.Interface(fn=generate_img,
-                        inputs=[Textbox(label="Begin your magic",
-                                       placeholder="Please enter your prompt. \n"
-                                                   "If you want to specify a aspect ratio or determine a customized height and width, "
-                                                   "use --ar h:w (or --aspect_ratio h:w) or --hw h:w. If no aspect ratio or hw is given, all setting will be default."),
-                                Image(type="pil", label="Condition"),
-                                Slider(minimum=0., maximum=1., value=1., label='edge strength'),
-                                Slider(minimum=-1., maximum=99., value=-1, step=2, label='radius'),
-                                ],
-                        outputs=[Image(type="numpy", label="Img"),
-                                 Textbox(label="clean prompt"),
-                                 Textbox(label="model info")],)
-    demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True, share=True)

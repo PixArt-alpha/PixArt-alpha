@@ -166,7 +166,8 @@ class ControlPixArtAll(Module): #add all the control
         t: (N,) tensor of diffusion timesteps
         y: (N, 1, 120, C) tensor of class labels
         """
-        c = self.forward_c(c)
+        if c is not None:
+            c = self.forward_c(c)
         bs = x.shape[0]
         c_size, ar = data_info['img_hw'], data_info['aspect_ratio']
         self.h, self.w = x.shape[-2]//self.patch_size, x.shape[-1]//self.patch_size
@@ -193,14 +194,18 @@ class ControlPixArtAll(Module): #add all the control
             x = auto_grad_checkpoint(self.base_model.blocks[index], x, y, t0, y_lens, **kwargs)  # (N, T, D) #support grad checkpoint
 
         # update c
-        skip_c_list = []
-        for index in range(14):
-            c, c_skip = auto_grad_checkpoint(self.controlnet[index], x, y, t0, y_lens, c, **kwargs)
-            skip_c_list.append(c_skip.clone())
+        if c is not None:
+            skip_c_list = []
+            for index in range(14):
+                c, c_skip = auto_grad_checkpoint(self.controlnet[index], x, y, t0, y_lens, c, **kwargs)
+                skip_c_list.append(c_skip.clone())
         
-        # update x
-        for index in range(14, 28):
-            x = auto_grad_checkpoint(self.base_model.blocks[index], x + skip_c_list[27 - index], y, t0, y_lens, **kwargs)
+            # update x
+            for index in range(14, 28):
+                x = auto_grad_checkpoint(self.base_model.blocks[index], x + skip_c_list[27 - index], y, t0, y_lens, **kwargs)
+        else:
+            for index in range(14, 28):
+                x = auto_grad_checkpoint(self.base_model.blocks[index], x, y, t0, y_lens, **kwargs)
 
         x = self.final_layer(x, t)  # (N, T, patch_size ** 2 * out_channels)
         x = self.unpatchify(x)  # (N, out_channels, H, W)

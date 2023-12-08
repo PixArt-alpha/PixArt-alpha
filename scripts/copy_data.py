@@ -33,13 +33,12 @@ for json_file in image_list_json:
     meta_data = load_json(os.path.join(root, 'partition', json_file))
     ori_imgs_nums += len(meta_data)
     meta_data_clean = [item for item in meta_data if (item['path'] not in noe and item['ratio'] <= 4)]
-    meta_data_clean.extend(meta_data_clean)
     #img_samples.extend([os.path.join(root.replace('MJData', "MJImgs"), item['path']) for item in meta_data_clean])
     txt_feat_samples.extend([os.path.join(root, 'caption_features', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npz')) for item in meta_data_clean])
     vae_feat_samples.extend([os.path.join(root, f'img_vae_features_{resolution}resolution/noflip', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npy')) for item in meta_data_clean])
     hed_feat_sample.extend([os.path.join(root, f'hed_feature_{resolution}', item['path'].replace('.png', '.npz')) for item in meta_data_clean])
 
-
+print("meta_data_clean", len(meta_data_clean), "txt_feat", len(txt_feat_samples), "vae_samples", len(vae_feat_samples), "hed samples", len(hed_feat_sample))
 def make_dirs(source_path, destination_path):
     splits = destination_path.split("/")
     root = './data_local/'
@@ -52,7 +51,7 @@ def make_dirs(source_path, destination_path):
 
 
 
-for index in range(len(txt_feat_samples)):
+for index in range(100):
     # if index == 16:
         # continue
     print("%d/%d"%(index, len(txt_feat_samples)))
@@ -90,8 +89,8 @@ for index in range(len(txt_feat_samples)):
     assert os.path.exists(hed_npz_destination_path), "error! copy failed %s"%hed_npz_path
 
 
-    # print(img_path, npz_path, npy_path, hed_npz_path)
-    # print(npz_path, npy_path, hed_npz_path)
-    # destination_path = img_path.replace("data", "data_local")
+    print(img_path, npz_path, npy_path, hed_npz_path)
+    print(npz_path, npy_path, hed_npz_path)
+    destination_path = img_path.replace("data", "data_local")
     
     

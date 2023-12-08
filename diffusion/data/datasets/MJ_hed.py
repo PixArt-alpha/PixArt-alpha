@@ -27,6 +27,7 @@ class MJHed(Dataset):
                  mask_type='null',
                  load_mask_index=False,
                  train_ratio=1.0,
+                 mode='train',
                  **kwargs):
         self.root = get_data_path(root)
         self.transform = transform
@@ -41,7 +42,8 @@ class MJHed(Dataset):
         self.img_samples = []
         self.txt_feat_samples = []
         self.vae_feat_samples = []
-        self.hed_feat_sample = []
+        self.hed_feat_samples = []
+        self.prompt_samples = []
 
         with open(f'{self.root}/not_exist.txt', 'r') as f:
             noe = set([line.strip() for line in f])
@@ -57,14 +59,28 @@ class MJHed(Dataset):
             self.img_samples.extend([os.path.join(self.root.replace('MJData', "MJImgs"), item['path']) for item in meta_data_clean])
             self.txt_feat_samples.extend([os.path.join(self.root, 'caption_features', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npz')) for item in meta_data_clean])
             self.vae_feat_samples.extend([os.path.join(self.root, f'img_vae_features_{resolution}resolution/noflip', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npy')) for item in meta_data_clean])
-            self.hed_feat_sample.extend([os.path.join(self.root, f'hed_feature_{resolution}', item['path'].replace('.png', '.npz')) for item in meta_data_clean])
+            self.hed_feat_samples.extend([os.path.join(self.root, f'hed_feature_{resolution}', item['path'].replace('.png', '.npz')) for item in meta_data_clean])
+            self.prompt_samples.extend([os.path.join(self.root.replace('MJData', "MJImgs"), item['prompt']) for item in meta_data_clean])
+
 
         total_sample = len(self.img_samples)
+        print(total_sample, self.ori_imgs_nums)
         used_sample_num = int(total_sample * train_ratio)
-        self.img_samples = self.img_samples[:used_sample_num]
-        self.txt_feat_samples = self.txt_feat_samples[:used_sample_num]
-        self.vae_feat_samples = self.vae_feat_samples[:used_sample_num]
-        self.hed_feat_sample = self.hed_feat_sample[:used_sample_num]
+        if mode == 'train':
+            print("using mode", mode)
+            self.img_samples = self.img_samples[:used_sample_num]
+            self.txt_feat_samples = self.txt_feat_samples[:used_sample_num]
+            self.vae_feat_samples = self.vae_feat_samples[:used_sample_num]
+            self.hed_feat_samples = self.hed_feat_samples[:used_sample_num]
+            self.prompt_samples = self.prompt_samples[:used_sample_num]
+        else:
+            print("using mode", mode)
+            self.img_samples = self.img_samples[-used_sample_num:]
+            self.txt_feat_samples = self.txt_feat_samples[-used_sample_num:]
+            self.vae_feat_samples = self.vae_feat_samples[-used_sample_num:]
+            self.hed_feat_samples = self.hed_feat_samples[-used_sample_num:]
+            self.prompt_samples = self.prompt_samples[-used_sample_num:]
+
 
         # Set loader and extensions
         if load_vae_feat:
@@ -80,7 +96,9 @@ class MJHed(Dataset):
         img_path = self.img_samples[index]
         npz_path = self.txt_feat_samples[index]
         npy_path = self.vae_feat_samples[index]
-        hed_npz_path = self.hed_feat_sample[index]
+        hed_npz_path = self.hed_feat_samples[index]
+        prompt = self.prompt_samples[index]
+
         data_info = {'img_hw': torch.tensor([1024., 1024.], dtype=torch.float32),
                      'aspect_ratio': torch.tensor(1.)}
 
@@ -100,7 +118,7 @@ class MJHed(Dataset):
 
         data_info["mask_type"] = self.mask_type
         data_info['condition'] = hed_fea
-
+        data_info['prompt'] = prompt
         return img, txt_fea, attention_mask, data_info
 
     def __getitem__(self, idx):
