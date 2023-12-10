@@ -36,7 +36,7 @@ from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspectRatioBatchSampler
 from diffusion.model.nets import PixArtMSBlock, PixArtMS
-from diffusion.model.nets import ControlT2IDiT, ControlPixArt_Mid, ControlPixArtAll 
+from diffusion.model.nets import ControlT2IDiT, ControlPixArt_Mid, ControlPixArtAll, ControlPixArtHalf
 
 def set_fsdp_env():
     os.environ["ACCELERATE_USE_FSDP"] = 'true'
@@ -176,6 +176,8 @@ def parse_args():
     parser.add_argument('--data_root', type=str, default=None)
     parser.add_argument('--resume_optimizer', action='store_true')
     parser.add_argument('--resume_lr_scheduler', action='store_true')
+    parser.add_argument('--controlnet_type', type=str, default='all', \
+        help='the network architecture of controlnet, choose from all or half')
     args = parser.parse_args()
     return args
 
@@ -191,7 +193,6 @@ if __name__ == '__main__':
     if args.data_root:
         config.data_root = args.data_root
     if args.resume_from is not None:
-        config.resume_from = args.resume_from
         resume_dict = dict(
             checkpoint=args.resume_from,
             load_ema=False,
@@ -266,7 +267,7 @@ if __name__ == '__main__':
                         pred_sigma=pred_sigma,
                         **model_kwargs)
 
-    if config.load_from is not None and config.resume_from is None:
+    if config.load_from is not None and args.resume_from is None:
         # load from pixart model
         missing, unexpected = load_checkpoint(config.load_from, model, load_ema=config.get('load_ema', False))
         # model.reparametrize()
@@ -274,7 +275,10 @@ if __name__ == '__main__':
             print('Warning Missing keys: ', missing)
             print('Warning Unexpected keys', unexpected)
 
-    model = ControlPixArtAll(model)
+    if args.controlnet_type == 'all':
+        model = ControlPixArtAll(model)
+    else:
+        model = ControlPixArtHalf(model)
 
     model = model.train()
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
@@ -324,9 +328,9 @@ if __name__ == '__main__':
         accelerator.init_trackers(f"tb_{timestamp}")
 
     start_epoch = 0
-    if config.resume_from is not None:
+    if args.resume_from is not None:
         if args.resume_optimizer == False or args.resume_lr_scheduler == False:
-            missing, unexpected = load_checkpoint(config.resume_from, model, load_ema=config.get('load_ema', False))
+            missing, unexpected = load_checkpoint(args.resume_from, model, load_ema=config.get('load_ema', False))
         else:
             start_epoch, missing, unexpected = load_checkpoint(**resume_dict,
                                                            model=model,

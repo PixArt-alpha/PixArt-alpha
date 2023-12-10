@@ -23,7 +23,7 @@ def auto_scale_lr(effective_bs, optimizer_cfg, rule='linear', base_batch_size=25
     elif rule == 'linear':
         scale_ratio = effective_bs / base_batch_size
     optimizer_cfg['lr'] *= scale_ratio
-    logger.info(f'Automatically adapt lr to {optimizer_cfg["lr"]:.5f} (using {rule} scaling rule).')
+    logger.info(f'Automatically adapt lr to {optimizer_cfg["lr"]:.7f} (using {rule} scaling rule).')
     return scale_ratio
 
 
