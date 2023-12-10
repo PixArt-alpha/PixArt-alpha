@@ -17,35 +17,79 @@ import argparse
 from diffusion.model.t5 import T5Embedder
 from diffusers.models import AutoencoderKL
 
+import threading
+from queue import Queue
+from pathlib import Path
+
+
+def extract_caption_t5_do(q):
+    while not q.empty():
+        item = q.get()
+        extract_caption_t5_job(item)
+        q.task_done()
+
+
+def extract_caption_t5_job(item):
+    global mutex
+    global t5
+    global t5_save_dir
+
+    with torch.no_grad():
+        caption = item['prompt'].strip()
+        if isinstance(caption, str):
+            caption = [caption]
+
+        save_path = os.path.join(t5_save_dir, Path(item['path']).stem)
+        if os.path.exists(save_path + ".npz"):
+            return
+        try:
+            mutex.acquire()
+            caption_emb, emb_mask = t5.get_text_embeddings(caption)
+            mutex.release()
+            emb_dict = {
+                'caption_feature': caption_emb.float().cpu().data.numpy(),
+                'attention_mask': emb_mask.cpu().data.numpy(),
+            }
+            np.savez_compressed(save_path, **emb_dict)
+        except Exception as e:
+            print(e)
+
 
 def extract_caption_t5():
+    global t5
+    global t5_save_dir
+    # global images_extension
     t5 = T5Embedder(device="cuda", local_cache=True, cache_dir=f'{args.pretrained_models_dir}/t5_ckpts')
     t5_save_dir = args.t5_save_root
     os.makedirs(t5_save_dir, exist_ok=True)
 
-
     train_data_json = json.load(open(args.json_path, 'r'))
     train_data = train_data_json[args.start_index: args.end_index]
-    _, images_extension = os.path.splitext(train_data[0]['path'])
-    with torch.no_grad():
-        for item in tqdm(train_data):
 
-            caption = item['prompt'].strip()
-            if isinstance(caption, str):
-                caption = [caption]
+    global mutex
+    mutex = threading.Lock()
+    jobs = Queue()
 
-            save_path = os.path.join(t5_save_dir, '_'.join(item['path'].rsplit('/', 1)).replace(images_extension, '.npz'))
-            if os.path.exists(save_path):
-                continue
-            try:
-                caption_emb, emb_mask = t5.get_text_embeddings(caption)
-                emb_dict = {
-                    'caption_feature': caption_emb.float().cpu().data.numpy(),
-                    'attention_mask': emb_mask.cpu().data.numpy(),
-                }
-                np.savez_compressed(save_path, **emb_dict)
-            except Exception as e:
-                print(e)
+    for item in tqdm(train_data):
+        jobs.put(item)
+
+    for _ in range(20):
+        worker = threading.Thread(target=extract_caption_t5_do, args=(jobs,))
+        worker.start()
+
+    jobs.join()
+
+
+def extract_img_vae_do(q):
+    while not q.empty():
+        item = q.get()
+        extract_img_vae_job(item)
+        q.task_done()
+
+
+def extract_img_vae_job(item):
+    return
+
 
 def extract_img_vae():
     vae = AutoencoderKL.from_pretrained(f'{args.pretrained_models_dir}/sd-vae-ft-ema').to(device)
@@ -53,8 +97,8 @@ def extract_img_vae():
     train_data_json = json.load(open(args.json_path, 'r'))
     image_names = set()
 
-    vae_save_root = f'{args.vae_save_root}_{image_resize}resolution'
-    os.umask(0o000)       # file permission: 666; dir permission: 777
+    vae_save_root = f'{args.vae_save_root}/{image_resize}resolution'
+    os.umask(0o000)  # file permission: 666; dir permission: 777
     os.makedirs(vae_save_root, exist_ok=True)
 
     vae_save_dir = os.path.join(vae_save_root, 'noflip')
@@ -81,8 +125,8 @@ def extract_img_vae():
 
     os.umask(0o000)  # file permission: 666; dir permission: 777
     for image_name in tqdm(lines):
-        save_path = os.path.join(vae_save_dir, '_'.join(image_name.rsplit('/', 1)).replace(images_extension, '.npy'))
-        if os.path.exists(save_path):
+        save_path = os.path.join(vae_save_dir, Path(image_name).stem)
+        if os.path.exists(save_path + ".npy"):
             continue
         try:
             img = Image.open(f'{args.dataset_root}/{image_name}')

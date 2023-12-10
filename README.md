@@ -325,7 +325,12 @@ We present auto-labeling with custom prompts for LAION (left) and SAM (right). T
 
 Prepare T5 text feature and VAE image feature in advance will speed up the training process and save GPU memory.
 ```bash
-python tools/extract_features.py
+python tools/extract_features.py --img_size=1024 \
+    --json_path "data/data_info.json" \
+    --t5_save_root "data/SA1B/caption_feature_wmask" \
+    --vae_save_root "data/SA1B/img_vae_features" \
+    --pretrained_models_dir "output/pretrained_models" \
+    --dataset_root "data/SA1B/Images/"
 ```
 
 ## 💪To-Do List
