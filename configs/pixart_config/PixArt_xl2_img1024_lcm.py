@@ -30,7 +30,7 @@ optimizer = dict(type='AdamW', lr=2e-5, weight_decay=0.0, eps=1e-10)
 lr_schedule_args = dict(num_warmup_steps=100)
 save_model_epochs=1
 save_model_steps=200
-valid_num=10
+valid_num=0      # take as valid aspect-ratio when sample number >= valid_num
 
 log_interval = 10
 eval_sampling_steps = 200

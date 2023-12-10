@@ -26,7 +26,7 @@ class AspectRatioBatchSampler(BatchSampler):
                  aspect_ratios: dict,
                  drop_last: bool = False,
                  config=None,
-                 valid_num=2000,
+                 valid_num=0,   # take as valid aspect-ratio when sample number >= valid_num
                  **kwargs) -> None:
         if not isinstance(sampler, Sampler):
             raise TypeError('sampler should be an instance of ``Sampler``, '
