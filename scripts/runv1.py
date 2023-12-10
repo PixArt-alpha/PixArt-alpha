@@ -23,6 +23,8 @@ def parse_args():
     parser.add_argument('--machine_num', type=int, default=1, help='number of machine')
     parser.add_argument('--vis_gpu', type=str, default='0,1,2,3,4,5,6,7', help='visible gpu id')
     parser.add_argument('--bucket', type=str, default='cneast3')
+    parser.add_argument('--controlnet_type', type=str, default='all')
+    
 
     args = parser.parse_args()
 
@@ -76,6 +78,8 @@ if not args.test:
     # 'scripts/train.py',
     if args.resume_from:
         run_cmd += '--resume_from {} '.format(args.resume_from)
+    if args.controlnet_type:
+        run_cmd += '--controlnet_type {} '.format(args.controlnet_type)
     # 'python -m torch.distributed.launch --nproc_per_node=8 --master_port=20004 --master_addr= --node_rank=0 scripts/train.py  --cloud --work_dir '
 
 else:
