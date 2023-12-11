@@ -67,7 +67,8 @@ def mask_feature(emb, mask):
         return masked_feature, emb.shape[2]
 
 @torch.inference_mode()
-def generate_img(prompt, condition, strength, radius):
+def generate_img(prompt, condition, strength, radius, seed):
+    torch.manual_seed(seed)
     torch.cuda.empty_cache()
     if condition is not None:
         condition = condition_transform(condition).unsqueeze(0).to(device)
@@ -201,6 +202,7 @@ if __name__ == '__main__':
                                 Image(type="pil", label="Condition"),
                                 Slider(minimum=0., maximum=1., value=1., label='edge strength'),
                                 Slider(minimum=-1., maximum=99., value=-1, step=2, label='radius'),
+                                Slider(minimum=0., maximum=10000., value=0, step=2, label='seed'),
                                 ],
                         outputs=[Image(type="numpy", label="Img"),
                                  Textbox(label="clean prompt"),

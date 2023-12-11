@@ -13,8 +13,8 @@ from typing import List, Union
 import gradio as gr
 from gradio.components import Textbox, Image, Slider
 from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor
-from diffusion.model.nets import PixArtMS_XL_2
-from diffusion.model.nets import ControlT2IDiT, ControlPixArt_Mid, ControlPixArtAll
+from diffusion.model.nets import PixArtMS_XL_2, PixArtMS
+from diffusion.model.nets import ControlT2IDiT, ControlPixArt_Mid, ControlPixArtAll, ControlPixArtHalf
 from diffusion.model.t5 import T5Embedder
 from torchvision.utils import _log_api_usage_once, make_grid
 from diffusion.data.datasets import *
@@ -27,7 +27,7 @@ from diffusion.utils.misc import set_random_seed, read_config, init_random_seed,
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 import os
 import numpy as np 
-
+# The code of testing on the train set or test set
 
 vae_scale = 0.18215
 
@@ -51,6 +51,7 @@ def get_args():
     parser.add_argument('--sampling_algo', default='dpm-solver', type=str, choices=['iddpm', 'dpm-solver', 'sa-solver'])
 
     parser.add_argument('--port', default=7788, type=int)
+    parser.add_argument('--controlnet_type', default='all', type=str)
 
     return parser.parse_args()
 
@@ -215,8 +216,14 @@ if __name__ == '__main__':
     assert args.image_size in [256, 512, 1024], "We only provide pre-trained models for 256x256, 512x512 and 1024x1024 resolutions."
     lewei_scale = {256: 1, 512: 1, 1024: 2}
     latent_size = args.image_size // 8
-    model = PixArtMS_XL_2(input_size=latent_size, lewei_scale=lewei_scale[args.image_size])
-    model = ControlPixArtAll(model).to(device)
+    
+    if args.controlnet_type == 'all':
+        model = PixArtMS_XL_2(input_size=latent_size, lewei_scale=lewei_scale[args.image_size])
+        model = ControlPixArtAll(model).to(device)
+    else:
+        model = PixArtMS(input_size=latent_size, lewei_scale=lewei_scale[args.image_size])
+        model = ControlPixArtHalf(model).to(device)
+
     state_dict = find_model(args.model_path)['state_dict']
     if 'pos_embed' in state_dict:
         del state_dict['pos_embed']
@@ -262,7 +269,7 @@ if __name__ == '__main__':
         os.makedirs(save_image_path, exist_ok=True)
         
         for index, batch in enumerate(train_dataloader):
-            if cnt > 50:
+            if cnt > 80:
                 break
             data_info = batch[3]
             c, prompt, c_vis = prepare_input_train(data_info)
