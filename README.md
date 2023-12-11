@@ -255,7 +255,7 @@ Let's have a look at a simple example using the `http://your-server-ip:12345`.
 Make sure you have the updated versions of the following libraries:
 
 ```bash
-pip install -U transformers accelerate diffusers
+pip install -U transformers accelerate diffusers SentencePiece ftfy beautifulsoup4
 ```
 
 And then:
@@ -279,6 +279,7 @@ pipe.enable_model_cpu_offload()
 
 prompt = "A small cactus with a happy face in the Sahara desert."
 image = pipe(prompt).images[0]
+image.save("./catcus.png")
 ```
 Check out the [documentation](./asset/docs/sasolver.md) for more information abount SA-Solver Sampler.
 
