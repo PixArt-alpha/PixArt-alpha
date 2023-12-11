@@ -23,13 +23,23 @@
 1&2 用来控制是否要resume之前的lr
 
 # Inference:
+**批量训练**
+
 新写了一个inference函数 ./T2I-DIT-feat-pixart-ctrlnet/scripts/inference_ctrl_hed_train.py
 这个函数用来批量测试图片. mode支持'train', 'inference'
 
 默认使用dataset里前10%的图片用来训练
-使用dataset里后10%的图片用来测试
+使用dataset里后10%的图片用来测试。 train模式会测试训练集的效果，inference模式会测试测试集的效果
 
 结果会存在./output_demo/下面。会根据exp_id, step, 和mode创建路径
+
+example shells are in ./test_inference_images.sh
+
+**demo**
+
+demo使用的是原函数./T2I-DIT-feat-pixart-ctrlnet/scripts/inference_ctrl_hed.py
+example shells are in ./test.sh
+
 
 # 实验记录
 实验结果都存在/efs_cv/yue目录下面
@@ -47,5 +57,7 @@ network half + res 512
 network half + res 1024
 1. controlnet_half_0.1data_drop0.5_lr2e-5_autolr_fix_res1024
 
+# 挂实验
+run文件储存在 /home/xieenze/yue/s3helper/s3helper/scripts/run1024.sh
 
-
+resume_from和resume_optimizer_component 这两个参数的解释在sh文件中

@@ -287,18 +287,18 @@ if __name__ == '__main__':
             cnt = cnt + 1
             # except:
             #     continue
-    else:
-        demo = gr.Interface(fn=generate_img,
-                            inputs=[Textbox(label="Begin your magic",
-                                        placeholder="Please enter your prompt. \n"
-                                                    "If you want to specify a aspect ratio or determine a customized height and width, "
-                                                    "use --ar h:w (or --aspect_ratio h:w) or --hw h:w. If no aspect ratio or hw is given, all setting will be default."),
-                                    Image(type="pil", label="Condition"),
-                                    Slider(minimum=0., maximum=1., value=1., label='edge strength'),
-                                    Slider(minimum=-1., maximum=99., value=-1, step=2, label='radius'),
-                                    ],
-                            outputs=[Image(type="numpy", label="Img"),
-                                    Textbox(label="clean prompt"),
-                                    Textbox(label="model info")],)
-        demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True, share=True)
+    # else:
+    #     demo = gr.Interface(fn=generate_img,
+    #                         inputs=[Textbox(label="Begin your magic",
+    #                                     placeholder="Please enter your prompt. \n"
+    #                                                 "If you want to specify a aspect ratio or determine a customized height and width, "
+    #                                                 "use --ar h:w (or --aspect_ratio h:w) or --hw h:w. If no aspect ratio or hw is given, all setting will be default."),
+    #                                 Image(type="pil", label="Condition"),
+    #                                 Slider(minimum=0., maximum=1., value=1., label='edge strength'),
+    #                                 Slider(minimum=-1., maximum=99., value=-1, step=2, label='radius'),
+    #                                 ],
+    #                         outputs=[Image(type="numpy", label="Img"),
+    #                                 Textbox(label="clean prompt"),
+    #                                 Textbox(label="model info")],)
+    #     demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True, share=True)
 
