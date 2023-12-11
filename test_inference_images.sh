@@ -19,3 +19,19 @@ CUDA_VISIBLE_DEVICES=4 python scripts/inference_ctrl_hed_train.py \
 --test_mode inference \
 --exp_id controlnet_all_0.5data_drop0.3_lr2e-5_fix \
 --step 6000
+
+CUDA_VISIBLE_DEVICES=3 python scripts/inference_ctrl_hed_train.py \
+./configs/pixart_app_config/PixArt_xl2_img1024_controlHed_drop.py \
+--model_path /home/xieenze/efs_cv/yue/controlnet_all_0.5data_drop0.3_lr2e-5/checkpoints/epoch_8_step_25000.pth --port 12233 \
+--test_mode inference \
+--exp_id controlnet_all_0.5data_drop0.3_lr2e-5 \
+--step 25000
+
+CUDA_VISIBLE_DEVICES=6 python scripts/inference_ctrl_hed_train.py \
+./configs/pixart_app_config/PixArt_xl2_img512_controlHed.py \
+--model_path /home/xieenze/efs_cv/yue/controlnet_half_0.1data_drop0.5_lr2e-5_res512/checkpoints/epoch_3_step_4000.pth --port 12233 \
+--test_mode inference \
+--exp_id controlnet_half_0.1data_drop0.5_lr2e-5_res512 \
+--step 4000 \
+--image_size 512 \
+--controlnet_type half

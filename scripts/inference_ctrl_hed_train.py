@@ -52,6 +52,7 @@ def get_args():
 
     parser.add_argument('--port', default=7788, type=int)
     parser.add_argument('--controlnet_type', default='all', type=str)
+    parser.add_argument('--start_index', default=0, type=int)
 
     return parser.parse_args()
 
@@ -269,8 +270,11 @@ if __name__ == '__main__':
         os.makedirs(save_image_path, exist_ok=True)
         
         for index, batch in enumerate(train_dataloader):
-            if cnt > 80:
-                break
+            # try:
+            # if cnt > 80:
+            #     break
+            if index < args.start_index - 1:
+                continue
             data_info = batch[3]
             c, prompt, c_vis = prepare_input_train(data_info)
             image, image_uncon, prompt_show, display_info = sample_image(c, prompt)
@@ -281,6 +285,8 @@ if __name__ == '__main__':
             vis = np.concatenate([c_vis, image, image_uncon], axis=1)
             Image_PIL.fromarray(vis.astype(np.uint8)).save(f'{save_image_path}/{index:04d}.png')
             cnt = cnt + 1
+            # except:
+            #     continue
     else:
         demo = gr.Interface(fn=generate_img,
                             inputs=[Textbox(label="Begin your magic",
