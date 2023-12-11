@@ -36,7 +36,7 @@ from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspectRatioBatchSampler
 from diffusion.model.nets import PixArtMSBlock, PixArtMS
-from diffusion.model.nets import ControlT2IDiT, ControlPixArt_Mid, ControlPixArtAll, ControlPixArtHalf
+from diffusion.model.nets import ControlT2IDiT, ControlPixArt_Mid, ControlPixArtAll, ControlPixArtHalf, ControlPixArtHalfRes1024
 
 def set_fsdp_env():
     os.environ["ACCELERATE_USE_FSDP"] = 'true'
@@ -276,9 +276,16 @@ if __name__ == '__main__':
             print('Warning Unexpected keys', unexpected)
 
     if args.controlnet_type == 'all':
+        print('model architrecture ControlPixArtAll')
         model = ControlPixArtAll(model)
-    else:
+    elif args.controlnet_type == 'half' and config.image_size == 512:
+        print('model architrecture ControlPixArtHalf and image size is 512')
         model = ControlPixArtHalf(model)
+    elif args.controlnet_type == 'half' and config.image_size == 1024:
+        print('model architrecture ControlPixArtHalfRes1024 and image size is 1024')
+        model = ControlPixArtHalfRes1024(model)
+    else:
+        assert 1==0, print("specific the controlnet type and image_size!!!")
 
     model = model.train()
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
