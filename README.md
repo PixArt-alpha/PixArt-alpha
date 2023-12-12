@@ -246,7 +246,7 @@ docker build . -t pixart
 docker run --gpus all -it -p 12345:12345 -v <path_to_huggingface_cache>:/root/.cache/huggingface pixart
 ```
 
-Or use docker-compse
+Or use docker-compose
 ```bash
 docker compose build
 docker compose up
