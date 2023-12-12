@@ -243,7 +243,13 @@ As an alternative, a sample [Dockerfile](Dockerfile) is provided to make a runti
 
 ```bash
 docker build . -t pixart
-docker run --gpus all -it -p 12345:12345 -v <path_to_models>:/workspace/output/pretrained_models pixart
+docker run --gpus all -it -p 12345:12345 -v <path_to_huggingface_cache>:/root/.cache/huggingface pixart
+```
+
+Or use docker-compse
+```bash
+docker compose build
+docker compose up
 ```
 
 Let's have a look at a simple example using the `http://your-server-ip:12345`.

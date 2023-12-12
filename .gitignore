@@ -151,3 +151,7 @@ work_dir
 #demo.py
 develop/
 tmp.py
+
+#cache for docker
+docker/cache/gradio
+docker/cache/huggingface
