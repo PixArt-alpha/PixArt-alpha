@@ -13,7 +13,7 @@ model = 'PixArt_XL_2'
 fp32_attention = True
 load_from = None
 vae_pretrained = "output/pretrained_models/sd-vae-ft-ema"
-lewei_scale = 4.0
+lewei_scale = 2.0
 
 # training setting
 num_workers=10
