@@ -36,12 +36,14 @@ Fast training diffusion models with transformers. You can find more visualizatio
 
 ---
 ## Breaking News 🔥🔥!!
+- (🔥 New) Dec. 13, 2023. PixArt-LCM-Lora, PixArt-LoRA training scripts in huggingface style will be released very soon. Stay tuned!!
 - (🔥 New) Nov. 30, 2023. 💥 PixArt collaborates with [LCMs](https://github.com/luosiallen/latent-consistency-model) team to make the **fastest** [Training & Inference Text-to-Image Generation System](https://github.com/PixArt-alpha/PixArt-alpha).
 Here, [Training code](train_scripts/train_pixart_lcm.py) & [Inference code](scripts/inference_lcm.py) & [Weights](https://huggingface.co/PixArt-alpha/PixArt-LCM-XL-2-1024-MS) & [Demo](https://huggingface.co/spaces/PixArt-alpha/PixArt-LCM) are all released, we hope users will enjoy them. 
 Detailed **inference speed** and **code guidance** can be found in [docs](asset/docs/pixart_lcm.md). At the same time, we update the codebase for better user experience and fix some bugs in the newest version.
 
 ---
 ## 🚩 **New Features/Updates**
+- ✅ Dec. 13, 2023. Add multi-scale vae feature extraction in [tools/extract_features.py](https://github.com/PixArt-alpha/PixArt-alpha/blob/3b4f0afdbe39def80b41ab05c664c963edeebbcd/tools/extract_features.py#L276).
 - ✅ Dec. 01, 2023. Add a [Notebook folder](./notebooks) to help users get started with PixArt quickly! Thanks to [@kopyl](https://github.com/kopyl) for his contribution!
 - ✅ Nov. 27, 2023. 💥 **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/rde6eaE5Ta" style="text-decoration:none;">
 <img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a> for discussions. Coders are welcome to contribute.
@@ -348,10 +350,11 @@ python tools/extract_features.py --img_size=1024 \
 - [x] Dreambooth Training code
 - [x] SA-Solver code
 - [x] PixArt-α-LCM will release soon
-- [ ] PixArt-α-LCM-LoRA will release soon
+- [x] Multi-scale vae feature extraction code
+- [ ] PixArt-α-LCM-LoRA scripts will release soon
+- [ ] PixArt-α-LoRA training scripts will release soon
+- [ ] ControlNet code will be released
 - [ ] SAM-LLaVA caption dataset
-- [ ] ControlNet code
-
 
 [//]: # (.mp4)
 
