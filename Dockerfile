@@ -23,5 +23,7 @@ RUN pip install -r requirements.txt
 
 ADD . .
 
+RUN chmod a+x docker-entrypoint.sh
+
 ENV DEMO_PORT=12345
-CMD [ "/usr/bin/python", "/workspace/scripts/app.py" ]
+ENTRYPOINT [ "/workspace/docker-entrypoint.sh" ]

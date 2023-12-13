@@ -8,7 +8,7 @@ services:
     ports:
       - 12345:12345
     environment:
-      CLI_ARGS: ""
+      - APP_CONTEXT=1024 #1024, 512, LCM
     tmpfs:
       - /tmp      
     volumes:
