@@ -381,3 +381,6 @@ python tools/extract_features.py --img_size=1024 \
 - Thanks to [Hugging Face](https://github.com/huggingface) for sponsoring the nicely demo!
 - Thanks to [DiT](https://github.com/facebookresearch/DiT) for their wonderful work and codebase!
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=PixArt-alpha/PixArt-alpha&type=Date)](https://star-history.com/#PixArt-alpha/PixArt-alpha&Date)
