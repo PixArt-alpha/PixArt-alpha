@@ -26,7 +26,7 @@ class AspectRatioBatchSampler(BatchSampler):
                  aspect_ratios: dict,
                  drop_last: bool = False,
                  config=None,
-                 valid_num=2000,
+                 valid_num=0,   # take as valid aspect-ratio when sample number >= valid_num
                  **kwargs) -> None:
         if not isinstance(sampler, Sampler):
             raise TypeError('sampler should be an instance of ``Sampler``, '
@@ -45,8 +45,8 @@ class AspectRatioBatchSampler(BatchSampler):
         # buckets for each aspect ratio
         self._aspect_ratio_buckets = {ratio: [] for ratio in aspect_ratios.keys()}
         self.current_available_bucket_keys =  [str(k) for k, v in self.ratio_nums_gt.items() if v >= valid_num]
-        logger = get_root_logger(os.path.join(config.work_dir, 'train_log.log'))
-        logger.warning(f"Available {len(self.current_available_bucket_keys)} aspect_ratios: {self.current_available_bucket_keys}")
+        logger = get_root_logger() if config is None else get_root_logger(os.path.join(config.work_dir, 'train_log.log'))
+        logger.warning(f"Using valid_num={valid_num} in config file. Available {len(self.current_available_bucket_keys)} aspect_ratios: {self.current_available_bucket_keys}")
 
     def __iter__(self) -> Sequence[int]:
         for idx in self.sampler:

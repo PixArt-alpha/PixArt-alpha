@@ -9,19 +9,18 @@ import random
 import gradio as gr
 import numpy as np
 import uuid
-from diffusers import ConsistencyDecoderVAE, PixArtAlphaPipeline, DPMSolverMultistepScheduler
+from diffusers import PixArtAlphaPipeline
 import torch
 from typing import Tuple
 from datetime import datetime
-from diffusion.sa_solver_diffusers import SASolverScheduler
 
 
-DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/logo.png)
-        # PixArt-Alpha 1024px
-        #### [PixArt-Alpha 1024px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-XL-2-1024-MS](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) checkpoint.
+DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/pixart-lcm.png)
+        # PixArt-LCM 1024px
+        #### [PixArt-Alpha 1024px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. This demo uses the [PixArt-alpha/PixArt-LCM-XL-2-1024-MS](https://huggingface.co/PixArt-alpha/PixArt-LCM-XL-2-1024-MS) checkpoint.
+        #### [LCMs](https://github.com/luosiallen/latent-consistency-model) is a diffusion distillation method which predict PF-ODE's solution directly in latent space, achieving super fast inference with few steps.
         #### English prompts ONLY; 提示词仅限英文
         Don't want to queue? Try [OpenXLab](https://openxlab.org.cn/apps/detail/PixArt-alpha/PixArt-alpha) or [Google Colab Demo](https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing).
-        ### <span style='color: red;'>You may change the DPM-Solver inference steps from 14 to 20, if you didn't get satisfied results.
         """
 if not torch.cuda.is_available():
     DESCRIPTION += "\n<p>Running on CPU 🥶 This demo does not work on CPU.</p>"
@@ -93,8 +92,6 @@ style_list = [
 styles = {k["name"]: (k["prompt"], k["negative_prompt"]) for k in style_list}
 STYLE_NAMES = list(styles.keys())
 DEFAULT_STYLE_NAME = "(No style)"
-SCHEDULE_NAME = ["DPM-Solver", "SA-Solver"]
-DEFAULT_SCHEDULE_NAME = "DPM-Solver"
 NUM_IMAGES_PER_PROMPT = 1
 
 def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str, str]:
@@ -105,15 +102,12 @@ def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str
 
 
 if torch.cuda.is_available():
+
     pipe = PixArtAlphaPipeline.from_pretrained(
-        "PixArt-alpha/PixArt-XL-2-1024-MS",
+        "PixArt-alpha/PixArt-LCM-XL-2-1024-MS",
         torch_dtype=torch.float16,
         use_safetensors=True,
     )
-
-    if os.getenv('CONSISTENCY_DECODER', False):
-        print("Using DALL-E 3 Consistency Decoder")
-        pipe.vae = ConsistencyDecoderVAE.from_pretrained("openai/consistency-decoder", torch_dtype=torch.float16)
 
     if ENABLE_CPU_OFFLOAD:
         pipe.enable_model_cpu_offload()
@@ -152,30 +146,13 @@ def generate(
         seed: int = 0,
         width: int = 1024,
         height: int = 1024,
-        schedule: str = 'DPM-Solver',
-        dpms_guidance_scale: float = 4.5,
-        sas_guidance_scale: float = 3,
-        dpms_inference_steps: int = 20,
-        sas_inference_steps: int = 25,
+        inference_steps: int = 4,
         randomize_seed: bool = False,
         use_resolution_binning: bool = True,
         progress=gr.Progress(track_tqdm=True),
 ):
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator().manual_seed(seed)
-
-    if schedule == 'DPM-Solver':
-        if not isinstance(pipe.scheduler, DPMSolverMultistepScheduler):
-            pipe.scheduler = DPMSolverMultistepScheduler()
-        num_inference_steps = dpms_inference_steps
-        guidance_scale = dpms_guidance_scale
-    elif schedule == "SA-Solver":
-        if not isinstance(pipe.scheduler, SASolverScheduler):
-            pipe.scheduler = SASolverScheduler.from_config(pipe.scheduler.config, algorithm_type='data_prediction', tau_func=lambda t: 1 if 200 <= t <= 800 else 0, predictor_order=2, corrector_order=2)
-        num_inference_steps = sas_inference_steps
-        guidance_scale = sas_guidance_scale
-    else:
-        raise ValueError(f"Unknown schedule: {schedule}")
 
     if not use_negative_prompt:
         negative_prompt = None  # type: ignore
@@ -185,8 +162,8 @@ def generate(
         prompt=prompt,
         width=width,
         height=height,
-        guidance_scale=guidance_scale,
-        num_inference_steps=num_inference_steps,
+        guidance_scale=0.,
+        num_inference_steps=inference_steps,
         generator=generator,
         num_images_per_prompt=NUM_IMAGES_PER_PROMPT,
         use_resolution_binning=use_resolution_binning,
@@ -231,15 +208,12 @@ with gr.Blocks(css="scripts/style.css") as demo:
     with gr.Accordion("Advanced options", open=False):
         with gr.Row():
             use_negative_prompt = gr.Checkbox(label="Use negative prompt", value=False, visible=True)
-        schedule = gr.Radio(
-            show_label=True,
-            container=True,
-            interactive=True,
-            choices=SCHEDULE_NAME,
-            value=DEFAULT_SCHEDULE_NAME,
-            label="Sampler Schedule",
-            visible=True,
-        )
+            negative_prompt = gr.Text(
+                label="Negative prompt",
+                max_lines=1,
+                placeholder="Enter a negative prompt",
+                visible=True,
+            )
         style_selection = gr.Radio(
             show_label=True,
             container=True,
@@ -247,12 +221,6 @@ with gr.Blocks(css="scripts/style.css") as demo:
             choices=STYLE_NAMES,
             value=DEFAULT_STYLE_NAME,
             label="Image Style",
-        )
-        negative_prompt = gr.Text(
-            label="Negative prompt",
-            max_lines=1,
-            placeholder="Enter a negative prompt",
-            visible=True,
         )
         seed = gr.Slider(
             label="Seed",
@@ -278,36 +246,13 @@ with gr.Blocks(css="scripts/style.css") as demo:
                 value=1024,
             )
         with gr.Row():
-            dpms_guidance_scale = gr.Slider(
-                label="DPM-Solver Guidance scale",
+            inference_steps = gr.Slider(
+                label="LCM inference steps",
                 minimum=1,
-                maximum=10,
-                step=0.1,
-                value=4.5,
-            )
-            dpms_inference_steps = gr.Slider(
-                label="DPM-Solver inference steps",
-                minimum=5,
-                maximum=40,
+                maximum=30,
                 step=1,
-                value=14,
+                value=4,
             )
-        with gr.Row():
-            sas_guidance_scale = gr.Slider(
-                label="SA-Solver Guidance scale",
-                minimum=1,
-                maximum=10,
-                step=0.1,
-                value=3,
-            )
-            sas_inference_steps = gr.Slider(
-                label="SA-Solver inference steps",
-                minimum=10,
-                maximum=40,
-                step=1,
-                value=25,
-            )
-
     gr.Examples(
         examples=examples,
         inputs=prompt,
@@ -338,11 +283,7 @@ with gr.Blocks(css="scripts/style.css") as demo:
             seed,
             width,
             height,
-            schedule,
-            dpms_guidance_scale,
-            sas_guidance_scale,
-            dpms_inference_steps,
-            sas_inference_steps,
+            inference_steps,
             randomize_seed,
         ],
         outputs=[result, seed],

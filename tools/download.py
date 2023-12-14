@@ -10,9 +10,10 @@ Functions for downloading pre-trained PixArt models
 from torchvision.datasets.utils import download_url
 import torch
 import os
+import argparse
 
 
-pretrained_models = {'PixArt-XL-2-512x512.pth', 'PixArt-XL-2-1024x1024.pth'}
+pretrained_models = {'PixArt-XL-2-512x512.pth', 'PixArt-XL-2-1024-MS.pth'}
 vae_models = {
     'sd-vae-ft-ema/config.json',
     'sd-vae-ft-ema/diffusion_pytorch_model.bin'
@@ -64,11 +65,17 @@ def download_other(model_name, model_zoo, output_dir):
 
 
 if __name__ == "__main__":
-    # Download all PixArt checkpoints
-    for model in pretrained_models:
-        download_model(model)    # for vae_model in vae_models:
-    for vae_model in vae_models:
-        download_other(vae_model, vae_models, 'output/pretrained_models/')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model_names', nargs='+', type=str, default=pretrained_models)
+    args = parser.parse_args()
+    model_names = args.model_names
+    model_names = set(model_names)
+
+    # Download PixArt checkpoints
     for t5_model in t5_models:
         download_other(t5_model, t5_models, 'output/pretrained_models/t5_ckpts')
+    for vae_model in vae_models:
+        download_other(vae_model, vae_models, 'output/pretrained_models/')
+    for model in model_names:
+        download_model(model)    # for vae_model in vae_models:
     print('Done.')

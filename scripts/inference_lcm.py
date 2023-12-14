@@ -22,7 +22,6 @@ from diffusion.lcm_scheduler import LCMScheduler
 from diffusion.data.datasets import ASPECT_RATIO_512_TEST, ASPECT_RATIO_1024_TEST
 
 
-
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--image_size', default=1024, type=int)
@@ -32,6 +31,7 @@ def get_args():
     parser.add_argument('--model_path', default='output/pretrained_models/PixArt-XL-2-1024x1024.pth', type=str)
     parser.add_argument('--bs', default=1, type=int)
     parser.add_argument('--cfg_scale', default=4.5, type=float)
+    parser.add_argument('--sample_steps', default=4, type=int)
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--dataset', default='custom', type=str)
     parser.add_argument('--step', default=-1, type=int)
@@ -111,10 +111,9 @@ if __name__ == '__main__':
     # only support fixed latent size currently
     latent_size = args.image_size // 8
     lewei_scale = {512: 1, 1024: 2}     # trick for positional embedding interpolation
-    sample_steps = 2
+    sample_steps = args.sample_steps
 
     # Initalize Scheduler:
-    # scheduler = LCMScheduler(beta_start=0.00085, beta_end=0.0120, beta_schedule="scaled_linear", prediction_type="epsilon")
     scheduler = LCMScheduler(beta_start=0.0001, beta_end=0.02, beta_schedule="linear", prediction_type="epsilon")
 
     # model setting
@@ -126,7 +125,6 @@ if __name__ == '__main__':
     print("Generating sample from ckpt: %s" % args.model_path)
     state_dict = find_model(args.model_path)
     del state_dict['state_dict']['pos_embed']
-    # missing, unexpected = model.load_state_dict(state_dict['state_dict_ema'], strict=False)
     missing, unexpected = model.load_state_dict(state_dict['state_dict'], strict=False)
     print('Missing keys: ', missing)
     print('Unexpected keys', unexpected)
@@ -141,7 +139,6 @@ if __name__ == '__main__':
     # data setting
     with open(args.txt_file, 'r') as f:
         items = [item.strip() for item in f.readlines()]
-    items = ['dog']
 
     # img save setting
     try:

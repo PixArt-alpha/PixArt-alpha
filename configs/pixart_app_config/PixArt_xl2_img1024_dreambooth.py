@@ -7,7 +7,7 @@ image_size = 1024
 # model setting
 model = 'PixArtMS_XL_2'     # model for multi-scale training
 fp32_attention = True
-load_from = 'Path/to/PixArt-XL-2-1024x1024.pth'
+load_from = 'Path/to/PixArt-XL-2-1024-MS.pth'
 vae_pretrained = "output/pretrained_models/sd-vae-ft-ema"
 window_block_indexes = []
 window_size=0
