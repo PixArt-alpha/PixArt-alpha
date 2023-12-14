@@ -245,7 +245,14 @@ As an alternative, a sample [Dockerfile](Dockerfile) is provided to make a runti
 
 ```bash
 docker build . -t pixart
-docker run --gpus all -it -p 12345:12345 -v <path_to_models>:/workspace/output/pretrained_models pixart
+docker run --gpus all -it -p 12345:12345 -v <path_to_huggingface_cache>:/root/.cache/huggingface pixart
+```
+
+Or use docker-compose.  Note, if you want to change context from the 1024 to 512 or LCM version of the app just change the APP_CONTEXT env variable in the docker-compose.yml file.  The default is 1024
+
+```bash
+docker compose build
+docker compose up
 ```
 
 Let's have a look at a simple example using the `http://your-server-ip:12345`.
