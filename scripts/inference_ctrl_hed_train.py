@@ -12,21 +12,21 @@ from datetime import datetime
 from typing import List, Union
 import gradio as gr
 from gradio.components import Textbox, Image, Slider
-from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor
-from diffusion.model.nets import PixArtMS_XL_2, PixArtMS
-from diffusion.model.nets import ControlT2IDiT, ControlPixArt_Mid, ControlPixArtAll, ControlPixArtHalf
-from diffusion.model.t5 import T5Embedder
 from torchvision.utils import _log_api_usage_once, make_grid
-from diffusion.data.datasets import *
-from diffusion.model.hed import HEDdetector
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
-from PIL import ImageFilter
 from PIL import Image as Image_PIL
+import os
+import numpy as np
+
 from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow #MoxingWorker
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
-import os
-import numpy as np 
+from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor
+from diffusion.model.nets import PixArtMS_XL_2, ControlT2IDiT, ControlPixArt_Mid, ControlPixArtAll, ControlPixArtHalf, ControlPixArtHalfRes1024
+from diffusion.model.t5 import T5Embedder
+from diffusion.data.datasets import *
+from diffusion.model.hed import HEDdetector
+
 # The code of testing on the train set or test set
 
 vae_scale = 0.18215
@@ -217,13 +217,16 @@ if __name__ == '__main__':
     assert args.image_size in [256, 512, 1024], "We only provide pre-trained models for 256x256, 512x512 and 1024x1024 resolutions."
     lewei_scale = {256: 1, 512: 1, 1024: 2}
     latent_size = args.image_size // 8
-    
+
+    model = PixArtMS_XL_2(input_size=latent_size, lewei_scale=lewei_scale[args.image_size])
     if args.controlnet_type == 'all':
-        model = PixArtMS_XL_2(input_size=latent_size, lewei_scale=lewei_scale[args.image_size])
         model = ControlPixArtAll(model).to(device)
-    else:
-        model = PixArtMS(input_size=latent_size, lewei_scale=lewei_scale[args.image_size])
+    elif args.controlnet_type == 'half' and config.image_size == 512:
+        print('model architrecture ControlPixArtHalf and image size is 512')
         model = ControlPixArtHalf(model).to(device)
+    elif args.controlnet_type == 'half' and config.image_size == 1024:
+        print('model architrecture ControlPixArtHalfRes1024 and image size is 1024')
+        model = ControlPixArtHalfRes1024(model).to(device)
 
     state_dict = find_model(args.model_path)['state_dict']
     if 'pos_embed' in state_dict:
@@ -271,8 +274,8 @@ if __name__ == '__main__':
         
         for index, batch in enumerate(train_dataloader):
             # try:
-            # if cnt > 80:
-            #     break
+            if cnt > 20:
+                break
             if index < args.start_index - 1:
                 continue
             data_info = batch[3]

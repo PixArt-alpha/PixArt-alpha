@@ -22,6 +22,7 @@ from diffusion.lcm_scheduler import LCMScheduler
 from diffusion.data.datasets import ASPECT_RATIO_512_TEST, ASPECT_RATIO_1024_TEST
 
 
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--image_size', default=1024, type=int)

@@ -15,8 +15,6 @@ from accelerate import DistributedDataParallelKwargs
 from mmcv.runner import LogBuffer
 from tqdm import tqdm
 from copy import deepcopy
-from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
-
 import torch
 import torch.nn as nn
 from PIL import Image
@@ -31,12 +29,14 @@ from diffusion.utils.dist_utils import synchronize, get_world_size, clip_grad_no
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 from diffusion.model.builder import build_model
 from diffusion.utils.logger import get_root_logger
-from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow #MoxingWorker
+from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow  # MoxingWorker
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspectRatioBatchSampler
 from diffusion.model.nets import PixArtMSBlock, PixArtMS
 from diffusion.model.nets import ControlT2IDiT, ControlPixArt_Mid, ControlPixArtAll, ControlPixArtHalf, ControlPixArtHalfRes1024
+from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
+
 
 def set_fsdp_env():
     os.environ["ACCELERATE_USE_FSDP"] = 'true'
@@ -52,6 +52,7 @@ def ema_update(model_dest: nn.Module, model_src: nn.Module, rate):
         assert p_src is not p_dest
         p_dest.data.mul_(rate).add_((1 - rate) * p_src.data)
 
+
 def train():
     if config.get('debug_nan', False):
         DebugUnderflowOverflow(model)
@@ -65,18 +66,17 @@ def train():
 
     # Now you train the model
     for epoch in range(start_epoch + 1, config.num_epochs + 1):
-        data_time_start= time.time()
+        data_time_start = time.time()
         data_time_all = 0
         for step, batch in enumerate(train_dataloader):
             data_time_all += time.time() - data_time_start
-            z = batch[0] # 4 x 4 x 128 x 128 z:vae output, 3x1024x1024->vae->4x128x128
-            clean_images = z * config.scale_factor #vae needed scale factor
-            y = batch[1] # 4 x 1 x 120 x 4096 # T5 extracted feature of caption, 120 token, 4096
-            y_mask = batch[2] # 4 x 1 x 1 x 120 # caption indicate whether valid
+            z = batch[0]  # 4 x 4 x 128 x 128 z:vae output, 3x1024x1024->vae->4x128x128
+            clean_images = z * config.scale_factor  # vae needed scale factor
+            y = batch[1]  # 4 x 1 x 120 x 4096 # T5 extracted feature of caption, 120 token, 4096
+            y_mask = batch[2]  # 4 x 1 x 1 x 120 # caption indicate whether valid
             data_info = batch[3]
             # data_info contains img_hw, aspect_ratio, and mask(useless) and condition 
             # condition shape is 4 x 4 x 128 x 128
-            
 
             # Sample a random timestep for each image
             bs = clean_images.shape[0]
@@ -110,7 +110,7 @@ def train():
                 eta_epoch = str(datetime.timedelta(seconds=int(avg_time * (len(train_dataloader) - step - 1))))
                 # avg_loss = sum(loss_buffer) / len(loss_buffer)
                 log_buffer.average()
-                info = f"Step/Epoch [{(epoch-1)*len(train_dataloader)+step+1}/{epoch}][{step + 1}/{len(train_dataloader)}]:total_eta: {eta}, " \
+                info = f"Step/Epoch [{(epoch - 1) * len(train_dataloader) + step + 1}/{epoch}][{step + 1}/{len(train_dataloader)}]:total_eta: {eta}, " \
                        f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, s:({model.module.h}, {model.module.w}), "
                 info += ', '.join([f"{k}:{v:.4f}" for k, v in log_buffer.output.items()])
                 logger.info(info)
@@ -128,7 +128,7 @@ def train():
                 logger.info(f"s3_work_dir: {config.s3_work_dir}")
 
             global_step += 1
-            data_time_start= time.time()
+            data_time_start = time.time()
 
             synchronize()
             # After each epoch you optionally sample some demo images with evaluate() and save the model
@@ -176,8 +176,7 @@ def parse_args():
     parser.add_argument('--data_root', type=str, default=None)
     parser.add_argument('--resume_optimizer', action='store_true')
     parser.add_argument('--resume_lr_scheduler', action='store_true')
-    parser.add_argument('--controlnet_type', type=str, default='all', \
-        help='the network architecture of controlnet, choose from all or half')
+    parser.add_argument('--controlnet_type', type=str, default='all', help='the network architecture of controlnet, choose from all or half')
     args = parser.parse_args()
     return args
 
@@ -193,7 +192,8 @@ if __name__ == '__main__':
     if args.data_root:
         config.data_root = args.data_root
     if args.resume_from is not None:
-        resume_dict = dict(
+        config.load_from = None
+        config.resume_from = dict(
             checkpoint=args.resume_from,
             load_ema=False,
             resume_optimizer=args.resume_optimizer,
@@ -201,7 +201,7 @@ if __name__ == '__main__':
     if args.debug:
         config.log_interval = 1
         config.train_batch_size = 2
-        config.save_model_steps=args.save_step
+        config.save_model_steps = args.save_step
         config.optimizer.update({'lr': args.lr})
 
     os.umask(0o000)  # file permission: 666; dir permission: 777
@@ -225,7 +225,6 @@ if __name__ == '__main__':
     even_batches = True
     if config.multi_scale:
         even_batches=False,
-
 
     accelerator = Accelerator(
         mixed_precision=config.mixed_precision,
@@ -252,20 +251,20 @@ if __name__ == '__main__':
     latent_size = int(image_size) // 8
     pred_sigma = getattr(config, 'pred_sigma', True)
     learn_sigma = getattr(config, 'learn_sigma', True) and pred_sigma
-    model_kwargs={"window_block_indexes": config.window_block_indexes, "window_size": config.window_size,
-                  "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config':config}
+    model_kwargs = {"window_block_indexes": config.window_block_indexes, "window_size": config.window_size,
+                    "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config': config}
 
     # build models
     train_diffusion = IDDPM(str(config.train_sampling_steps))
     eval_diffusion = IDDPM(str(config.eval_sampling_steps))
 
     model: PixArtMS = build_model(config.model,
-                        config.grad_checkpointing,
-                        config.get('fp32_attention', False),
-                        input_size=latent_size,
-                        learn_sigma=learn_sigma,
-                        pred_sigma=pred_sigma,
-                        **model_kwargs)
+                                  config.grad_checkpointing,
+                                  config.get('fp32_attention', False),
+                                  input_size=latent_size,
+                                  learn_sigma=learn_sigma,
+                                  pred_sigma=pred_sigma,
+                                  **model_kwargs)
 
     if config.load_from is not None and args.resume_from is None:
         # load from pixart model
@@ -285,16 +284,16 @@ if __name__ == '__main__':
         print('model architrecture ControlPixArtHalfRes1024 and image size is 1024')
         model = ControlPixArtHalfRes1024(model)
     else:
-        assert 1==0, print("specific the controlnet type and image_size!!!")
+        assert 1 == 0, print("specific the controlnet type and image_size!!!")
 
     model = model.train()
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
-    if args.local_rank == 0:
-        for name, params in model.named_parameters():
-            if params.requires_grad == False: logger.info(f"freeze param: {name}")
-
-        for name, params in model.named_parameters():
-            if params.requires_grad == True: logger.info(f"trainable param: {name}")
+    # if args.local_rank == 0:
+    #     for name, params in model.named_parameters():
+    #         if params.requires_grad == False: logger.info(f"freeze param: {name}")
+    #
+    #     for name, params in model.named_parameters():
+    #         if params.requires_grad == True: logger.info(f"trainable param: {name}")
 
     model_ema = deepcopy(model).eval()
     ema_update(model_ema, model, 0.)
@@ -335,16 +334,16 @@ if __name__ == '__main__':
         accelerator.init_trackers(f"tb_{timestamp}")
 
     start_epoch = 0
-    if args.resume_from is not None:
+    if config.resume_from is not None and config.resume_from['checkpoint'] is not None:
         if args.resume_optimizer == False or args.resume_lr_scheduler == False:
             missing, unexpected = load_checkpoint(args.resume_from, model, load_ema=config.get('load_ema', False))
         else:
-            start_epoch, missing, unexpected = load_checkpoint(**resume_dict,
-                                                           model=model,
-                                                           model_ema=model_ema,
-                                                           optimizer=optimizer,
-                                                           lr_scheduler=lr_scheduler,
-                                                           )
+            start_epoch, missing, unexpected = load_checkpoint(**config.resume_from,
+                                                               model=model,
+                                                               model_ema=model_ema,
+                                                               optimizer=optimizer,
+                                                               lr_scheduler=lr_scheduler,
+                                                               )
 
         if accelerator.is_main_process:
             print('Warning Missing keys: ', missing)

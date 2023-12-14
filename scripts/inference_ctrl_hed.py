@@ -22,7 +22,8 @@ from diffusion.model.hed import HEDdetector
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 from PIL import ImageFilter
-
+from PIL import Image as Image_PIL
+import numpy as np
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--num_sampling_steps', default=14, type=int)
@@ -79,10 +80,14 @@ def generate_img(prompt, condition, strength, radius, seed):
         condition = hed(condition) * strength
         if radius > 0:
             condition[0] = TF.gaussian_blur(condition[0], kernel_size=radius)
-        TF.to_pil_image(condition[0]).save('./test.png')
+        c_vis = condition.permute(0, 2, 3, 1)[0].cpu().repeat(1,1,3)
+        c_vis = (c_vis*255).clip(0, 255).int().numpy()
+        # TF.to_pil_image(condition[0]).save('./test.png')
         # condition = TF.to_tensor(condition).unsqueeze(0).to(device)
         condition = TF.normalize(condition, [.5], [.5])
         condition = condition.repeat(1, 3, 1, 1)
+        print("debug", c_vis.shape)
+        Image_PIL.fromarray(c_vis.astype(np.uint8)).save('test.png')
         posterior = vae.encode(condition).latent_dist
         c = posterior.sample()
         c = c * 0.18215
