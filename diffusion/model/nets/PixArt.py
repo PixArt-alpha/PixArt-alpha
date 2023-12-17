@@ -42,7 +42,7 @@ class PixArtBlock(nn.Module):
         self.window_size = window_size
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size ** 0.5)
 
-    def forward(self, x, y, t, mask=None):
+    def forward(self, x, y, t, mask=None, **kwargs):
         B, N, C = x.shape
 
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (self.scale_shift_table[None] + t.reshape(B, 6, -1)).chunk(6, dim=1)
@@ -122,7 +122,7 @@ class PixArt(nn.Module):
         else:
             print(f'Warning: lewei scale: {self.lewei_scale}, base size: {self.base_size}')
 
-    def forward(self, x, t, y, mask=None, data_info=None):
+    def forward(self, x, timestep, y, mask=None, data_info=None, **kwargs):
         """
         Forward pass of PixArt.
         x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
@@ -131,7 +131,7 @@ class PixArt(nn.Module):
         """
         self.h, self.w = x.shape[-2]//self.patch_size, x.shape[-1]//self.patch_size
         x = self.x_embedder(x) + self.pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
-        t = self.t_embedder(t)  # (N, D)
+        t = self.t_embedder(timestep)  # (N, D)
         t0 = self.t_block(t)
         y = self.y_embedder(y, self.training)  # (N, 1, L, D)
         if mask is not None:
@@ -149,22 +149,22 @@ class PixArt(nn.Module):
         x = self.unpatchify(x)  # (N, out_channels, H, W)
         return x
 
-    def forward_with_dpmsolver(self, x, t, y, mask=None, **kwargs):
+    def forward_with_dpmsolver(self, x, timestep, y, mask=None, **kwargs):
         """
         dpm solver donnot need variance prediction
         """
         # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
-        model_out = self.forward(x, t, y, mask)
+        model_out = self.forward(x, timestep, y, mask)
         return model_out.chunk(2, dim=1)[0]
 
-    def forward_with_cfg(self, x, t, y, cfg_scale, mask=None, **kwargs):
+    def forward_with_cfg(self, x, timestep, y, cfg_scale, mask=None, **kwargs):
         """
         Forward pass of PixArt, but also batches the unconditional forward pass for classifier-free guidance.
         """
         # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
         half = x[: len(x) // 2]
         combined = torch.cat([half, half], dim=0)
-        model_out = self.forward(combined, t, y, mask, kwargs)
+        model_out = self.forward(combined, timestep, y, mask, kwargs)
         model_out = model_out['x'] if isinstance(model_out, dict) else model_out
         eps, rest = model_out[:, :3], model_out[:, 3:]
         cond_eps, uncond_eps = torch.split(eps, len(eps) // 2, dim=0)

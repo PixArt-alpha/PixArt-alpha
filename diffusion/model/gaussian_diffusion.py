@@ -720,7 +720,7 @@ class GaussianDiffusion:
         output = th.where((t == 0), decoder_nll, kl)
         return {"output": output, "pred_xstart": out["pred_xstart"]}
 
-    def training_losses(self, model, x_start, t, model_kwargs=None, noise=None, skip_noise=False):
+    def training_losses(self, model, x_start, timestep, model_kwargs=None, noise=None, skip_noise=False):
         """
         Compute training losses for a single timestep.
         :param model: the model to evaluate loss on.
@@ -732,13 +732,14 @@ class GaussianDiffusion:
         :return: a dict with the key "loss" containing a tensor of shape [N].
                  Some mean or variance settings may also have other keys.
         """
+        t = timestep
         if model_kwargs is None:
             model_kwargs = {}
-        if noise is None:
-            noise = th.randn_like(x_start)
         if skip_noise:
             x_t = x_start
         else:
+            if noise is None:
+                noise = th.randn_like(x_start)
             x_t = self.q_sample(x_start, t, noise=noise)
 
         terms = {}
@@ -777,7 +778,7 @@ class GaussianDiffusion:
                 # Learn the variance using the variational bound, but don't let it affect our mean prediction.
                 frozen_out = th.cat([output.detach(), model_var_values], dim=1)
                 terms["vb"] = self._vb_terms_bpd(
-                    model=lambda *args, r=frozen_out: r,
+                    model=lambda *args, r=frozen_out, **kwargs: r,
                     x_start=x_start,
                     x_t=x_t,
                     t=t,
@@ -821,6 +822,106 @@ class GaussianDiffusion:
                     terms['mae'] = model_kwargs['mask_loss_coef'] * mean_flat(loss * mask) * mask.shape[1]/mask.sum(1)
             else:
                 terms["mse"] = mean_flat(loss)
+            if "vb" in terms:
+                terms["loss"] = terms["mse"] + terms["vb"]
+            else:
+                terms["loss"] = terms["mse"]
+            if "mae" in terms:
+                terms["loss"] = terms["loss"] + terms["mae"]
+        else:
+            raise NotImplementedError(self.loss_type)
+
+        return terms
+
+    def training_losses_diffusers(self, model, x_start, timestep, model_kwargs=None, noise=None, skip_noise=False):
+        """
+        Compute training losses for a single timestep.
+        :param model: the model to evaluate loss on.
+        :param x_start: the [N x C x ...] tensor of inputs.
+        :param t: a batch of timestep indices.
+        :param model_kwargs: if not None, a dict of extra keyword arguments to
+            pass to the model. This can be used for conditioning.
+        :param noise: if specified, the specific Gaussian noise to try to remove.
+        :return: a dict with the key "loss" containing a tensor of shape [N].
+                 Some mean or variance settings may also have other keys.
+        """
+        t = timestep
+        if model_kwargs is None:
+            model_kwargs = {}
+        if skip_noise:
+            x_t = x_start
+        else:
+            if noise is None:
+                noise = th.randn_like(x_start)
+            x_t = self.q_sample(x_start, t, noise=noise)
+
+        terms = {}
+
+        if self.loss_type == LossType.KL or self.loss_type == LossType.RESCALED_KL:
+            terms["loss"] = self._vb_terms_bpd(
+                model=model,
+                x_start=x_start,
+                x_t=x_t,
+                t=t,
+                clip_denoised=False,
+                model_kwargs=model_kwargs,
+            )["output"]
+            if self.loss_type == LossType.RESCALED_KL:
+                terms["loss"] *= self.num_timesteps
+        elif self.loss_type == LossType.MSE or self.loss_type == LossType.RESCALED_MSE:
+            output = model(x_t, timestep=t, **model_kwargs, return_dict=False)[0]
+
+            if self.return_startx and self.model_mean_type == ModelMeanType.EPSILON:
+                B, C = x_t.shape[:2]
+                assert output.shape == (B, C * 2, *x_t.shape[2:])
+                output = th.split(output, C, dim=1)[0]
+                return output, self._predict_xstart_from_eps(x_t=x_t, t=t, eps=output), x_t
+
+            if self.model_var_type in [
+                ModelVarType.LEARNED,
+                ModelVarType.LEARNED_RANGE,
+            ]:
+                B, C = x_t.shape[:2]
+                assert output.shape == (B, C * 2, *x_t.shape[2:])
+                output, model_var_values = th.split(output, C, dim=1)
+                # Learn the variance using the variational bound, but don't let it affect our mean prediction.
+                frozen_out = th.cat([output.detach(), model_var_values], dim=1)
+                terms["vb"] = self._vb_terms_bpd(
+                    model=lambda *args, r=frozen_out, **kwargs: r,
+                    x_start=x_start,
+                    x_t=x_t,
+                    t=t,
+                    clip_denoised=False,
+                )["output"]
+                if self.loss_type == LossType.RESCALED_MSE:
+                    # Divide by 1000 for equivalence with initial implementation.
+                    # Without a factor of 1/1000, the VB term hurts the MSE term.
+                    terms["vb"] *= self.num_timesteps / 1000.0
+
+            target = {
+                ModelMeanType.PREVIOUS_X: self.q_posterior_mean_variance(
+                    x_start=x_start, x_t=x_t, t=t
+                )[0],
+                ModelMeanType.START_X: x_start,
+                ModelMeanType.EPSILON: noise,
+            }[self.model_mean_type]
+            assert output.shape == target.shape == x_start.shape
+            if self.snr:
+                if self.model_mean_type == ModelMeanType.START_X:
+                    pred_noise = self._predict_eps_from_xstart(x_t=x_t, t=t, pred_xstart=output)
+                    pred_startx = output
+                elif self.model_mean_type == ModelMeanType.EPSILON:
+                    pred_noise = output
+                    pred_startx = self._predict_xstart_from_eps(x_t=x_t, t=t, eps=output)
+                # terms["mse_eps"] = mean_flat((noise - pred_noise) ** 2)
+                # terms["mse_x0"] = mean_flat((x_start - pred_startx) ** 2)
+
+                t = t[:, None, None, None].expand(pred_startx.shape)  # [128, 4, 32, 32]
+                # best
+                target = th.where(t > 249, noise, x_start)
+                output = th.where(t > 249, pred_noise, pred_startx)
+            loss = (target - output) ** 2
+            terms["mse"] = mean_flat(loss)
             if "vb" in terms:
                 terms["loss"] = terms["mse"] + terms["vb"]
             else:

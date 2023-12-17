@@ -9,11 +9,12 @@ import random
 import gradio as gr
 import numpy as np
 import uuid
-from diffusers import PixArtAlphaPipeline
+from diffusers import PixArtAlphaPipeline, Transformer2DModel
+from peft import PeftModel
 import torch
 from typing import Tuple
 from datetime import datetime
-
+import argparse
 
 DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/pixart-lcm.png)
         # PixArt-LCM 1024px
@@ -101,13 +102,33 @@ def apply_style(style_name: str, positive: str, negative: str = "") -> Tuple[str
     return p.replace("{prompt}", positive), n + negative
 
 
-if torch.cuda.is_available():
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--is_lora', action='store_true', help='enable lora ckpt loading')
+    parser.add_argument('--repo_id', default="PixArt-alpha/PixArt-LCM-XL-2-1024-MS", type=str)
+    parser.add_argument('--lora_repo_id', default="PixArt-alpha/PixArt-LCM-LoRA-XL-2-1024-MS", type=str)
+    return parser.parse_args()
 
-    pipe = PixArtAlphaPipeline.from_pretrained(
-        "PixArt-alpha/PixArt-LCM-XL-2-1024-MS",
-        torch_dtype=torch.float16,
-        use_safetensors=True,
-    )
+
+args = get_args()
+if torch.cuda.is_available():
+    if not args.is_lora:
+        pipe = PixArtAlphaPipeline.from_pretrained(
+            args.repo_id,
+            torch_dtype=torch.float16,
+            use_safetensors=True,
+        )
+    else:
+        assert args.lora_repo_id is not None
+        transformer = Transformer2DModel.from_pretrained(args.repo_id, subfolder="transformer", torch_dtype=torch.float16)
+        transformer = PeftModel.from_pretrained(transformer, args.lora_repo_id)
+        pipe = PixArtAlphaPipeline.from_pretrained(
+            args.repo_id,
+            transformer=transformer,
+            torch_dtype=torch.float16,
+            use_safetensors=True,
+        )
+        del transformer
 
     if ENABLE_CPU_OFFLOAD:
         pipe.enable_model_cpu_offload()

@@ -15,6 +15,8 @@ lewei_scale = 1.0    # lewei_scale for positional embedding interpolation
 num_workers=4
 train_sampling_steps = 1000
 eval_sampling_steps = 250
+model_max_length = 120
+lora_rank = 4
 
 num_epochs = 80
 gradient_accumulation_steps = 1

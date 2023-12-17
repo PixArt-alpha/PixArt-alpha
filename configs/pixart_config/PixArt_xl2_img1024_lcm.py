@@ -19,7 +19,7 @@ lewei_scale = 2.0
 
 # training setting
 num_workers=4
-train_batch_size = 11   # max 12 for PixArt-xL/2 when grad_checkpoint
+train_batch_size = 16   # max 12 for PixArt-xL/2 when grad_checkpoint   16 for LCM-LoRA
 num_epochs = 10 # 3
 gradient_accumulation_steps = 1
 grad_checkpointing = True
@@ -45,3 +45,4 @@ w_min = 3.0
 ema_decay = 0.95
 cfg_scale = 4.5
 class_dropout_prob = 0.
+lora_rank = 32
