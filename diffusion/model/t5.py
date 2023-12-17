@@ -16,7 +16,7 @@ class T5Embedder:
     bad_punct_regex = re.compile(r'['+'#®•©™&@·º½¾¿¡§~'+'\)'+'\('+'\]'+'\['+'\}'+'\{'+'\|'+'\\'+'\/'+'\*' + r']{1,}')  # noqa
 
     def __init__(self, device, dir_or_name='t5-v1_1-xxl', *, local_cache=False, cache_dir=None, hf_token=None, use_text_preprocessing=True,
-                 t5_model_kwargs=None, torch_dtype=None, use_offload_folder=None):
+                 t5_model_kwargs=None, torch_dtype=None, use_offload_folder=None, model_max_length=120):
         self.device = torch.device(device)
         self.torch_dtype = torch_dtype or torch.bfloat16
         if t5_model_kwargs is None:
@@ -85,13 +85,14 @@ class T5Embedder:
         print(tokenizer_path)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
         self.model = T5EncoderModel.from_pretrained(path, **t5_model_kwargs).eval()
+        self.model_max_length = model_max_length
 
     def get_text_embeddings(self, texts):
         texts = [self.text_preprocessing(text) for text in texts]
 
         text_tokens_and_mask = self.tokenizer(
             texts,
-            max_length=120,
+            max_length=self.model_max_length,
             padding='max_length',
             truncation=True,
             return_attention_mask=True,

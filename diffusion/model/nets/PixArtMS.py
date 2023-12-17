@@ -106,6 +106,7 @@ class PixArtMS(PixArt):
             caption_channels=4096,
             lewei_scale=1.,
             config=None,
+            model_max_length=120,
             **kwargs,
     ):
         super().__init__(
@@ -125,6 +126,7 @@ class PixArtMS(PixArt):
             use_rel_pos=use_rel_pos,
             lewei_scale=lewei_scale,
             config=config,
+            model_max_length=model_max_length,
             **kwargs,
         )
         self.h = self.w = 0
@@ -134,7 +136,7 @@ class PixArtMS(PixArt):
             nn.Linear(hidden_size, 6 * hidden_size, bias=True)
         )
         self.x_embedder = PatchEmbed(patch_size, in_channels, hidden_size, bias=True)
-        self.y_embedder = CaptionEmbedder(in_channels=caption_channels, hidden_size=hidden_size, uncond_prob=class_dropout_prob, act_layer=approx_gelu)
+        self.y_embedder = CaptionEmbedder(in_channels=caption_channels, hidden_size=hidden_size, uncond_prob=class_dropout_prob, act_layer=approx_gelu, token_num=model_max_length)
         self.csize_embedder = SizeEmbedder(hidden_size//3)  # c_size embed
         self.ar_embedder = SizeEmbedder(hidden_size//3)     # aspect ratio embed
         drop_path = [x.item() for x in torch.linspace(0, drop_path, depth)]  # stochastic depth decay rule
