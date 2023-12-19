@@ -110,8 +110,7 @@ class WindowAttention(Attention_):
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads)
         q, k, v = qkv.unbind(2)
-        use_fp32_attention = getattr(self, 'fp32_attention', False)
-        if use_fp32_attention:
+        if use_fp32_attention := getattr(self, 'fp32_attention', False):
             q, k, v = q.float(), k.float(), v.float()
 
         attn_bias = None
@@ -268,8 +267,7 @@ class TimestepEmbedder(nn.Module):
 
     def forward(self, t):
         t_freq = self.timestep_embedding(t, self.frequency_embedding_size)
-        t_emb = self.mlp(t_freq)
-        return t_emb
+        return self.mlp(t_freq)
 
 
 class SizeEmbedder(TimestepEmbedder):
@@ -329,8 +327,7 @@ class LabelEmbedder(nn.Module):
         use_dropout = self.dropout_prob > 0
         if (train and use_dropout) or (force_drop_ids is not None):
             labels = self.token_drop(labels, force_drop_ids)
-        embeddings = self.embedding_table(labels)
-        return embeddings
+        return self.embedding_table(labels)
 
 
 class CaptionEmbedder(nn.Module):

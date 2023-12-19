@@ -19,12 +19,11 @@ def get_transform(type, resolution):
 
 @register_transform
 def default_train(n_px):
-    transform = [
+    return [
         T.Lambda(lambda img: img.convert('RGB')),
         T.Resize(n_px),  # Image.BICUBIC
         T.CenterCrop(n_px),
         # T.RandomHorizontalFlip(),
         T.ToTensor(),
-        T.Normalize([.5], [.5]),
+        T.Normalize([0.5], [0.5]),
     ]
-    return transform

@@ -85,7 +85,6 @@ class InternalDataMS(InternalData):
         img_path = self.img_samples[index]
         npz_path = self.txt_feat_samples[index]
         npy_path = self.vae_feat_samples[index]
-        data_info = {}
         ori_h, ori_w = self.meta_data_clean[index]['height'], self.meta_data_clean[index]['width']
 
         # Calculate the closest aspect ratio and resize & crop image[w, h]
@@ -108,7 +107,7 @@ class InternalDataMS(InternalData):
             h, w = (img.size[1], img.size[0])
             assert h, w == (ori_h, ori_w)
 
-        data_info['img_hw'] = torch.tensor([ori_h, ori_w], dtype=torch.float32)
+        data_info = {'img_hw': torch.tensor([ori_h, ori_w], dtype=torch.float32)}
         data_info['aspect_ratio'] = closest_ratio
         data_info["mask_type"] = self.mask_type
 
@@ -139,8 +138,7 @@ class InternalDataMS(InternalData):
     def __getitem__(self, idx):
         for _ in range(20):
             try:
-                data = self.getdata(idx)
-                return data
+                return self.getdata(idx)
             except Exception as e:
                 print(f"Error details: {str(e)}")
                 idx = random.choice(self.ratio_index[self.closest_ratio])

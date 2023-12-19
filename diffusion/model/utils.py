@@ -37,11 +37,10 @@ def set_grad_checkpoint(model, use_fp32_attention=False, gc_step=1):
 
 def auto_grad_checkpoint(module, *args, **kwargs):
     if getattr(module, 'grad_checkpointing', False):
-        if isinstance(module, Iterable):
-            gc_step = module[0].grad_checkpointing_step
-            return checkpoint_sequential(module, gc_step, *args, **kwargs)
-        else:
+        if not isinstance(module, Iterable):
             return checkpoint(module, *args, **kwargs)
+        gc_step = module[0].grad_checkpointing_step
+        return checkpoint_sequential(module, gc_step, *args, **kwargs)
     return module(*args, **kwargs)
 
 
@@ -50,7 +49,7 @@ def checkpoint_sequential(functions, step, input, *args, **kwargs):
     # Hack for keyword-only parameter in a python 2.7-compliant way
     preserve = kwargs.pop('preserve_rng_state', True)
     if kwargs:
-        raise ValueError("Unexpected keyword arguments: " + ",".join(arg for arg in kwargs))
+        raise ValueError("Unexpected keyword arguments: " + ",".join(kwargs))
 
     def run_function(start, end, functions):
         def forward(input):
@@ -207,7 +206,7 @@ def get_mask(batch, length, mask_ratio, device, mask_type=None, data_info=None, 
     mask = torch.ones([batch, length], device=device)
     len_keep = int(length * (1 - mask_ratio)) - extra_len
 
-    if mask_type == 'random' or mask_type == 'group':
+    if mask_type in ['random', 'group']:
         noise = torch.rand(batch, length, device=device)  # noise in [0, 1]
         ids_shuffle = torch.argsort(noise, dim=1)  # ascend: small is keep, large is remove
         ids_restore = torch.argsort(ids_shuffle, dim=1)
@@ -322,8 +321,7 @@ def parse_int_list(s):
     ranges = []
     range_re = re.compile(r'^(\d+)-(\d+)$')
     for p in s.split(','):
-        m = range_re.match(p)
-        if m:
+        if m := range_re.match(p):
             ranges.extend(range(int(m.group(1)), int(m.group(2))+1))
         else:
             ranges.append(int(p))
@@ -467,7 +465,7 @@ def prepare_prompt_ar(prompt, ratios, device='cpu', show=True):
 
 def resize_and_crop_tensor(samples: torch.Tensor, new_width: int, new_height: int):
     orig_hw = torch.tensor([samples.shape[2], samples.shape[3]], dtype=torch.int)
-    custom_hw = torch.tensor([int(new_height), int(new_width)], dtype=torch.int)
+    custom_hw = torch.tensor([new_height, new_width], dtype=torch.int)
 
     if (orig_hw != custom_hw).all():
         ratio = max(custom_hw[0] / orig_hw[0], custom_hw[1] / orig_hw[1])

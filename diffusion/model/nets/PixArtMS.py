@@ -217,8 +217,7 @@ class PixArtMS(PixArt):
 
         x = x.reshape(shape=(x.shape[0], self.h, self.w, p, p, c))
         x = torch.einsum('nhwpqc->nchpwq', x)
-        imgs = x.reshape(shape=(x.shape[0], c, self.h * p, self.w * p))
-        return imgs
+        return x.reshape(shape=(x.shape[0], c, self.h * p, self.w * p))
 
     def initialize(self):
         # Initialize transformer layers:

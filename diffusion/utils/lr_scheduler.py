@@ -78,7 +78,12 @@ def get_cosine_decay_to_constant_with_warmup(optimizer: Optimizer,
             return final_lr
 
         progress = float(current_step - num_warmup_steps) / float(max(1, num_decay_steps - num_warmup_steps))
-        return max(0.0, 0.5 * (1.0 + math.cos(math.pi * float(num_cycles) * 2.0 * progress))) * (
-                1 - final_lr) + final_lr
+        return (
+            max(
+                0.0,
+                0.5 * (1.0 + math.cos(math.pi * num_cycles * 2.0 * progress)),
+            )
+            * (1 - final_lr)
+        ) + final_lr
 
     return LambdaLR(optimizer, lr_lambda, last_epoch)

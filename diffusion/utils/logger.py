@@ -18,8 +18,7 @@ def get_root_logger(log_file=None, log_level=logging.INFO, name='PixArt'):
     """
     if log_file is None:
         log_file = '/dev/null'
-    logger = get_logger(name=name, log_file=log_file, log_level=log_level)
-    return logger
+    return get_logger(name=name, log_file=log_file, log_level=log_level)
 
 
 def get_logger(name, log_file=None, log_level=logging.INFO):
@@ -57,11 +56,7 @@ def get_logger(name, log_file=None, log_level=logging.INFO):
     stream_handler = logging.StreamHandler()
     handlers = [stream_handler]
 
-    if dist.is_available() and dist.is_initialized():
-        rank = dist.get_rank()
-    else:
-        rank = 0
-
+    rank = dist.get_rank() if dist.is_available() and dist.is_initialized() else 0
     # only rank 0 will add a FileHandler
     if rank == 0 and log_file is not None:
         file_handler = logging.FileHandler(log_file, 'w')

@@ -115,4 +115,6 @@ class MPTConfig(PretrainedConfig):
         if self.init_config.get('name', None) is None:
             raise ValueError(f"self.init_config={self.init_config!r} 'name' needs to be set.")
         if not self.learned_pos_emb and (not self.attn_config['alibi']):
-            raise ValueError(f'Positional information must be provided to the model using either learned_pos_emb or alibi.')
+            raise ValueError(
+                'Positional information must be provided to the model using either learned_pos_emb or alibi.'
+            )

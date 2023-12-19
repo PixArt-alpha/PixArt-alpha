@@ -39,16 +39,49 @@ class SAM(Dataset):
                 image_list = os.path.join(self.root, 'partition', txt)
                 with open(image_list, 'r') as f:
                     lines = [line.strip() for line in f.readlines()]
-                    self.img_samples.extend([os.path.join(self.root, 'images', i+'.jpg') for i in lines])
-                    self.txt_feat_samples.extend([os.path.join(self.root, 'caption_feature_wmask', i+'.npz') for i in lines])
+                    self.img_samples.extend(
+                        [
+                            os.path.join(self.root, 'images', f'{i}.jpg')
+                            for i in lines
+                        ]
+                    )
+                    self.txt_feat_samples.extend(
+                        [
+                            os.path.join(
+                                self.root, 'caption_feature_wmask', f'{i}.npz'
+                            )
+                            for i in lines
+                        ]
+                    )
         elif isinstance(image_list_txt, list):
             for txt in image_list_txt:
                 image_list = os.path.join(self.root, 'partition', txt)
                 with open(image_list, 'r') as f:
                     lines = [line.strip() for line in f.readlines()]
-                    self.img_samples.extend([os.path.join(self.root, 'images', i + '.jpg') for i in lines])
-                    self.txt_feat_samples.extend([os.path.join(self.root, 'caption_feature_wmask', i + '.npz') for i in lines])
-                    self.vae_feat_samples.extend([os.path.join(self.root, 'img_vae_feature/train_vae_256/noflip', i + '.npy') for i in lines])
+                    self.img_samples.extend(
+                        [
+                            os.path.join(self.root, 'images', f'{i}.jpg')
+                            for i in lines
+                        ]
+                    )
+                    self.txt_feat_samples.extend(
+                        [
+                            os.path.join(
+                                self.root, 'caption_feature_wmask', f'{i}.npz'
+                            )
+                            for i in lines
+                        ]
+                    )
+                    self.vae_feat_samples.extend(
+                        [
+                            os.path.join(
+                                self.root,
+                                'img_vae_feature/train_vae_256/noflip',
+                                f'{i}.npy',
+                            )
+                            for i in lines
+                        ]
+                    )
 
         self.ori_imgs_nums = len(self)
         # self.img_samples = self.img_samples[:10000]
@@ -69,10 +102,7 @@ class SAM(Dataset):
         data_info = {'img_hw': torch.tensor([self.resolution, self.resolution], dtype=torch.float32),
                      'aspect_ratio': torch.tensor(1.)}
 
-        if self.load_vae_feat:
-            img = self.loader(npy_path)
-        else:
-            img = self.loader(img_path)
+        img = self.loader(npy_path) if self.load_vae_feat else self.loader(img_path)
         npz_info = np.load(npz_path)
         txt_fea = torch.from_numpy(npz_info['caption_feature'])
         attention_mask = torch.ones(1, 1, txt_fea.shape[1])
@@ -87,10 +117,9 @@ class SAM(Dataset):
         return img, txt_fea, attention_mask, data_info
 
     def __getitem__(self, idx):
-        for i in range(20):
+        for _ in range(20):
             try:
-                data = self.getdata(idx)
-                return data
+                return self.getdata(idx)
             except:
                 print(self.img_samples[idx], ' info is not correct')
                 idx = np.random.randint(len(self))

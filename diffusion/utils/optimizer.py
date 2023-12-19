@@ -59,17 +59,17 @@ class MyOptimizerConstructor(DefaultOptimizerConstructor):
 
         for name, param in module.named_parameters(recurse=False):
             base_lr = self.base_lr
-            if name == 'bias' and not (is_norm or is_dcn_module):
+            if name == 'bias' and not is_norm and not is_dcn_module:
                 base_lr *= bias_lr_mult
 
             # apply weight decay policies
             base_wd = self.base_wd
-            if self.base_wd is not None:
                 # norm decay
-                if is_norm:
+            if is_norm:
+                if self.base_wd is not None:
                     base_wd *= norm_decay_mult
-                # bias lr and decay
-                elif name == 'bias' and not is_dcn_module:
+            elif name == 'bias' and not is_dcn_module:
+                if self.base_wd is not None:
                     # TODO: current bias_decay_mult will have affect on DCN
                     base_wd *= bias_decay_mult
 
@@ -86,10 +86,7 @@ class MyOptimizerConstructor(DefaultOptimizerConstructor):
             # if the parameter match one of the custom keys, ignore other rules
             is_custom = False
             for key in custom_keys:
-                if isinstance(key, tuple):
-                    scope, key_name = key
-                else:
-                    scope, key_name = None, key
+                scope, key_name = key if isinstance(key, tuple) else (None, key)
                 if scope is not None and scope not in f'{prefix}':
                     continue
                 if key_name in f'{prefix}.{name}':
@@ -140,8 +137,7 @@ def build_optimizer(model, optimizer_cfg):
             custom_keys.update({(name, key): dict(decay_mult=0) for key in module.zero_weight_decay})
 
     paramwise_cfg = Config(dict(cfg=dict(custom_keys=custom_keys)))
-    given_cfg = optimizer_cfg.get('paramwise_cfg')
-    if given_cfg:
+    if given_cfg := optimizer_cfg.get('paramwise_cfg'):
         paramwise_cfg.merge_from_dict(dict(cfg=given_cfg))
     optimizer_cfg['paramwise_cfg'] = paramwise_cfg.cfg
     # build optimizer
@@ -180,7 +176,7 @@ class Lion(Optimizer):
             weight_decay: float = 0.0,
     ):
         assert lr > 0.
-        assert all([0. <= beta <= 1. for beta in betas])
+        assert all(0. <= beta <= 1. for beta in betas)
 
         defaults = dict(lr=lr, betas=betas, weight_decay=weight_decay)
 
