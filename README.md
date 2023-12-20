@@ -134,7 +134,7 @@ PixArt-α only takes 12% of Stable Diffusion v1.5's training time (753 vs. 6,250
 ```bash
 conda create -n pixart python==3.9.0
 conda activate pixart
-pip install torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1 --index-url https://download.pytorch.org/whl/cu117
+pip install torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1 --index-url https://download.pytorch.org/whl/cu118
 
 git clone https://github.com/PixArt-alpha/PixArt-alpha.git
 cd PixArt-alpha
