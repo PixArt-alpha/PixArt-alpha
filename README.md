@@ -23,7 +23,7 @@
 This repo contains PyTorch model definitions, pre-trained weights and inference/sampling code for our paper exploring 
 Fast training diffusion models with transformers. You can find more visualizations on our [project page](https://pixart-alpha.github.io/).
 
-<img src="asset/logo.png" width="10%" alt="" /> **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/hWT7caau" style="text-decoration:none;">
+<img src="asset/logo.png" width="10%" alt="" /> **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/rde6eaE5Ta" style="text-decoration:none;">
 <img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a> for discussions. Coders are welcome to contribute.
 
 > [**PixArt-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis**](https://pixart-alpha.github.io/)<br>
