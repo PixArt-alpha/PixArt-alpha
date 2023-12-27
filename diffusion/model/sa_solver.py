@@ -74,8 +74,8 @@ class NoiseScheduleVP:
 
         if schedule not in ['discrete', 'linear', 'cosine']:
             raise ValueError(
-                "Unsupported noise schedule {}. The schedule needs to be 'discrete' or 'linear' or 'cosine'".format(
-                    schedule))
+                f"Unsupported noise schedule {schedule}. The schedule needs to be 'discrete' or 'linear' or 'cosine'"
+            )
 
         self.schedule = schedule
         if schedule == 'discrete':
@@ -98,12 +98,7 @@ class NoiseScheduleVP:
                         1. + self.cosine_s) / math.pi - self.cosine_s
             self.cosine_log_alpha_0 = math.log(math.cos(self.cosine_s / (1. + self.cosine_s) * math.pi / 2.))
             self.schedule = schedule
-            if schedule == 'cosine':
-                # For the cosine schedule, T = 1 will have numerical issues. So we manually set the ending time T.
-                # Note that T = 0.9946 may be not the optimal setting. However, we find it works well.
-                self.T = 0.9946
-            else:
-                self.T = 1.
+            self.T = 0.9946 if schedule == 'cosine' else 1.
 
     def marginal_log_mean_coeff(self, t):
         """
@@ -116,8 +111,7 @@ class NoiseScheduleVP:
             return -0.25 * t ** 2 * (self.beta_1 - self.beta_0) - 0.5 * t * self.beta_0
         elif self.schedule == 'cosine':
             log_alpha_fn = lambda s: torch.log(torch.cos((s + self.cosine_s) / (1. + self.cosine_s) * math.pi / 2.))
-            log_alpha_t = log_alpha_fn(t) - self.cosine_log_alpha_0
-            return log_alpha_t
+            return log_alpha_fn(t) - self.cosine_log_alpha_0
 
     def marginal_alpha(self, t):
         """
@@ -156,8 +150,7 @@ class NoiseScheduleVP:
             log_alpha = -0.5 * torch.logaddexp(-2. * lamb, torch.zeros((1,)).to(lamb))
             t_fn = lambda log_alpha_t: torch.arccos(torch.exp(log_alpha_t + self.cosine_log_alpha_0)) * 2. * (
                         1. + self.cosine_s) / math.pi - self.cosine_s
-            t = t_fn(log_alpha)
-            return t
+            return t_fn(log_alpha)
 
     def edm_sigma(self, t):
         return self.marginal_std(t) / self.marginal_alpha(t)
@@ -166,8 +159,7 @@ class NoiseScheduleVP:
         alpha = 1 / (edmsigma ** 2 + 1).sqrt()
         sigma = alpha * edmsigma
         lambda_t = torch.log(alpha / sigma)
-        t = self.inverse_lambda(lambda_t)
-        return t
+        return self.inverse_lambda(lambda_t)
 
 
 def model_wrapper(
@@ -310,12 +302,11 @@ def model_wrapper(
         elif guidance_type == "classifier-free":
             if guidance_scale == 1. or unconditional_condition is None:
                 return noise_pred_fn(x, t_continuous, cond=condition)
-            else:
-                x_in = torch.cat([x] * 2)
-                t_in = torch.cat([t_continuous] * 2)
-                c_in = torch.cat([unconditional_condition, condition])
-                noise_uncond, noise = noise_pred_fn(x_in, t_in, cond=c_in).chunk(2)
-                return noise_uncond + guidance_scale * (noise - noise_uncond)
+            x_in = torch.cat([x] * 2)
+            t_in = torch.cat([t_continuous] * 2)
+            c_in = torch.cat([unconditional_condition, condition])
+            noise_uncond, noise = noise_pred_fn(x_in, t_in, cond=c_in).chunk(2)
+            return noise_uncond + guidance_scale * (noise - noise_uncond)
 
     assert model_type in ["noise", "x_start", "v", "score"]
     assert guidance_type in ["uncond", "classifier", "classifier-free"]
@@ -406,16 +397,20 @@ class SASolver:
                 order).to(device)
             return self.noise_schedule.inverse_lambda(logSNR_steps)
         elif skip_type == 'time':
-            t = torch.linspace(t_T ** (1. / order), t_0 ** (1. / order), N + 1).pow(order).to(device)
-            return t
+            return (
+                torch.linspace(t_T ** (1.0 / order), t_0 ** (1.0 / order), N + 1)
+                .pow(order)
+                .to(device)
+            )
         elif skip_type == 'karras':
             sigma_min = max(0.002, self.sigma_min)
             sigma_max = min(80, self.sigma_max)
             sigma_steps = torch.linspace(sigma_max ** (1. / 7), sigma_min ** (1. / 7), N + 1).pow(7).to(device)
-            t = self.noise_schedule.edm_inverse_sigma(sigma_steps)
-            return t
+            return self.noise_schedule.edm_inverse_sigma(sigma_steps)
         else:
-            raise ValueError("Unsupported skip_type {}, need to be 'logSNR' or 'time' or 'karras'".format(skip_type))
+            raise ValueError(
+                f"Unsupported skip_type {skip_type}, need to be 'logSNR' or 'time' or 'karras'"
+            )
 
     def denoise_to_zero_fn(self, x, s):
         """
@@ -547,14 +542,18 @@ class SASolver:
         coefficients = []
         lagrange_coefficient = self.lagrange_polynomial_coefficient(order - 1, lambda_list)
         for i in range(order):
-            coefficient = 0
-            for j in range(order):
-                if self.predict_x0:
-                    coefficient += lagrange_coefficient[i][j] * self.get_coefficients_exponential_positive(
-                        order - 1 - j, interval_start, interval_end, tau)
-                else:
-                    coefficient += lagrange_coefficient[i][j] * self.get_coefficients_exponential_negative(
-                        order - 1 - j, interval_start, interval_end)
+            coefficient = sum(
+                lagrange_coefficient[i][j]
+                * self.get_coefficients_exponential_positive(
+                    order - 1 - j, interval_start, interval_end, tau
+                )
+                if self.predict_x0
+                else lagrange_coefficient[i][j]
+                * self.get_coefficients_exponential_negative(
+                    order - 1 - j, interval_start, interval_end
+                )
+                for j in range(order)
+            )
             coefficients.append(coefficient)
         assert len(coefficients) == order, 'the length of coefficients does not match the order'
         return coefficients
@@ -574,9 +573,7 @@ class SASolver:
         sigma_prev = ns.marginal_std(t_prev_list[-1])
         gradient_part = torch.zeros_like(x)
         h = lambda_t - ns.marginal_lambda(t_prev_list[-1])
-        lambda_list = []
-        for i in range(order):
-            lambda_list.append(ns.marginal_lambda(t_prev_list[-(i + 1)]))
+        lambda_list = [ns.marginal_lambda(t_prev_list[-(i + 1)]) for i in range(order)]
         gradient_coefficients = self.get_coefficients_fn(order, ns.marginal_lambda(t_prev_list[-1]), lambda_t,
                                                          lambda_list, tau)
 
@@ -592,12 +589,13 @@ class SASolver:
         else:
             noise_part = tau * sigma_t * torch.sqrt(torch.exp(2 * h) - 1) * noise
 
-        if self.predict_x0:
-            x_t = torch.exp(-tau ** 2 * h) * (sigma_t / sigma_prev) * x + gradient_part + noise_part
-        else:
-            x_t = (alpha_t / alpha_prev) * x + gradient_part + noise_part
-
-        return x_t
+        return (
+            torch.exp(-(tau**2) * h) * (sigma_t / sigma_prev) * x
+            + gradient_part
+            + noise_part
+            if self.predict_x0
+            else (alpha_t / alpha_prev) * x + gradient_part + noise_part
+        )
 
     def adams_moulton_update(self, order, x, tau, model_prev_list, t_prev_list, noise, t):
         """
@@ -615,10 +613,8 @@ class SASolver:
         sigma_prev = ns.marginal_std(t_prev_list[-1])
         gradient_part = torch.zeros_like(x)
         h = lambda_t - ns.marginal_lambda(t_prev_list[-1])
-        lambda_list = []
         t_list = t_prev_list + [t]
-        for i in range(order):
-            lambda_list.append(ns.marginal_lambda(t_list[-(i + 1)]))
+        lambda_list = [ns.marginal_lambda(t_list[-(i + 1)]) for i in range(order)]
         gradient_coefficients = self.get_coefficients_fn(order, ns.marginal_lambda(t_prev_list[-1]), lambda_t,
                                                          lambda_list, tau)
 
@@ -634,12 +630,13 @@ class SASolver:
         else:
             noise_part = tau * sigma_t * torch.sqrt(torch.exp(2 * h) - 1) * noise
 
-        if self.predict_x0:
-            x_t = torch.exp(-tau ** 2 * h) * (sigma_t / sigma_prev) * x + gradient_part + noise_part
-        else:
-            x_t = (alpha_t / alpha_prev) * x + gradient_part + noise_part
-
-        return x_t
+        return (
+            torch.exp(-(tau**2) * h) * (sigma_t / sigma_prev) * x
+            + gradient_part
+            + noise_part
+            if self.predict_x0
+            else (alpha_t / alpha_prev) * x + gradient_part + noise_part
+        )
 
     def adams_bashforth_update_few_steps(self, order, x, tau, model_prev_list, t_prev_list, noise, t):
         """
@@ -657,14 +654,12 @@ class SASolver:
         sigma_prev = ns.marginal_std(t_prev_list[-1])
         gradient_part = torch.zeros_like(x)
         h = lambda_t - ns.marginal_lambda(t_prev_list[-1])
-        lambda_list = []
-        for i in range(order):
-            lambda_list.append(ns.marginal_lambda(t_prev_list[-(i + 1)]))
+        lambda_list = [ns.marginal_lambda(t_prev_list[-(i + 1)]) for i in range(order)]
         gradient_coefficients = self.get_coefficients_fn(order, ns.marginal_lambda(t_prev_list[-1]), lambda_t,
                                                          lambda_list, tau)
 
-        if self.predict_x0:
-            if order == 2:  ## if order = 2 we do a modification that does not influence the convergence order similar to unipc. Note: This is used only for few steps sampling.
+        if order == 2:
+            if self.predict_x0:  ## if order = 2 we do a modification that does not influence the convergence order similar to unipc. Note: This is used only for few steps sampling.
                 # The added term is O(h^3). Empirically we find it will slightly improve the image quality.
                 # ODE case
                 # gradient_coefficients[0] += 1.0 * torch.exp(lambda_t) * (h ** 2 / 2 - (h - 1 + torch.exp(-h))) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(t_prev_list[-2]))
@@ -690,12 +685,13 @@ class SASolver:
         else:
             noise_part = tau * sigma_t * torch.sqrt(torch.exp(2 * h) - 1) * noise
 
-        if self.predict_x0:
-            x_t = torch.exp(-tau ** 2 * h) * (sigma_t / sigma_prev) * x + gradient_part + noise_part
-        else:
-            x_t = (alpha_t / alpha_prev) * x + gradient_part + noise_part
-
-        return x_t
+        return (
+            torch.exp(-(tau**2) * h) * (sigma_t / sigma_prev) * x
+            + gradient_part
+            + noise_part
+            if self.predict_x0
+            else (alpha_t / alpha_prev) * x + gradient_part + noise_part
+        )
 
     def adams_moulton_update_few_steps(self, order, x, tau, model_prev_list, t_prev_list, noise, t):
         """
@@ -713,15 +709,13 @@ class SASolver:
         sigma_prev = ns.marginal_std(t_prev_list[-1])
         gradient_part = torch.zeros_like(x)
         h = lambda_t - ns.marginal_lambda(t_prev_list[-1])
-        lambda_list = []
         t_list = t_prev_list + [t]
-        for i in range(order):
-            lambda_list.append(ns.marginal_lambda(t_list[-(i + 1)]))
+        lambda_list = [ns.marginal_lambda(t_list[-(i + 1)]) for i in range(order)]
         gradient_coefficients = self.get_coefficients_fn(order, ns.marginal_lambda(t_prev_list[-1]), lambda_t,
                                                          lambda_list, tau)
 
-        if self.predict_x0:
-            if order == 2:  ## if order = 2 we do a modification that does not influence the convergence order similar to UniPC. Note: This is used only for few steps sampling.
+        if order == 2:
+            if self.predict_x0:  ## if order = 2 we do a modification that does not influence the convergence order similar to UniPC. Note: This is used only for few steps sampling.
                 # The added term is O(h^3). Empirically we find it will slightly improve the image quality.
                 # ODE case
                 # gradient_coefficients[0] += 1.0 * torch.exp(lambda_t) * (h / 2 - (h - 1 + torch.exp(-h)) / h)
@@ -745,12 +739,13 @@ class SASolver:
         else:
             noise_part = tau * sigma_t * torch.sqrt(torch.exp(2 * h) - 1) * noise
 
-        if self.predict_x0:
-            x_t = torch.exp(-tau ** 2 * h) * (sigma_t / sigma_prev) * x + gradient_part + noise_part
-        else:
-            x_t = (alpha_t / alpha_prev) * x + gradient_part + noise_part
-
-        return x_t
+        return (
+            torch.exp(-(tau**2) * h) * (sigma_t / sigma_prev) * x
+            + gradient_part
+            + noise_part
+            if self.predict_x0
+            else (alpha_t / alpha_prev) * x + gradient_part + noise_part
+        )
 
     def sample_few_steps(self, x, tau, steps=5, t_start=None, t_end=None, skip_type='time', skip_order=1,
                          predictor_order=3, corrector_order=4, pc_mode='PEC', return_intermediate=False
@@ -871,16 +866,12 @@ class SASolver:
 
                 # corrector step
                 # do not correct if skip_final_step and step = steps
-                if corrector_order > 0:
-                    if not skip_final_step or step < steps:
-                        x = self.adams_moulton_update_few_steps(order=corrector_order_used, x=x, tau=tau(t),
-                                                                model_prev_list=model_prev_list,
-                                                                t_prev_list=t_prev_list, noise=noise, t=t)
-                    else:
-                        x = x_p
+                if corrector_order > 0 and (not skip_final_step or step < steps):
+                    x = self.adams_moulton_update_few_steps(order=corrector_order_used, x=x, tau=tau(t),
+                                                            model_prev_list=model_prev_list,
+                                                            t_prev_list=t_prev_list, noise=noise, t=t)
                 else:
                     x = x_p
-
                 # evaluation step if mode = pece and step != steps
                 if corrector_order > 0:
                     if pc_mode == 'PECE' and step < steps:
@@ -903,10 +894,7 @@ class SASolver:
                     x = self.correcting_xt_fn(x, t, step + 1)
                 if return_intermediate:
                     intermediates.append(x)
-        if return_intermediate:
-            return x, intermediates
-        else:
-            return x
+        return (x, intermediates) if return_intermediate else x
 
     def sample_more_steps(self, x, tau, steps=20, t_start=None, t_end=None, skip_type='time', skip_order=1,
                           predictor_order=3, corrector_order=4, pc_mode='PEC', return_intermediate=False

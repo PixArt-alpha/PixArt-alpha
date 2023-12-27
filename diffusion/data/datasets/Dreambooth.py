@@ -25,7 +25,9 @@ class DreamBooth(Dataset):
         path = pathlib.Path(self.root)
         self.transform = transform
         self.resolution = resolution
-        self.img_samples = sorted([file for ext in IMAGE_EXTENSIONS for file in path.glob('*.{}'.format(ext))])
+        self.img_samples = sorted(
+            [file for ext in IMAGE_EXTENSIONS for file in path.glob(f'*.{ext}')]
+        )
         self.ori_imgs_nums = len(self)
         self.loader = default_loader
         self.base_size = int(kwargs['aspect_ratio_type'].split('_')[-1])
@@ -65,8 +67,7 @@ class DreamBooth(Dataset):
             T.CenterCrop(256),
             T.ToTensor(),
         ])
-        img = transform(Image.open(img_path))
-        return img
+        return transform(Image.open(img_path))
 
     def __len__(self):
         return len(self.img_samples)

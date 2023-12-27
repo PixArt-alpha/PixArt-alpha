@@ -58,20 +58,15 @@ class SASolverSampler(object):
                 cbs = conditioning[list(conditioning.keys())[0]].shape[0]
                 if cbs != batch_size:
                     print(f"Warning: Got {cbs} conditionings but batch-size is {batch_size}")
-            else:
-                if conditioning.shape[0] != batch_size:
-                    print(f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}")
+            elif conditioning.shape[0] != batch_size:
+                print(f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}")
 
         # sampling
         C, H, W = shape
         size = (batch_size, C, H, W)
 
         device = self.device
-        if x_T is None:
-            img = torch.randn(size, device=device)
-        else:
-            img = x_T
-
+        img = torch.randn(size, device=device) if x_T is None else x_T
         ns = NoiseScheduleVP('discrete', alphas_cumprod=self.alphas_cumprod)
 
         model_fn = model_wrapper(

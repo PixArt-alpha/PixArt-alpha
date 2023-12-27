@@ -144,17 +144,14 @@ def caption(tokenizer, model, context_len, images, prompt, prefix):
                 use_cache=True,
                 images=images)
             del images
-            logits = out.logits
-            past_key_values = out.past_key_values
         else:
             attention_mask = torch.ones(1, past_key_values[0][0].shape[-2] + 1, device="cuda")
             out = model(input_ids=token,
                         use_cache=True,
                         attention_mask=attention_mask,
                         past_key_values=past_key_values)
-            logits = out.logits
-            past_key_values = out.past_key_values
-
+        past_key_values = out.past_key_values
+        logits = out.logits
         last_token_logits = logits[:, -1]
         if temperature < 1e-4:
             token = torch.argmax(last_token_logits)

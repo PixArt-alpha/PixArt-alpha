@@ -92,8 +92,12 @@ class LossAwareSampler(ScheduleSampler):
         batch_sizes = [x.item() for x in batch_sizes]
         max_bs = max(batch_sizes)
 
-        timestep_batches = [th.zeros(max_bs, device=local_ts.device) for bs in batch_sizes]
-        loss_batches = [th.zeros(max_bs, device=local_losses.device) for bs in batch_sizes]
+        timestep_batches = [
+            th.zeros(max_bs, device=local_ts.device) for _ in batch_sizes
+        ]
+        loss_batches = [
+            th.zeros(max_bs, device=local_losses.device) for _ in batch_sizes
+        ]
         dist.all_gather(timestep_batches, local_ts)
         dist.all_gather(loss_batches, local_losses)
         timesteps = [

@@ -13,11 +13,14 @@ def normal_kl(mean1, logvar1, mean2, logvar2):
     Shapes are automatically broadcasted, so batches can be compared to
     scalars, among other use cases.
     """
-    tensor = None
-    for obj in (mean1, logvar1, mean2, logvar2):
-        if isinstance(obj, th.Tensor):
-            tensor = obj
-            break
+    tensor = next(
+        (
+            obj
+            for obj in (mean1, logvar1, mean2, logvar2)
+            if isinstance(obj, th.Tensor)
+        ),
+        None,
+    )
     assert tensor is not None, "at least one argument must be a Tensor"
 
     # Force variances to be Tensors. Broadcasting helps convert scalars to
@@ -55,8 +58,9 @@ def continuous_gaussian_log_likelihood(x, *, means, log_scales):
     centered_x = x - means
     inv_stdv = th.exp(-log_scales)
     normalized_x = centered_x * inv_stdv
-    log_probs = th.distributions.Normal(th.zeros_like(x), th.ones_like(x)).log_prob(normalized_x)
-    return log_probs
+    return th.distributions.Normal(th.zeros_like(x), th.ones_like(x)).log_prob(
+        normalized_x
+    )
 
 
 def discretized_gaussian_log_likelihood(x, *, means, log_scales):

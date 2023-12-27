@@ -69,10 +69,7 @@ class InternalData(Dataset):
         data_info = {'img_hw': torch.tensor([self.meta_data_clean[index]['height'], self.meta_data_clean[index]['width']], dtype=torch.float32),
                      'aspect_ratio': torch.tensor(1.)}
 
-        if self.load_vae_feat:
-            img = self.loader(npy_path)
-        else:
-            img = self.loader(img_path)
+        img = self.loader(npy_path) if self.load_vae_feat else self.loader(img_path)
         txt_info = np.load(npz_path)
         txt_fea = torch.from_numpy(txt_info['caption_feature'])
         attention_mask = torch.ones(1, 1, txt_fea.shape[1])
@@ -83,21 +80,12 @@ class InternalData(Dataset):
             img = self.transform(img)
 
         data_info["mask_type"] = self.mask_type
-        # if self.mask_ratio > 0:
-        #     data_info["N"] = self.N
-        #     if self.load_mask_index:
-        #         data_info['strength'] = torch.from_numpy(np.load(mask_npy_path))
-            # else:
-            #     data_info['ori_img'] = self.load_ori_img(img_path)
-            # data_info['img_path'] = img_path
-
         return img, txt_fea, attention_mask, data_info
 
     def __getitem__(self, idx):
         for _ in range(20):
             try:
-                data = self.getdata(idx)
-                return data
+                return self.getdata(idx)
             except Exception as e:
                 print(f"Error details: {str(e)}")
                 idx = np.random.randint(len(self))
@@ -121,8 +109,7 @@ class InternalData(Dataset):
             T.CenterCrop(256),
             T.ToTensor(),
         ])
-        img = transform(Image.open(img_path))
-        return img
+        return transform(Image.open(img_path))
 
     def load_json(self, file_path):
         with open(file_path, 'r') as f:

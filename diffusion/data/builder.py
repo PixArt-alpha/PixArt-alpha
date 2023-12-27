@@ -38,13 +38,20 @@ def build_dataset(cfg, resolution=224, **kwargs):
 
 
 def build_dataloader(dataset, batch_size=256, num_workers=4, shuffle=True, **kwargs):
-    if 'batch_sampler' in kwargs:
-        dataloader = DataLoader(dataset, batch_sampler=kwargs['batch_sampler'], num_workers=num_workers, pin_memory=True)
-    else:
-        dataloader = DataLoader(dataset,
-                                batch_size=batch_size,
-                                shuffle=shuffle,
-                                num_workers=num_workers,
-                                pin_memory=True,
-                                **kwargs)
-    return dataloader
+    return (
+        DataLoader(
+            dataset,
+            batch_sampler=kwargs['batch_sampler'],
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+        if 'batch_sampler' in kwargs
+        else DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            num_workers=num_workers,
+            pin_memory=True,
+            **kwargs
+        )
+    )

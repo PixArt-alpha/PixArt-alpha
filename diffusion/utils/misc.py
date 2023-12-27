@@ -294,7 +294,7 @@ class DebugUnderflowOverflow:
 
         last_frame_of_batch = False
 
-        trace_mode = True if self.batch_number in self.trace_batch_nums else False
+        trace_mode = self.batch_number in self.trace_batch_nums
         if trace_mode:
             self.reset_saved_frames()
 
@@ -363,22 +363,4 @@ class DebugUnderflowOverflow:
         if var.dtype == torch.float32 and torch.ge(var.abs(), 65535).any().item():
             detected = True
             print(f"{ctx} has overflow values {var.abs().max().item()}.")
-        # if needed to monitor large elements can enable the following
-        if 0:  # and detected:
-            n100 = var[torch.ge(var.abs(), 100)]
-            if n100.numel() > 0:
-                print(f"{ctx}:  n100={n100.numel()}")
-            n1000 = var[torch.ge(var.abs(), 1000)]
-            if n1000.numel() > 0:
-                print(f"{ctx}: n1000={n1000.numel()}")
-            n10000 = var[torch.ge(var.abs(), 10000)]
-            if n10000.numel() > 0:
-                print(f"{ctx}: n10000={n10000.numel()}")
-
-        if 0:
-            print(f"min={var.min():9.2e} max={var.max():9.2e}")
-
-        if 0:
-            print(f"min={var.min():9.2e} max={var.max():9.2e} var={var.var():9.2e} mean={var.mean():9.2e} ({ctx})")
-
         return detected

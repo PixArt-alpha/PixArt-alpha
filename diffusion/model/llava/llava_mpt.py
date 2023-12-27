@@ -133,9 +133,9 @@ class LlavaMPTModel(MPTModel):
                     cur_input_embeds = cur_input_embeds + (0. * dummy_image_features).sum()
                     new_input_embeds.append(cur_input_embeds)
                     continue
+                cur_image_features = image_features[cur_image_idx]
+                num_patches = cur_image_features.shape[0]
                 if vision_tower.config.use_im_start_end:
-                    cur_image_features = image_features[cur_image_idx]
-                    num_patches = cur_image_features.shape[0]
                     if (cur_input_ids == vision_tower.config.im_start_token).sum() != (cur_input_ids == vision_tower.config.im_end_token).sum():
                         raise ValueError("The number of image start tokens and image end tokens should be the same.")
                     image_start_tokens = torch.where(cur_input_ids == vision_tower.config.im_start_token)[0]
@@ -149,10 +149,7 @@ class LlavaMPTModel(MPTModel):
                         else:
                             cur_new_input_embeds = torch.cat((cur_input_embeds[:image_start_token_pos+1], cur_image_features, cur_input_embeds[image_start_token_pos + num_patches + 1:]), dim=0)
                         cur_image_idx += 1
-                    new_input_embeds.append(cur_new_input_embeds)
                 else:
-                    cur_image_features = image_features[cur_image_idx]
-                    num_patches = cur_image_features.shape[0]
                     if (cur_input_ids == vision_tower.config.im_patch_token).sum() != num_patches:
                         raise ValueError("The number of image patch tokens should be the same as the number of image patches.")
                     masked_indices = torch.where(cur_input_ids == vision_tower.config.im_patch_token)[0]
@@ -163,7 +160,7 @@ class LlavaMPTModel(MPTModel):
                         cur_new_input_embeds = torch.cat((cur_input_embeds[:mask_index_start].detach(), cur_image_features, cur_input_embeds[mask_index_start+num_patches:].detach()), dim=0)
                     else:
                         cur_new_input_embeds = torch.cat((cur_input_embeds[:mask_index_start], cur_image_features, cur_input_embeds[mask_index_start+num_patches:]), dim=0)
-                    new_input_embeds.append(cur_new_input_embeds)
+                new_input_embeds.append(cur_new_input_embeds)
             inputs_embeds = torch.stack(new_input_embeds, dim=0)
 
         return super(LlavaMPTModel, self).forward(input_ids=None, past_key_values=past_key_values, attention_mask=attention_mask, prefix_mask=prefix_mask, sequence_id=sequence_id, return_dict=return_dict, output_attentions=output_attentions, output_hidden_states=output_hidden_states, use_cache=use_cache, tok_emb=inputs_embeds)

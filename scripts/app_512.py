@@ -140,7 +140,7 @@ def prepare_prompt_hw(height, width, ratios):
 
 
 def save_image(img):
-    unique_name = str(uuid.uuid4()) + '.png'
+    unique_name = f'{str(uuid.uuid4())}.png'
     save_path = os.path.join(f'output/online_demo_img512/{datetime.now().date()}')
     os.makedirs(save_path, exist_ok=True)
     unique_name = os.path.join(save_path, unique_name)
