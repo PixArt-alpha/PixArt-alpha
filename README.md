@@ -38,6 +38,7 @@ Fast training diffusion models with transformers. You can find more visualizatio
 
 ---
 ## Breaking News 🔥🔥!!
+- (🔥 New) Dec. 27, 2023. 💥 [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha) incorporates into [ControlLLM](https://github.com/OpenGVLab/ControlLLM)!
 - (🔥 New) Dec. 17, 2023. 💥 [PixArt-LCM-Lora](train_scripts/train_pixart_lcm_lora.py) & [PixArt-Lora](train_scripts/train_pixart_lora_hf.py) training scripts in Hugging Face style is released.
 - (🔥 New) Dec. 17, 2023. 💥 PixArt supports [ComfyUI](https://github.com/comfyanonymous/ComfyUI#manual-install-windows-linux). Thanks to [@city96](https://github.com/city96/ComfyUI_ExtraModels) with his great work.
 - (🔥 New) Dec. 17, 2023. PixArt-ControlNet training scripts will be released very soon. Stay tuned!!
