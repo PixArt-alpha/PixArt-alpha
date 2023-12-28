@@ -167,7 +167,6 @@ def parse_args():
     parser.add_argument('--data_root', type=str, default=None)
     parser.add_argument('--resume_optimizer', action='store_true')
     parser.add_argument('--resume_lr_scheduler', action='store_true')
-    parser.add_argument('--controlnet_type', type=str, default='all', help='the network architecture of controlnet, choose from all or half')
 
     args = parser.parse_args()
     return args
