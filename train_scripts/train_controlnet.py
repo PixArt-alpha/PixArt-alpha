@@ -1,41 +1,36 @@
-import os
-import sys
-import types
-from pathlib import Path
-current_file_path = Path(__file__).resolve()
-sys.path.insert(0, str(current_file_path.parent.parent))
 import argparse
 import datetime
-import math
-import numpy as np
+import os
+import sys
 import time
+import types
 import warnings
-warnings.filterwarnings("ignore")  # ignore warning
-from accelerate import DistributedDataParallelKwargs
-from mmcv.runner import LogBuffer
-from tqdm import tqdm
 from copy import deepcopy
+from pathlib import Path
+
 import torch
 import torch.nn as nn
-from PIL import Image
 from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import DistributedType
-from diffusers.models import AutoencoderKL
-from torchvision.utils import make_grid
+from mmcv.runner import LogBuffer
 from torch.utils.data import RandomSampler
 
 from diffusion import IDDPM
-from diffusion.utils.dist_utils import synchronize, get_world_size, clip_grad_norm_
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 from diffusion.model.builder import build_model
+from diffusion.model.nets import PixArtMS, ControlPixArtHalf, ControlPixArtMSHalf
+from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
+from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspectRatioBatchSampler
+from diffusion.utils.dist_utils import synchronize, get_world_size, clip_grad_norm_
 from diffusion.utils.logger import get_root_logger
+from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow  # MoxingWorker
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
-from diffusion.utils.lr_scheduler import build_lr_scheduler
-from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspectRatioBatchSampler
-from diffusion.model.nets import PixArtMSBlock, PixArtMS
-from diffusion.model.nets import ControlT2IDiT, ControlPixArt_Mid, ControlPixArtAll, ControlPixArtHalf, ControlPixArtHalfRes1024
-from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
+
+warnings.filterwarnings("ignore")  # ignore warning
+
+current_file_path = Path(__file__).resolve()
+sys.path.insert(0, str(current_file_path.parent.parent))
 
 
 def set_fsdp_env():
@@ -274,15 +269,12 @@ if __name__ == '__main__':
             print('Warning Missing keys: ', missing)
             print('Warning Unexpected keys', unexpected)
 
-    if args.controlnet_type == 'all':
-        print('model architrecture ControlPixArtAll')
-        model = ControlPixArtAll(model)
-    elif args.controlnet_type == 'half' and config.image_size == 512:
+    if args.controlnet_type == 'half' and config.image_size == 512:
         print('model architrecture ControlPixArtHalf and image size is 512')
         model = ControlPixArtHalf(model)
     elif args.controlnet_type == 'half' and config.image_size == 1024:
         print('model architrecture ControlPixArtHalfRes1024 and image size is 1024')
-        model = ControlPixArtHalfRes1024(model)
+        model = ControlPixArtMSHalf(model)
     else:
         assert 1 == 0, print("specific the controlnet type and image_size!!!")
 
@@ -316,7 +308,6 @@ if __name__ == '__main__':
         train_dataloader = build_dataloader(dataset, batch_sampler=batch_sampler, num_workers=config.num_workers)
     else:
         train_dataloader = build_dataloader(dataset, num_workers=config.num_workers, batch_size=config.train_batch_size, shuffle=True)
-    # print("debug train_dataloader", train_dataloader)
 
     # build optimizer and lr scheduler
     lr_scale_ratio = 1

@@ -1,33 +1,37 @@
-import os
-import sys
-import types
-from pathlib import Path
-current_file_path = Path(__file__).resolve()
-sys.path.insert(0, str(current_file_path.parent.parent))
 import argparse
 import datetime
+import os
+import sys
 import time
+import types
 import warnings
-warnings.filterwarnings("ignore")  # ignore warning
+from copy import deepcopy
+from pathlib import Path
+
 import torch
 import torch.nn as nn
 from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import DistributedType
 from diffusers.models import AutoencoderKL
-from torch.utils.data import RandomSampler
 from mmcv.runner import LogBuffer
-from copy import deepcopy
+from torch.utils.data import RandomSampler
 
 from diffusion import IDDPM
-from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
-from diffusion.utils.dist_utils import synchronize, get_world_size, clip_grad_norm_
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 from diffusion.model.builder import build_model
-from diffusion.utils.logger import get_root_logger
-from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow
-from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
-from diffusion.utils.lr_scheduler import build_lr_scheduler
+from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
 from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspectRatioBatchSampler
+from diffusion.utils.dist_utils import synchronize, get_world_size, clip_grad_norm_
+from diffusion.utils.logger import get_root_logger
+from diffusion.utils.lr_scheduler import build_lr_scheduler
+from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow  # MoxingWorker
+from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
+
+warnings.filterwarnings("ignore")  # ignore warning
+
+current_file_path = Path(__file__).resolve()
+sys.path.insert(0, str(current_file_path.parent.parent))
+
 
 def set_fsdp_env():
     os.environ["ACCELERATE_USE_FSDP"] = 'true'
