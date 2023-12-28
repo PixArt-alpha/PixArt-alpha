@@ -230,7 +230,8 @@ if __name__ == '__main__':
     pred_sigma = getattr(config, 'pred_sigma', True)
     learn_sigma = getattr(config, 'learn_sigma', True) and pred_sigma
     model_kwargs={"window_block_indexes": config.window_block_indexes, "window_size": config.window_size,
-                  "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config':config}
+                  "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config':config,
+                  'model_max_length': config.model_max_length}
 
     # build models
     train_diffusion = IDDPM(str(config.train_sampling_steps))

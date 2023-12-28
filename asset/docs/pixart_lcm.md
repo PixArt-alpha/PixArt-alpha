@@ -30,13 +30,27 @@ For cards with a lot of capacity, such as A100, performance increases significan
 ## Training the `PixArt + LCM` on your machine
 
 ```bash
-python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 train_scripts/train_pixart_lcm.py configs/pixart_config/PixArt_xl2_img1024_lcm.py --work-dir output/train_pixart-lcm
+python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 train_scripts/train_pixart_lcm.py configs/pixart_config/PixArt_xl2_img1024_lcm.py --work-dir output/pixartlcm-xl2-img1024_ft
+```
+
+## Trainig the `PixArt + LCM-LoRA`
+
+```bash
+python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 train_scripts/train_pixart_lcm_lora.py configs/pixart_config/PixArt_xl2_img1024_lcm.py --work-dir output/pixartlcm-lora-xl2-img1024_ft
 ```
 
 ## Testing the `PixArt + LCM` on your machine
 
 ```bash
 DEMO_PORT=12345 python scripts/app_lcm.py
+
+Then have a look at a simple example using the http://your-server-ip:12345
+```
+
+## Testing the `PixArt + LCM-LoRA`
+
+```bash
+DEMO_PORT=12345 python scripts/app_lcm.py --is_lora --lora_repo_id output/pixartlcm-lora-xl2-img1024_ft/checkpoint-xxx
 
 Then have a look at a simple example using the http://your-server-ip:12345
 ```
@@ -56,7 +70,14 @@ And then:
 import torch
 from diffusers import PixArtAlphaPipeline, AutoencoderKL
 
+# for PixArt-LCM
 pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-LCM-XL-2-1024-MS", torch_dtype=torch.float16, use_safetensors=True)
+
+# for PixArt-LCM-LoRA
+# transformer = Transformer2DModel.from_pretrained("PixArt-alpha/PixArt-LCM-XL-2-1024-MS", subfolder="transformer", torch_dtype=torch.float16)
+# transformer = PeftModel.from_pretrained(transformer, "PixArt-alpha/PixArt-LCM-LoRA-XL-2-1024-MS")
+# pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-LCM-XL-2-1024-MS", transformer=transformer, torch_dtype=torch.float16, use_safetensors=True)
+# del transformer
 
 # Enable memory optimizations.
 pipe.enable_model_cpu_offload()

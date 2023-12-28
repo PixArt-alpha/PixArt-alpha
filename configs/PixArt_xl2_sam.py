@@ -10,6 +10,8 @@ model = 'PixArt_XL_2'
 aspect_ratio_type = None         # base aspect ratio [ASPECT_RATIO_512 or ASPECT_RATIO_1024]
 multi_scale = False     # if use multiscale dataset model training
 lewei_scale = 1.0
+model_max_length = 120
+lora_rank = 4
 # training setting
 num_workers=4
 train_sampling_steps = 1000

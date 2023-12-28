@@ -197,7 +197,7 @@ if __name__ == '__main__':
             resume_optimizer=True,
             resume_lr_scheduler=True)
     if args.debug:
-        config.log_interval = 20
+        config.log_interval = 1
         config.train_batch_size = 8
         config.valid_num = 100
 
@@ -247,7 +247,8 @@ if __name__ == '__main__':
     pred_sigma = getattr(config, 'pred_sigma', True)
     learn_sigma = getattr(config, 'learn_sigma', True) and pred_sigma
     model_kwargs={"window_block_indexes": config.window_block_indexes, "window_size": config.window_size,
-                  "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config':config}
+                  "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config':config,
+                  'model_max_length': config.model_max_length}
 
     # build models
     train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
@@ -259,6 +260,7 @@ if __name__ == '__main__':
                         pred_sigma=pred_sigma,
                         **model_kwargs).train()
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
+    logger.info(f"T5 max token length: {config.model_max_length}")
     model_ema = deepcopy(model).eval()
 
     if config.load_from is not None:
@@ -296,16 +298,18 @@ if __name__ == '__main__':
     lr_scale_ratio = 1
     if config.get('auto_lr', None):
         lr_scale_ratio = auto_scale_lr(config.train_batch_size * get_world_size() * config.gradient_accumulation_steps,
-                                       config.optimizer,
-                                       **config.auto_lr)
+                                       config.optimizer, **config.auto_lr)
     optimizer = build_optimizer(model, config.optimizer)
     lr_scheduler = build_lr_scheduler(config, optimizer, train_dataloader, lr_scale_ratio)
 
     timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
 
     if accelerator.is_main_process:
-        tracker_config = dict(config)
-        accelerator.init_trackers(args.tracker_project_name, tracker_config)
+        tracker_config = dict(vars(config))
+        try:
+            accelerator.init_trackers(args.tracker_project_name, tracker_config)
+        except:
+            accelerator.init_trackers(f"tb_{timestamp}")
 
     start_epoch = 0
     if config.resume_from is not None and config.resume_from['checkpoint'] is not None:

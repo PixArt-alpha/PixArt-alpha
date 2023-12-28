@@ -19,3 +19,4 @@ bs4
 einops
 xformers
 optimum
+peft==0.6.2

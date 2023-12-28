@@ -157,7 +157,7 @@ def extract_caption_t5():
     global t5
     global t5_save_dir
     # global images_extension
-    t5 = T5Embedder(device="cuda", local_cache=True, cache_dir=f'{args.pretrained_models_dir}/t5_ckpts')
+    t5 = T5Embedder(device="cuda", local_cache=True, cache_dir=f'{args.pretrained_models_dir}/t5_ckpts', model_max_length=120)
     t5_save_dir = args.t5_save_root
     os.makedirs(t5_save_dir, exist_ok=True)
 

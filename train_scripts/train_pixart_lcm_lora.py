@@ -10,29 +10,26 @@ import time
 import warnings
 warnings.filterwarnings("ignore")  # ignore warning
 import torch
-import torch.nn as nn
 from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import DistributedType
-from diffusers.models import AutoencoderKL
 from torch.utils.data import RandomSampler
 from mmcv.runner import LogBuffer
-from copy import deepcopy
-import numpy as np
 import torch.nn.functional as F
-from tqdm import tqdm
+import numpy as np
+import re
+from packaging import version
+import accelerate
 
 from diffusion import IDDPM
-from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
-from diffusion.utils.dist_utils import synchronize, get_world_size, clip_grad_norm_
+from diffusion.utils.dist_utils import get_world_size, clip_grad_norm_
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
-from diffusion.model.builder import build_model
 from diffusion.utils.logger import get_root_logger
 from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspectRatioBatchSampler
-from diffusion.lcm_scheduler import LCMScheduler
-from torchvision.utils import save_image
+from peft import LoraConfig, get_peft_model, get_peft_model_state_dict
+from diffusers import AutoencoderKL, Transformer2DModel, StableDiffusionPipeline, PixArtAlphaPipeline
 
 
 def set_fsdp_env():
@@ -41,13 +38,11 @@ def set_fsdp_env():
     os.environ["FSDP_BACKWARD_PREFETCH"] = 'BACKWARD_PRE'
     os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = 'PixArtBlock'
 
+def filter_keys(key_set):
+    def _f(dictionary):
+        return {k: v for k, v in dictionary.items() if k in key_set}
 
-def ema_update(model_dest: nn.Module, model_src: nn.Module, rate):
-    param_dict_src = dict(model_src.named_parameters())
-    for p_name, p_dest in model_dest.named_parameters():
-        p_src = param_dict_src[p_name]
-        assert p_src is not p_dest
-        p_dest.data.mul_(rate).add_((1 - rate) * p_src.data)
+    return _f
 
 
 def append_dims(x, target_dims):
@@ -63,6 +58,22 @@ def scalings_for_boundary_conditions(timestep, sigma_data=0.5, timestep_scaling=
     c_skip = sigma_data**2 / ((timestep / 0.1) ** 2 + sigma_data**2)
     c_out = (timestep / 0.1) / ((timestep / 0.1) ** 2 + sigma_data**2) ** 0.5
     return c_skip, c_out
+
+
+# Compare LCMScheduler.step, Step 4
+def predicted_origin(model_output, timesteps, sample, prediction_type, alphas, sigmas):
+    if prediction_type == "epsilon":
+        sigmas = extract_into_tensor(sigmas, timesteps, sample.shape)
+        alphas = extract_into_tensor(alphas, timesteps, sample.shape)
+        pred_x_0 = (sample - sigmas * model_output) / alphas
+    elif prediction_type == "v_prediction":
+        sigmas = extract_into_tensor(sigmas, timesteps, sample.shape)
+        alphas = extract_into_tensor(alphas, timesteps, sample.shape)
+        pred_x_0 = alphas * sample - sigmas * model_output
+    else:
+        raise ValueError(f"Prediction type {prediction_type} currently not supported.")
+
+    return pred_x_0
 
 
 def extract_into_tensor(a, t, x_shape):
@@ -99,52 +110,19 @@ class DDIMSolver:
         return x_prev
 
 
-@torch.no_grad()
-def log_validation(model, step, device):
-    if hasattr(model, 'module'):
-        model = model.module
-    scheduler = LCMScheduler(beta_start=0.0001, beta_end=0.02, beta_schedule="linear", prediction_type="epsilon")
-    scheduler.set_timesteps(4, 50)
-    infer_timesteps = scheduler.timesteps
-
-    dog_embed = torch.load('data/tmp/dog.pth', map_location='cpu')
-    caption_embs, emb_masks = dog_embed['dog_text'].to(device), dog_embed['dog_mask'].to(device)
-    hw = torch.tensor([[1024, 1024]], dtype=torch.float, device=device).repeat(1, 1)
-    ar = torch.tensor([[1.]], device=device).repeat(1, 1)
-    # Create sampling noise:
-    infer_latents = torch.randn(1, 4, 1024, 1024, device=device)
-    model_kwargs = dict(data_info={'img_hw': hw, 'aspect_ratio': ar}, mask=emb_masks)
-    logger.info("Running validation... ")
-
-    # 7. LCM MultiStep Sampling Loop:
-    for i, t in tqdm(list(enumerate(infer_timesteps))):
-        ts = torch.full((1,), t, device=device, dtype=torch.long)
-
-        # model prediction (v-prediction, eps, x)
-        model_pred = model(infer_latents, ts, caption_embs, **model_kwargs)[:, :4]
-
-        # compute the previous noisy sample x_t -> x_t-1
-        infer_latents, denoised = scheduler.step(model_pred, i, t, infer_latents, return_dict=False)
-    samples = vae.decode(denoised / 0.18215).sample
-    torch.cuda.empty_cache()
-    save_image(samples[0], f'output_cv/vis/{step}.jpg', nrow=1, normalize=True, value_range=(-1, 1))
-
-
-def train():
+def train(model):
     if config.get('debug_nan', False):
         DebugUnderflowOverflow(model)
         logger.info('NaN debugger registered. Start to detect overflow during training.')
     time_start, last_tic = time.time(), time.time()
     log_buffer = LogBuffer()
 
-    start_step = start_epoch * len(train_dataloader)
-    global_step = 0
-    total_steps = len(train_dataloader) * config.num_epochs
+    global_step = start_step
 
     load_vae_feat = getattr(train_dataloader.dataset, 'load_vae_feat', False)
 
     # Create uncond embeds for classifier free guidance
-    uncond_prompt_embeds = model.module.y_embedder.y_embedding.repeat(config.train_batch_size, 1, 1, 1)
+    uncond_prompt_embeds = torch.load('output/pretrained_models/null_embed.pth', map_location='cpu').to(accelerator.device).repeat(config.train_batch_size, 1, 1, 1)
 
     # Now you train the model
     for epoch in range(start_epoch + 1, config.num_epochs + 1):
@@ -162,10 +140,10 @@ def train():
                             z = posterior.sample()
                         else:
                             z = posterior.mode()
-            latents = z * config.scale_factor
-            y = batch[1]
-            y_mask = batch[2]
-            data_info = batch[3]
+            latents = (z * config.scale_factor).to(weight_dtype)
+            y = batch[1].squeeze(1).to(weight_dtype)
+            y_mask = batch[2].squeeze(1).squeeze(1).to(weight_dtype)
+            data_info = {'resolution': batch[3]['img_hw'].to(weight_dtype), 'aspect_ratio': batch[3]['aspect_ratio'].to(weight_dtype),}
 
             # Sample a random timestep for each image
             grad_norm = None
@@ -196,19 +174,26 @@ def train():
                 w = w.to(device=latents.device, dtype=latents.dtype)
 
                 # Get online LCM prediction on z_{t_{n + k}}, w, c, t_{n + k}
-                _, pred_x_0, noisy_model_input = train_diffusion.training_losses(model, latents, start_timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info), noise=noise)
-
+                _, pred_x_0, noisy_model_input  = train_diffusion.training_losses_diffusers(
+                    model, latents, start_timesteps,
+                    model_kwargs=dict(encoder_hidden_states=y, encoder_attention_mask=y_mask, added_cond_kwargs=data_info),
+                    noise=noise
+                )
                 model_pred = c_skip_start * noisy_model_input + c_out_start * pred_x_0
 
-                # Use the ODE solver to predict the kth step in the augmented PF-ODE trajectory after
-                # noisy_latents with both the conditioning embedding c and unconditional embedding 0
-                # Get teacher model prediction on noisy_latents and conditional embedding
                 with torch.no_grad():
                     with torch.autocast("cuda"):
-                        cond_teacher_output, cond_pred_x0, _ = train_diffusion.training_losses(model_teacher, latents, start_timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info), noise=noise)
-
+                        cond_teacher_output, cond_pred_x0, _ = train_diffusion.training_losses_diffusers(
+                            model_teacher, latents, start_timesteps,
+                            model_kwargs=dict(encoder_hidden_states=y, encoder_attention_mask=y_mask, added_cond_kwargs=data_info),
+                            noise=noise
+                        )
                         # Get teacher model prediction on noisy_latents and unconditional embedding
-                        uncond_teacher_output, uncond_pred_x0, _ = train_diffusion.training_losses(model_teacher, latents, start_timesteps, model_kwargs=dict(y=uncond_prompt_embeds, mask=y_mask, data_info=data_info), noise=noise)
+                        uncond_teacher_output, uncond_pred_x0, _ = train_diffusion.training_losses_diffusers(
+                            model_teacher, latents, start_timesteps,
+                            model_kwargs=dict(encoder_hidden_states=uncond_prompt_embeds, encoder_attention_mask=y_mask, added_cond_kwargs=data_info),
+                            noise=noise
+                        )
 
                         # Perform "CFG" to get x_prev estimate (using the LCM paper's CFG formulation)
                         pred_x0 = cond_pred_x0 + w * (cond_pred_x0 - uncond_pred_x0)
@@ -218,7 +203,11 @@ def train():
                 # Get target LCM prediction on x_prev, w, c, t_n
                 with torch.no_grad():
                     with torch.autocast("cuda", enabled=True):
-                        _, pred_x_0, _ = train_diffusion.training_losses(model_ema, x_prev.float(), timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info), skip_noise=True)
+                        _, pred_x_0, _ = train_diffusion.training_losses_diffusers(
+                            model, x_prev.float(), timesteps,
+                            model_kwargs=dict(encoder_hidden_states=y, encoder_attention_mask=y_mask, added_cond_kwargs=data_info),
+                            skip_noise=True
+                        )
 
                     target = c_skip * x_prev + c_out * pred_x_0
 
@@ -228,16 +217,12 @@ def train():
                 elif config.loss_type == "huber":
                     loss = torch.mean(torch.sqrt((model_pred.float() - target.float()) ** 2 + config.huber_c**2) - config.huber_c)
 
-                # Backpropagation on the online student model (`model`)
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
                     grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.gradient_clip)
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad(set_to_none=True)
-
-                if accelerator.sync_gradients:
-                    ema_update(model_ema, model, config.ema_decay)
 
             lr = lr_scheduler.get_last_lr()[0]
             logs = {"loss": accelerator.gather(loss).mean().item()}
@@ -265,47 +250,38 @@ def train():
             global_step += 1
             data_time_start= time.time()
 
-            synchronize()
-            torch.cuda.empty_cache()
+            accelerator.wait_for_everyone()
             if accelerator.is_main_process:
-                # log_validation(model_ema, step, model.device)
                 if ((epoch - 1) * len(train_dataloader) + step + 1) % config.save_model_steps == 0:
+                    save_path = os.path.join(os.path.join(config.work_dir, 'checkpoints'), f"checkpoint-{(epoch - 1) * len(train_dataloader) + step + 1}")
                     os.umask(0o000)
-                    save_checkpoint(os.path.join(config.work_dir, 'checkpoints'),
-                                    epoch=epoch,
-                                    step=(epoch - 1) * len(train_dataloader) + step + 1,
-                                    model=accelerator.unwrap_model(model),
-                                    model_ema=accelerator.unwrap_model(model_ema),
-                                    optimizer=optimizer,
-                                    lr_scheduler=lr_scheduler
-                                    )
-            synchronize()
+                    logger.info(f"Start to save state to {save_path}")
+                    accelerator.save_state(save_path)
+                    logger.info(f"Saved state to {save_path}")
 
-        synchronize()
-        if accelerator.is_main_process:
-            if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
-                os.umask(0o000)
-                save_checkpoint(os.path.join(config.work_dir, 'checkpoints'),
-                                epoch=epoch,
-                                step=(epoch - 1) * len(train_dataloader) + step + 1,
-                                model=accelerator.unwrap_model(model),
-                                model_ema=accelerator.unwrap_model(model_ema),
-                                optimizer=optimizer,
-                                lr_scheduler=lr_scheduler
-                                )
-        synchronize()
+
+        accelerator.wait_for_everyone()
+        if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
+            os.umask(0o000)
+            save_path = os.path.join(os.path.join(config.work_dir, 'checkpoints'), f"checkpoint-{(epoch - 1) * len(train_dataloader) + step + 1}")
+            logger.info(f"Start to save state to {save_path}")
+            model = accelerator.unwrap_model(model)
+            model.save_pretrained(save_path)
+            lora_state_dict = get_peft_model_state_dict(model, adapter_name="default")
+            StableDiffusionPipeline.save_lora_weights(os.path.join(save_path, "transformer_lora"), lora_state_dict)
+            logger.info(f"Saved state to {save_path}")
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Process some integers.")
     parser.add_argument("config", type=str, help="config")
     parser.add_argument("--cloud", action='store_true', default=False, help="cloud or local machine")
-    parser.add_argument('--work-dir', help='the dir to save logs and models')
-    parser.add_argument('--resume-from', help='the dir to resume the training')
-    parser.add_argument('--load-from', default=None, help='the dir to load a ckpt for training')
-    parser.add_argument('--local-rank', type=int, default=-1)
-    parser.add_argument('--local_rank', type=int, default=-1)
-    parser.add_argument('--debug', action='store_true')
+    parser.add_argument("--work-dir", default='output', help='the dir to save logs and models')
+    parser.add_argument("--resume-from", help='the dir to save logs and models')
+    parser.add_argument("--local-rank", type=int, default=-1)
+    parser.add_argument("--local_rank", type=int, default=-1)
+    parser.add_argument("--debug", action='store_true')
+    parser.add_argument("--lora_rank", type=int, default=64, help="The rank of the LoRA projection matrix.", )
     args = parser.parse_args()
     return args
 
@@ -313,23 +289,21 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     config = read_config(args.config)
+
+    config.resume_from = None
     if args.work_dir is not None:
         # update configs according to CLI args if args.work_dir is not None
         config.work_dir = args.work_dir
     if args.cloud:
         config.data_root = '/data/data'
     if args.resume_from is not None:
-        config.load_from = None
-        config.resume_from = dict(
-            checkpoint=args.resume_from,
-            load_ema=False,
-            resume_optimizer=True,
-            resume_lr_scheduler=True)
+        config.resume_from = args.resume_from
     if args.debug:
         config.log_interval = 1
-        config.train_batch_size = 11
-        config.valid_num = 100
-        config.load_from = None
+        config.train_batch_size = 4
+        config.valid_num = 10
+        config.save_model_steps = 10
+        config.data.image_list_json = ['mj_1-5_nounfilter0.3_700K.json']
 
     os.umask(0o000)
     os.makedirs(config.work_dir, exist_ok=True)
@@ -363,6 +337,7 @@ if __name__ == '__main__':
 
     logger = get_root_logger(os.path.join(config.work_dir, 'train_log.log'))
 
+    logger.info(accelerator.state)
     config.seed = init_random_seed(config.get('seed', None))
     set_random_seed(config.seed)
 
@@ -376,31 +351,96 @@ if __name__ == '__main__':
     latent_size = int(image_size) // 8
     pred_sigma = getattr(config, 'pred_sigma', True)
     learn_sigma = getattr(config, 'learn_sigma', True) and pred_sigma
-    model_kwargs={"window_block_indexes": config.window_block_indexes, "window_size": config.window_size,
-                  "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config':config,
-                  'model_max_length': config.model_max_length}
+
+    # prepare null_embedding for training
+    if not os.path.exists('output/pretrained_models/null_embed.pth'):
+        logger.info(f"Creating output/pretrained_models/null_embed.pth")
+        os.makedirs('output/pretrained_models/', exist_ok=True)
+        pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-XL-2-1024-MS", torch_dtype=torch.float16, use_safetensors=True,).to("cuda")
+        torch.save(pipe.encode_prompt(""), 'output/pretrained_models/null_embed.pth')
+        del pipe
+        torch.cuda.empty_cache()
 
     # build models
-    train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma,
-                            snr=config.snr_loss, return_startx=True)
-    model = build_model(config.model,
-                        config.grad_checkpointing,
-                        config.get('fp32_attention', False),
-                        input_size=latent_size,
-                        learn_sigma=learn_sigma,
-                        pred_sigma=pred_sigma,
-                        **model_kwargs).train()
-    logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
+    train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, return_startx=True)
+    model_teacher = Transformer2DModel.from_pretrained(config.load_from, subfolder="transformer")
+    model_teacher.requires_grad_(False)
+    model = Transformer2DModel.from_pretrained(config.load_from, subfolder="transformer").train()
+    logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):}")
 
-    if config.load_from is not None:
-        if args.load_from is not None:
-            config.load_from = args.load_from
-        missing, unexpected = load_checkpoint(config.load_from, model, load_ema=config.get('load_ema', False))
-        logger.warning(f'Missing keys: {missing}')
-        logger.warning(f'Unexpected keys: {unexpected}')
+    lora_config = LoraConfig(
+        r=config.lora_rank,
+        target_modules=[
+            "to_q",
+            "to_k",
+            "to_v",
+            "to_out.0",
+            "proj_in",
+            "proj_out",
+            "ff.net.0.proj",
+            "ff.net.2",
+            "proj",
+            "linear",
+            "linear_1",
+            "linear_2",
+            # "scale_shift_table",      # not available due to the implementation in huggingface/peft, working on it.
+        ],
+    )
+    print(lora_config)
+    model = get_peft_model(model, lora_config)
+    model.print_trainable_parameters()
 
-    model_ema = deepcopy(model).eval()
-    model_teacher = deepcopy(model).eval()
+    # 9. Handle mixed precision and device placement
+    # For mixed precision training we cast all non-trainable weigths to half-precision
+    # as these weights are only used for inference, keeping weights in full precision is not required.
+    weight_dtype = torch.float32
+    if accelerator.mixed_precision == "fp16":
+        weight_dtype = torch.float16
+    elif accelerator.mixed_precision == "bf16":
+        weight_dtype = torch.bfloat16
+
+    # 11. Enable optimizations
+    # model.enable_xformers_memory_efficient_attention()
+    # model_teacher.enable_xformers_memory_efficient_attention()
+
+    lora_layers = filter(lambda p: p.requires_grad, model.parameters())
+
+    # for name, params in model.named_parameters():
+    #     if params.requires_grad == False: logger.info(f"freeze param: {name}")
+    #
+    # for name, params in model.named_parameters():
+    #     if params.requires_grad == True: logger.info(f"trainable param: {name}")
+
+    # 10. Handle saving and loading of checkpoints
+    # `accelerate` 0.16.0 will have better support for customized saving
+    if version.parse(accelerate.__version__) >= version.parse("0.16.0"):
+        # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
+        def save_model_hook(models, weights, output_dir):
+            if accelerator.is_main_process:
+                transformer_ = accelerator.unwrap_model(models[0])
+                lora_state_dict = get_peft_model_state_dict(transformer_, adapter_name="default")
+                StableDiffusionPipeline.save_lora_weights(os.path.join(output_dir, "transformer_lora"), lora_state_dict)
+                # save weights in peft format to be able to load them back
+                transformer_.save_pretrained(output_dir)
+
+                for _, model in enumerate(models):
+                    # make sure to pop weight so that corresponding model is not saved again
+                    weights.pop()
+
+        def load_model_hook(models, input_dir):
+            # load the LoRA into the model
+            transformer_ = accelerator.unwrap_model(models[0])
+            transformer_.load_adapter(input_dir, "default", is_trainable=True)
+
+            for _ in range(len(models)):
+                # pop models so that they are not loaded again
+                models.pop()
+
+        accelerator.register_save_state_pre_hook(save_model_hook)
+        accelerator.register_load_state_pre_hook(load_model_hook)
+
+    if config.grad_checkpointing:
+        model.enable_gradient_checkpointing()
 
     if not config.data.load_vae_feat:
         vae = AutoencoderKL.from_pretrained(config.vae_pretrained).cuda()
@@ -440,23 +480,35 @@ if __name__ == '__main__':
         accelerator.init_trackers(f"tb_{timestamp}")
 
     start_epoch = 0
-    if config.resume_from is not None and config.resume_from['checkpoint'] is not None:
-        start_epoch, missing, unexpected = load_checkpoint(**config.resume_from,
-                                                           model=model,
-                                                           model_ema=model_ema,
-                                                           optimizer=optimizer,
-                                                           lr_scheduler=lr_scheduler,
-                                                           )
-
-        logger.warning(f'Missing keys: {missing}')
-        logger.warning(f'Unexpected keys: {unexpected}')
+    start_step = 0
+    total_steps = len(train_dataloader) * config.num_epochs
 
     solver = DDIMSolver(train_diffusion.alphas_cumprod, timesteps=config.train_sampling_steps, ddim_timesteps=config.num_ddim_timesteps)
     solver.to(accelerator.device)
+
     # Prepare everything
     # There is no specific order to remember, you just need to unpack the
     # objects in the same order you gave them to the prepare method.
-    model, model_ema, model_teacher = accelerator.prepare(model, model_ema, model_teacher)
-    # model, model_ema = accelerator.prepare(model, model_ema)
+    model, model_teacher = accelerator.prepare(model, model_teacher)
     optimizer, train_dataloader, lr_scheduler = accelerator.prepare(optimizer, train_dataloader, lr_scheduler)
-    train()
+
+    if config.resume_from is not None:
+        if config.resume_from != "latest":
+            path = os.path.basename(config.resume_from)
+        else:
+            # Get the most recent checkpoint
+            dirs = os.listdir(os.path.join(config.work_dir, 'checkpoints'))
+            dirs = [d for d in dirs if d.startswith("checkpoint")]
+            dirs = sorted(dirs, key=lambda x: int(x.split("-")[1]))
+            path = dirs[-1] if len(dirs) > 0 else None
+
+        if path is None:
+            accelerator.print(f"Checkpoint '{config.resume_from}' does not exist. Starting a new training run.")
+            config.resume_from = None
+        else:
+            accelerator.print(f"Resuming from checkpoint {path}")
+            accelerator.load_state(os.path.join(config.work_dir, 'checkpoints', path))
+            start_step = int(path.split("-")[1])
+            start_epoch = start_step // len(train_dataloader)
+
+    train(model)
