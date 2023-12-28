@@ -125,9 +125,6 @@ class ControlT2IDitBlockAll(Module):
         return c, c_skip
         
         
-        
-        
-
 # The implementation of controlnet-mid version
 class ControlPixArtAll(Module): #add all the control
     def __init__(self, base_model: PixArtMS) -> None:
