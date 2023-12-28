@@ -7,6 +7,9 @@ import types
 import warnings
 from pathlib import Path
 
+current_file_path = Path(__file__).resolve()
+sys.path.insert(0, str(current_file_path.parent.parent))
+
 import torch
 from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import DistributedType
@@ -26,9 +29,6 @@ from diffusion.utils.misc import set_random_seed, read_config, init_random_seed,
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 
 warnings.filterwarnings("ignore")  # ignore warning
-
-current_file_path = Path(__file__).resolve()
-sys.path.insert(0, str(current_file_path.parent.parent))
 
 
 def set_fsdp_env():
@@ -254,19 +254,16 @@ if __name__ == '__main__':
                                   pred_sigma=pred_sigma,
                                   **model_kwargs)
 
-
     if config.load_from is not None and args.resume_from is None:
         # load from PixArt model
         missing, unexpected = load_checkpoint(config.load_from, model)
         logger.warning(f'Missing keys: {missing}')
         logger.warning(f'Unexpected keys: {unexpected}')
 
-    if config.multi_scale and image_size == 1024:
-        print('model architrecture ControlPixArtHalfRes1024 and image size is 1024')
-        model: ControlPixArtMSHalf = ControlPixArtMSHalf(model).train()
+    if image_size == 1024:
+        model: ControlPixArtMSHalf = ControlPixArtMSHalf(model, copy_blocks_num=config.copy_blocks_num).train()
     else:
-        print('model architrecture ControlPixArtHalf and image size is 512')
-        model: ControlPixArtHalf = ControlPixArtHalf(model).train()
+        model: ControlPixArtHalf = ControlPixArtHalf(model, copy_blocks_num=config.copy_blocks_num).train()
 
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
     logger.info(f"T5 max token length: {config.model_max_length}")

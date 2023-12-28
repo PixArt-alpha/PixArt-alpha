@@ -99,14 +99,17 @@ class MJData(Dataset):
         raise RuntimeError('Too many bad data.')
 
 class HEDdetector(nn.Module):
-    def __init__(self, feature=True):
+    def __init__(self, feature=True, vae=None):
         super().__init__()
         self.model = ControlNetHED_Apache2()
         self.model.load_state_dict(torch.load('output/pretrained_models/ControlNetHED.pth', map_location='cpu'))
         self.model.eval()
         self.model.requires_grad_(False)
         if feature:
-            self.vae = AutoencoderKL.from_pretrained("output/pretrained_models/sd-vae-ft-ema")
+            if vae is None:
+                self.vae = AutoencoderKL.from_pretrained("output/pretrained_models/sd-vae-ft-ema")
+            else:
+                self.vae = vae
             self.vae.eval()
             self.vae.requires_grad_(False)
         else:

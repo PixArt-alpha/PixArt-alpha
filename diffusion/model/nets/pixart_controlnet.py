@@ -82,7 +82,7 @@ class ControlPixArtHalf(Module):
 
     # def forward(self, x, t, c, **kwargs):
     #     return self.base_model(x, t, c=self.forward_c(c), **kwargs)
-    def forward(self, x, t, y, mask=None, data_info=None, c=None, **kwargs):
+    def forward(self, x, timestep, y, mask=None, data_info=None, c=None, **kwargs):
         # modify the original PixArtMS forward function
         if c is not None:
             c = self.forward_c(c)
@@ -94,7 +94,7 @@ class ControlPixArtHalf(Module):
         """
         self.h, self.w = x.shape[-2]//self.patch_size, x.shape[-1]//self.patch_size
         x = self.x_embedder(x) + self.pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
-        t = self.t_embedder(t)  # (N, D)
+        t = self.t_embedder(timestep)  # (N, D)
         t0 = self.t_block(t)
         y = self.y_embedder(y, self.training)  # (N, 1, L, D)
         if mask is not None:
@@ -172,7 +172,7 @@ class ControlPixArtMSHalf(ControlPixArtHalf):
     def __init__(self, base_model: PixArtMS, copy_blocks_num: int = 13) -> None:
         super().__init__(base_model=base_model, copy_blocks_num=copy_blocks_num)
 
-    def forward(self, x, t, y, mask=None, data_info=None, c=None, **kwargs):
+    def forward(self, x, timestep, y, mask=None, data_info=None, c=None, **kwargs):
         # modify the original PixArtMS forward function
         """
         Forward pass of PixArt.
@@ -187,7 +187,7 @@ class ControlPixArtMSHalf(ControlPixArtHalf):
         self.h, self.w = x.shape[-2]//self.patch_size, x.shape[-1]//self.patch_size
         pos_embed = torch.from_numpy(get_2d_sincos_pos_embed(self.pos_embed.shape[-1], (self.h, self.w), lewei_scale=self.lewei_scale, base_size=self.base_size)).float().unsqueeze(0).to(x.device)
         x = self.x_embedder(x) + pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
-        t = self.t_embedder(t)  # (N, D)
+        t = self.t_embedder(timestep)  # (N, D)
         csize = self.csize_embedder(c_size, bs)  # (N, D)
         ar = self.ar_embedder(ar, bs)  # (N, D)
         t = t + torch.cat([csize, ar], dim=1)

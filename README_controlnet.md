@@ -5,7 +5,7 @@
 
 **ControlPixArtHalf**: 用前14层提condition的feature, 然后送到和这14个block对应的block里，比如说controlent.block[0]用base_block[0]的weight初始化, controlnet.block[0]的输出会和base_block[0]的输出一起送到base_block[1]
 
-**ControlPixArtHalfRes1024**: ControlPixArtHalf的1024版本, 只修改了forward函数为了和pixartms.py的forward函数对应
+**ControlPixArtMSHalf**: ControlPixArtHalf的1024版本, 只修改了forward函数为了和pixartms.py的forward函数对应
 
 **ControlPixArtAll**: 前14层的feature送到后14层里，类似controlnet+sd的结构。只support 1024
 
