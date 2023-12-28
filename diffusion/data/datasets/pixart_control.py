@@ -13,7 +13,7 @@ import json, time
 
 
 @DATASETS.register_module()
-class MJHed(Dataset):
+class InternalDataHed(Dataset):
     def __init__(self,
                  root,
                  image_list_json='mj_1_new.json',
@@ -24,7 +24,6 @@ class MJHed(Dataset):
                  input_size=32,
                  patch_size=2,
                  mask_ratio=0.0,
-                 mask_type='null',
                  load_mask_index=False,
                  train_ratio=1.0,
                  mode='train',
@@ -37,7 +36,6 @@ class MJHed(Dataset):
         self.N = int(resolution // (input_size // patch_size))
         self.mask_ratio = mask_ratio
         self.load_mask_index = load_mask_index
-        self.mask_type = mask_type
         self.meta_data_clean = []
         self.img_samples = []
         self.txt_feat_samples = []
@@ -45,22 +43,18 @@ class MJHed(Dataset):
         self.hed_feat_samples = []
         self.prompt_samples = []
 
-        with open(f'{self.root}/not_exist.txt', 'r') as f:
-            noe = set([line.strip() for line in f])
-        with open(f'{self.root}/not_exist_5-10.txt', 'r') as f:
-            noe = noe.union([line.strip() for line in f])
-
         image_list_json = image_list_json if isinstance(image_list_json, list) else [image_list_json]
         for json_file in image_list_json:
-            meta_data = self.load_json(os.path.join(self.root, 'partition', json_file))
+            meta_data = self.load_json(os.path.join(self.root, 'partition_filter', json_file))
             self.ori_imgs_nums += len(meta_data)
-            meta_data_clean = [item for item in meta_data if (item['path'] not in noe and item['ratio'] <= 4)]
+            meta_data_clean = [item for item in meta_data if item['ratio'] <= 4]
             self.meta_data_clean.extend(meta_data_clean)
+            # self.img_samples.extend([os.path.join(self.root.replace('InternData', "InternImgs"), item['path']) for item in meta_data_clean])
             self.img_samples.extend([os.path.join(self.root.replace('MJData', "MJImgs"), item['path']) for item in meta_data_clean])
             self.txt_feat_samples.extend([os.path.join(self.root, 'caption_features', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npz')) for item in meta_data_clean])
             self.vae_feat_samples.extend([os.path.join(self.root, f'img_vae_features_{resolution}resolution/noflip', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npy')) for item in meta_data_clean])
             self.hed_feat_samples.extend([os.path.join(self.root, f'hed_feature_{resolution}', item['path'].replace('.png', '.npz')) for item in meta_data_clean])
-            self.prompt_samples.extend([os.path.join(self.root.replace('MJData', "MJImgs"), item['prompt']) for item in meta_data_clean])
+            self.prompt_samples.extend([item['prompt'] for item in meta_data_clean])
 
 
         total_sample = len(self.img_samples)
@@ -81,7 +75,6 @@ class MJHed(Dataset):
             self.hed_feat_samples = self.hed_feat_samples[-used_sample_num:]
             self.prompt_samples = self.prompt_samples[-used_sample_num:]
 
-
         # Set loader and extensions
         if load_vae_feat:
             self.transform = None
@@ -98,9 +91,8 @@ class MJHed(Dataset):
         npy_path = self.vae_feat_samples[index]
         hed_npz_path = self.hed_feat_samples[index]
         prompt = self.prompt_samples[index]
-
-        data_info = {'img_hw': torch.tensor([1024., 1024.], dtype=torch.float32),
-                     'aspect_ratio': torch.tensor(1.)}
+        # only trained on single-scale 1024 res data
+        data_info = {'img_hw': torch.tensor([1024., 1024.], dtype=torch.float32), 'aspect_ratio': torch.tensor(1.)}
 
         if self.load_vae_feat:
             img = self.loader(npy_path)
@@ -116,20 +108,11 @@ class MJHed(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        data_info["mask_type"] = self.mask_type
         data_info['condition'] = hed_fea
         data_info['prompt'] = prompt
         return img, txt_fea, attention_mask, data_info
 
     def __getitem__(self, idx):
-        # t1 = time.time()
-        # try: 
-        #     data = self.getdata(idx)
-        #     return data
-        # except:
-        #     print("invalid index", idx)
-        #     idx = np.random.randint(len(self))
-        #     return self.getdata(idx)
         for i in range(20):
             try:
                 data = self.getdata(idx)
@@ -137,9 +120,6 @@ class MJHed(Dataset):
             except Exception as e:
                 print(f"Error details: {str(e)}")
                 idx = np.random.randint(len(self))
-        # t2 = time.time()
-        # if t2 - t1 > 30:
-        #     print(idx)
         raise RuntimeError('Too many bad data.')
 
     def get_data_info(self, idx):
@@ -159,16 +139,6 @@ class MJHed(Dataset):
         mean, std = torch.from_numpy(np.load(path)['arr_0']).chunk(2)
         sample = randn_tensor(mean.shape, generator=None, device=mean.device, dtype=mean.dtype)
         return mean + std * sample
-
-    def load_ori_img(self, img_path):
-        # 加载图像并转换为Tensor
-        transform = T.Compose([
-            T.Resize(256),  # Image.BICUBIC
-            T.CenterCrop(256),
-            T.ToTensor(),
-        ])
-        img = transform(Image.open(img_path))
-        return img
 
     def load_json(self, file_path):
         with open(file_path, 'r') as f:

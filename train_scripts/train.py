@@ -24,7 +24,7 @@ from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspect
 from diffusion.utils.dist_utils import synchronize, get_world_size, clip_grad_norm_
 from diffusion.utils.logger import get_root_logger
 from diffusion.utils.lr_scheduler import build_lr_scheduler
-from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow  # MoxingWorker
+from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 
 warnings.filterwarnings("ignore")  # ignore warning
@@ -111,7 +111,7 @@ def train():
                 # avg_loss = sum(loss_buffer) / len(loss_buffer)
                 log_buffer.average()
                 info = f"Step/Epoch [{(epoch-1)*len(train_dataloader)+step+1}/{epoch}][{step + 1}/{len(train_dataloader)}]:total_eta: {eta}, " \
-                       f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, s:({model.module.h}, {model.module.w}), "
+                       f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, s:({data_info['img_hw'][0][0].item()}, {data_info['img_hw'][0][1].item()}), "
                 info += ', '.join([f"{k}:{v:.4f}" for k, v in log_buffer.output.items()])
                 logger.info(info)
                 last_tic = time.time()
@@ -181,6 +181,7 @@ def parse_args():
         ),
     )
     parser.add_argument("--loss_report_name", type=str, default="loss")
+
     args = parser.parse_args()
     return args
 
@@ -246,7 +247,7 @@ if __name__ == '__main__':
     logger.info(f"Config: \n{config.pretty_text}")
     logger.info(f"World_size: {get_world_size()}, seed: {config.seed}")
     logger.info(f"Initializing: {init_train} for training")
-    image_size = config.image_size  # @param [256, 512]
+    image_size = config.image_size  # @param [256, 512, 1024]
     latent_size = int(image_size) // 8
     pred_sigma = getattr(config, 'pred_sigma', True)
     learn_sigma = getattr(config, 'learn_sigma', True) and pred_sigma

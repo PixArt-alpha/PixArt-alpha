@@ -5,11 +5,9 @@ import sys
 import time
 import types
 import warnings
-from copy import deepcopy
 from pathlib import Path
 
 import torch
-import torch.nn as nn
 from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import DistributedType
 from mmcv.runner import LogBuffer
@@ -24,7 +22,7 @@ from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspect
 from diffusion.utils.dist_utils import synchronize, get_world_size, clip_grad_norm_
 from diffusion.utils.logger import get_root_logger
 from diffusion.utils.lr_scheduler import build_lr_scheduler
-from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow  # MoxingWorker
+from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow
 from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 
 warnings.filterwarnings("ignore")  # ignore warning
@@ -40,14 +38,6 @@ def set_fsdp_env():
     os.environ["FSDP_TRANSFORMER_CLS_TO_WRAP"] = 'PixArtBlock'
 
 
-def ema_update(model_dest: nn.Module, model_src: nn.Module, rate):
-    param_dict_src = dict(model_src.named_parameters())
-    for p_name, p_dest in model_dest.named_parameters():
-        p_src = param_dict_src[p_name]
-        assert p_src is not p_dest
-        p_dest.data.mul_(rate).add_((1 - rate) * p_src.data)
-
-
 def train():
     if config.get('debug_nan', False):
         DebugUnderflowOverflow(model)
@@ -59,6 +49,9 @@ def train():
     global_step = 0
     total_steps = len(train_dataloader) * config.num_epochs
 
+    load_vae_feat = getattr(train_dataloader.dataset, 'load_vae_feat', False)
+    if not load_vae_feat:
+        raise ValueError("Only support load vae features for now.")
     # Now you train the model
     for epoch in range(start_epoch + 1, config.num_epochs + 1):
         data_time_start = time.time()
@@ -70,8 +63,6 @@ def train():
             y = batch[1]  # 4 x 1 x 120 x 4096 # T5 extracted feature of caption, 120 token, 4096
             y_mask = batch[2]  # 4 x 1 x 1 x 120 # caption indicate whether valid
             data_info = batch[3]
-            # data_info contains img_hw, aspect_ratio, and mask(useless) and condition 
-            # condition shape is 4 x 4 x 128 x 128
 
             # Sample a random timestep for each image
             bs = clean_images.shape[0]
@@ -83,14 +74,10 @@ def train():
                 loss_term = train_diffusion.training_losses(model, clean_images, timesteps, model_kwargs=dict(y=y, mask=y_mask, data_info=data_info, c=data_info['condition'] * config.scale_factor))
                 loss = loss_term['loss'].mean()
                 accelerator.backward(loss)
-                # for n, p in model.named_parameters():
-                #     print(n, '\'s grad is None' if p.grad is None else f'\'s grad is not None {p.max()} {p.min()}')
                 if accelerator.sync_gradients:
                     grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.gradient_clip)
                 optimizer.step()
                 lr_scheduler.step()
-                if accelerator.sync_gradients:
-                    ema_update(model_ema, model, config.ema_rate)
 
             lr = lr_scheduler.get_last_lr()[0]
             logs = {"loss": accelerator.gather(loss).mean().item()}
@@ -106,7 +93,7 @@ def train():
                 # avg_loss = sum(loss_buffer) / len(loss_buffer)
                 log_buffer.average()
                 info = f"Step/Epoch [{(epoch - 1) * len(train_dataloader) + step + 1}/{epoch}][{step + 1}/{len(train_dataloader)}]:total_eta: {eta}, " \
-                       f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, s:({model.module.h}, {model.module.w}), "
+                       f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, s:({data_info['img_hw'][0][0].item()}, {data_info['img_hw'][0][1].item()}), "
                 info += ', '.join([f"{k}:{v:.4f}" for k, v in log_buffer.output.items()])
                 logger.info(info)
                 last_tic = time.time()
@@ -115,10 +102,6 @@ def train():
             logs.update(lr=lr)
             accelerator.log(logs, step=global_step + start_step)
 
-            # moxing tensorboard log to s3
-            # if (global_step + 1) % config.tensorboard_mox_interval == 0 and config.s3_work_dir is not None:
-            #     mox_worker.mox(os.path.join(config.work_dir, 'logs'),
-            #                    os.path.join(config.s3_work_dir, 'logs'))
             if (global_step + 1) % 1000 == 0 and config.s3_work_dir is not None:
                 logger.info(f"s3_work_dir: {config.s3_work_dir}")
 
@@ -126,7 +109,6 @@ def train():
             data_time_start = time.time()
 
             synchronize()
-            # After each epoch you optionally sample some demo images with evaluate() and save the model
             if accelerator.is_main_process:
                 if ((epoch - 1) * len(train_dataloader) + step + 1) % config.save_model_steps == 0:
                     os.umask(0o000)  # file permission: 666; dir permission: 777
@@ -134,7 +116,6 @@ def train():
                                     epoch=epoch,
                                     step=(epoch - 1) * len(train_dataloader) + step + 1,
                                     model=accelerator.unwrap_model(model),
-                                    model_ema=accelerator.unwrap_model(model_ema),
                                     optimizer=optimizer,
                                     lr_scheduler=lr_scheduler
                                     )
@@ -149,7 +130,6 @@ def train():
                                 epoch=epoch,
                                 step=(epoch - 1) * len(train_dataloader) + step + 1,
                                 model=accelerator.unwrap_model(model),
-                                model_ema=accelerator.unwrap_model(model_ema),
                                 optimizer=optimizer,
                                 lr_scheduler=lr_scheduler
                                 )
@@ -165,13 +145,30 @@ def parse_args():
     parser.add_argument('--local-rank', type=int, default=-1)
     parser.add_argument('--local_rank', type=int, default=-1)
     parser.add_argument('--debug', action='store_true')
-
-    parser.add_argument('--save_step', type=int, default=400)
+    parser.add_argument(
+        "--report_to",
+        type=str,
+        default="tensorboard",
+        help=(
+            'The integration to report the results and logs to. Supported platforms are `"tensorboard"`'
+            ' (default), `"wandb"` and `"comet_ml"`. Use `"all"` to report to all integrations.'
+        ),
+    )
+    parser.add_argument(
+        "--tracker_project_name",
+        type=str,
+        default="text2image-fine-tune",
+        help=(
+            "The `project_name` argument passed to Accelerator.init_trackers for"
+            " more information see https://huggingface.co/docs/accelerate/v0.17.0/en/package_reference/accelerator#accelerate.Accelerator"
+        ),
+    )
     parser.add_argument('--lr', type=float, default=2e-4)
     parser.add_argument('--data_root', type=str, default=None)
     parser.add_argument('--resume_optimizer', action='store_true')
     parser.add_argument('--resume_lr_scheduler', action='store_true')
     parser.add_argument('--controlnet_type', type=str, default='all', help='the network architecture of controlnet, choose from all or half')
+
     args = parser.parse_args()
     return args
 
@@ -196,13 +193,10 @@ if __name__ == '__main__':
     if args.debug:
         config.log_interval = 1
         config.train_batch_size = 2
-        config.save_model_steps = args.save_step
         config.optimizer.update({'lr': args.lr})
 
     os.umask(0o000)  # file permission: 666; dir permission: 777
     os.makedirs(config.work_dir, exist_ok=True)
-    # mox_worker = MoxingWorker()
-    # mox_worker.start()
 
     init_handler = InitProcessGroupKwargs()
     init_handler.timeout = datetime.timedelta(seconds=9600)  # change timeout to avoid a strange NCCL bug
@@ -224,7 +218,7 @@ if __name__ == '__main__':
     accelerator = Accelerator(
         mixed_precision=config.mixed_precision,
         gradient_accumulation_steps=config.gradient_accumulation_steps,
-        log_with="tensorboard",
+        log_with=args.report_to,
         project_dir=os.path.join(config.work_dir, "logs"),
         fsdp_plugin=fsdp_plugin,
         even_batches=even_batches,
@@ -242,17 +236,16 @@ if __name__ == '__main__':
     logger.info(f"Config: \n{config.pretty_text}")
     logger.info(f"World_size: {get_world_size()}, seed: {config.seed}")
     logger.info(f"Initializing: {init_train} for training")
-    image_size = config.image_size  # @param [256, 512]
+    image_size = config.image_size  # @param [512, 1024]
     latent_size = int(image_size) // 8
     pred_sigma = getattr(config, 'pred_sigma', True)
     learn_sigma = getattr(config, 'learn_sigma', True) and pred_sigma
-    model_kwargs = {"window_block_indexes": config.window_block_indexes, "window_size": config.window_size,
-                    "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config': config}
+    model_kwargs={"window_block_indexes": config.window_block_indexes, "window_size": config.window_size,
+                  "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config':config,
+                  'model_max_length': config.model_max_length}
 
     # build models
     train_diffusion = IDDPM(str(config.train_sampling_steps))
-    eval_diffusion = IDDPM(str(config.eval_sampling_steps))
-
     model: PixArtMS = build_model(config.model,
                                   config.grad_checkpointing,
                                   config.get('fp32_attention', False),
@@ -261,34 +254,29 @@ if __name__ == '__main__':
                                   pred_sigma=pred_sigma,
                                   **model_kwargs)
 
+
     if config.load_from is not None and args.resume_from is None:
-        # load from pixart model
-        missing, unexpected = load_checkpoint(config.load_from, model, load_ema=config.get('load_ema', False))
-        # model.reparametrize()
-        if accelerator.is_main_process:
-            print('Warning Missing keys: ', missing)
-            print('Warning Unexpected keys', unexpected)
+        # load from PixArt model
+        missing, unexpected = load_checkpoint(config.load_from, model)
+        logger.warning(f'Missing keys: {missing}')
+        logger.warning(f'Unexpected keys: {unexpected}')
 
-    if args.controlnet_type == 'half' and config.image_size == 512:
-        print('model architrecture ControlPixArtHalf and image size is 512')
-        model = ControlPixArtHalf(model)
-    elif args.controlnet_type == 'half' and config.image_size == 1024:
+    if config.multi_scale and image_size == 1024:
         print('model architrecture ControlPixArtHalfRes1024 and image size is 1024')
-        model = ControlPixArtMSHalf(model)
+        model: ControlPixArtMSHalf = ControlPixArtMSHalf(model).train()
     else:
-        assert 1 == 0, print("specific the controlnet type and image_size!!!")
+        print('model architrecture ControlPixArtHalf and image size is 512')
+        model: ControlPixArtHalf = ControlPixArtHalf(model).train()
 
-    model = model.train()
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
+    logger.info(f"T5 max token length: {config.model_max_length}")
+
     # if args.local_rank == 0:
     #     for name, params in model.named_parameters():
     #         if params.requires_grad == False: logger.info(f"freeze param: {name}")
     #
     #     for name, params in model.named_parameters():
     #         if params.requires_grad == True: logger.info(f"trainable param: {name}")
-
-    model_ema = deepcopy(model).eval()
-    ema_update(model_ema, model, 0.)
 
     # prepare for FSDP clip grad norm calculation
     if accelerator.distributed_type == DistributedType.FSDP:
@@ -313,36 +301,35 @@ if __name__ == '__main__':
     lr_scale_ratio = 1
     if config.get('auto_lr', None):
         lr_scale_ratio = auto_scale_lr(config.train_batch_size * get_world_size() * config.gradient_accumulation_steps,
-                                       config.optimizer,
-                                       **config.auto_lr)
-    # optimizer = build_optimizer(model, config.optimizer)
+                                       config.optimizer, **config.auto_lr)
     optimizer = build_optimizer(model.controlnet, config.optimizer)
     lr_scheduler = build_lr_scheduler(config, optimizer, train_dataloader, lr_scale_ratio)
 
     timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
 
     if accelerator.is_main_process:
-        accelerator.init_trackers(f"tb_{timestamp}")
+        tracker_config = dict(vars(config))
+        try:
+            accelerator.init_trackers(args.tracker_project_name, tracker_config)
+        except:
+            accelerator.init_trackers(f"tb_{timestamp}")
 
     start_epoch = 0
     if config.resume_from is not None and config.resume_from['checkpoint'] is not None:
         if args.resume_optimizer == False or args.resume_lr_scheduler == False:
-            missing, unexpected = load_checkpoint(args.resume_from, model, load_ema=config.get('load_ema', False))
+            missing, unexpected = load_checkpoint(args.resume_from, model)
         else:
             start_epoch, missing, unexpected = load_checkpoint(**config.resume_from,
                                                                model=model,
-                                                               model_ema=model_ema,
                                                                optimizer=optimizer,
                                                                lr_scheduler=lr_scheduler,
                                                                )
 
-        if accelerator.is_main_process:
-            print('Warning Missing keys: ', missing)
-            print('Warning Unexpected keys', unexpected)
+        logger.warning(f'Missing keys: {missing}')
+        logger.warning(f'Unexpected keys: {unexpected}')
     # Prepare everything
     # There is no specific order to remember, you just need to unpack the
     # objects in the same order you gave them to the prepare method.
-    model, model_ema = accelerator.prepare(model, model_ema)
+    model = accelerator.prepare(model,)
     optimizer, train_dataloader, lr_scheduler = accelerator.prepare(optimizer, train_dataloader, lr_scheduler)
     train()
-    # mox_worker.close()
