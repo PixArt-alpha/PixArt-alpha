@@ -144,6 +144,7 @@ output_cv/
 # added by ylw
 *.pt
 *.pth
+*mj*
 s3helper/
 TODO.md
 pretrained_models
