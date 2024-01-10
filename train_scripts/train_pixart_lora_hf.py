@@ -259,7 +259,7 @@ def parse_args():
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=1e-4,
+        default=1e-6,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument(
@@ -972,7 +972,7 @@ def main():
     # load lora weight
     transformer = PeftModel.from_pretrained(transformer, args.output_dir)
     # Load previous pipeline
-    pipeline = DiffusionPipeline.from_pretrained(args.pretrained_model_name_or_path, transformer=transformer, torch_dtype=weight_dtype,)
+    pipeline = DiffusionPipeline.from_pretrained(args.pretrained_model_name_or_path, transformer=transformer, text_encoder=text_encoder, vae=vae, torch_dtype=weight_dtype,)
     pipeline = pipeline.to(accelerator.device)
 
     del transformer
