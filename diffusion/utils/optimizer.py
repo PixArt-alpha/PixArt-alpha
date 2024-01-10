@@ -134,7 +134,10 @@ def build_optimizer(model, optimizer_cfg):
     custom_keys = dict()
     for name, module in model.named_modules():
         if hasattr(module, 'zero_weight_decay'):
-            custom_keys.update({(name, key): dict(decay_mult=0) for key in module.zero_weight_decay})
+            custom_keys |= {
+                (name, key): dict(decay_mult=0)
+                for key in module.zero_weight_decay
+            }
 
     paramwise_cfg = Config(dict(cfg=dict(custom_keys=custom_keys)))
     if given_cfg := optimizer_cfg.get('paramwise_cfg'):

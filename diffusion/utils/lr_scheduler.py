@@ -8,7 +8,7 @@ from diffusion.utils.logger import get_root_logger
 
 def build_lr_scheduler(config, optimizer, train_dataloader, lr_scale_ratio):
     if not config.get('lr_schedule_args', None):
-        config.lr_schedule_args = dict()
+        config.lr_schedule_args = {}
     if config.get('lr_warmup_steps', None):
         config['num_warmup_steps'] = config.get('lr_warmup_steps')  # for compatibility with old version
 

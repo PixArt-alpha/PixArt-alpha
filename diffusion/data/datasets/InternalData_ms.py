@@ -97,7 +97,7 @@ class InternalDataMS(InternalData):
                 img = self.loader(npy_path)
                 if index not in self.ratio_index[closest_ratio]:
                     self.ratio_index[closest_ratio].append(index)
-            except:
+            except Exception:
                 index = random.choice(self.ratio_index[closest_ratio])
                 return self.getdata(index)
             h, w = (img.shape[1], img.shape[2])

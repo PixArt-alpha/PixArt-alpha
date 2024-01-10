@@ -52,7 +52,9 @@ def scaled_multihead_dot_product_attention(query, key, value, n_heads, softmax_s
     out = rearrange(out, 'b h s d -> b s (h d)')
     return (out, attn_weight) if needs_weights else (out, None)
 
-def check_valid_inputs(*tensors, valid_dtypes=[torch.float16, torch.bfloat16]):
+def check_valid_inputs(*tensors, valid_dtypes=None):
+    if valid_dtypes is None:
+        valid_dtypes = [torch.float16, torch.bfloat16]
     for tensor in tensors:
         if tensor.dtype not in valid_dtypes:
             raise TypeError(f'tensor.dtype={tensor.dtype!r} must be in valid_dtypes={valid_dtypes!r}.')

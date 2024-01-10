@@ -117,9 +117,7 @@ class MPTModel(MPTPreTrainedModel):
         causal = torch.tril(torch.ones((seq_len, seq_len), dtype=torch.bool, device=prefix_mask.device)).view(1, 1, seq_len, seq_len)
         prefix = prefix_mask.view(-1, 1, 1, seq_len)
         cannot_attend = ~torch.logical_or(causal, prefix.bool())
-        min_val = torch.finfo(attn_bias.dtype).min
-        attn_bias = attn_bias.masked_fill(cannot_attend, min_val)
-        return attn_bias
+        return self._extracted_from__apply_sequence_id_15(attn_bias, cannot_attend)
 
     def _apply_sequence_id(self, attn_bias: torch.Tensor, sequence_id: torch.LongTensor):
         seq_len = sequence_id.shape[-1]
@@ -127,6 +125,10 @@ class MPTModel(MPTPreTrainedModel):
             raise ValueError(f'sequence_id sequence length cannot exceed max_seq_len={self.config.max_seq_len}')
         attn_bias = attn_bias[..., :seq_len, :seq_len]
         cannot_attend = torch.logical_not(torch.eq(sequence_id.view(-1, seq_len, 1), sequence_id.view(-1, 1, seq_len))).unsqueeze(1)
+        return self._extracted_from__apply_sequence_id_15(attn_bias, cannot_attend)
+
+    # TODO Rename this here and in `_apply_prefix_mask` and `_apply_sequence_id`
+    def _extracted_from__apply_sequence_id_15(self, attn_bias, cannot_attend):
         min_val = torch.finfo(attn_bias.dtype).min
         attn_bias = attn_bias.masked_fill(cannot_attend, min_val)
         return attn_bias
@@ -135,12 +137,11 @@ class MPTModel(MPTPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.return_dict
         use_cache = use_cache if use_cache is not None else self.config.use_cache
 
-        if self.gradient_checkpointing and self.training:
-            if use_cache:
-                logger.warning_once(
-                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-                )
-                use_cache = False
+        if self.gradient_checkpointing and self.training and use_cache:
+            logger.warning_once(
+                "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+            )
+            use_cache = False
         if attention_mask is not None:
             attention_mask = attention_mask.bool()
         if prefix_mask is not None:

@@ -62,27 +62,9 @@ class PixArt(nn.Module):
     Diffusion model with a Transformer backbone.
     """
 
-    def __init__(
-            self,
-            input_size=32,
-            patch_size=2,
-            in_channels=4,
-            hidden_size=1152,
-            depth=28,
-            num_heads=16,
-            mlp_ratio=4.0,
-            class_dropout_prob=0.1,
-            pred_sigma=True,
-            drop_path: float = 0.,
-            window_size=0,
-            window_block_indexes=[],
-            use_rel_pos=False,
-            caption_channels=4096,
-            lewei_scale=1.0,
-            config=None,
-            model_max_length=120,
-            **kwargs,
-    ):
+    def __init__(self, input_size=32, patch_size=2, in_channels=4, hidden_size=1152, depth=28, num_heads=16, mlp_ratio=4.0, class_dropout_prob=0.1, pred_sigma=True, drop_path: float = 0., window_size=0, window_block_indexes=None, use_rel_pos=False, caption_channels=4096, lewei_scale=1.0, config=None, model_max_length=120, **kwargs):
+        if window_block_indexes is None:
+            window_block_indexes = []
         super().__init__()
         self.pred_sigma = pred_sigma
         self.in_channels = in_channels

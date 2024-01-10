@@ -658,20 +658,15 @@ class SASolver:
         gradient_coefficients = self.get_coefficients_fn(order, ns.marginal_lambda(t_prev_list[-1]), lambda_t,
                                                          lambda_list, tau)
 
-        if order == 2:
-            if self.predict_x0:  ## if order = 2 we do a modification that does not influence the convergence order similar to unipc. Note: This is used only for few steps sampling.
-                # The added term is O(h^3). Empirically we find it will slightly improve the image quality.
-                # ODE case
-                # gradient_coefficients[0] += 1.0 * torch.exp(lambda_t) * (h ** 2 / 2 - (h - 1 + torch.exp(-h))) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(t_prev_list[-2]))
-                # gradient_coefficients[1] -= 1.0 * torch.exp(lambda_t) * (h ** 2 / 2 - (h - 1 + torch.exp(-h))) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(t_prev_list[-2]))
-                gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                            h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                                (1 + tau ** 2) ** 2)) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(
-                    t_prev_list[-2]))
-                gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                            h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                                (1 + tau ** 2) ** 2)) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(
-                    t_prev_list[-2]))
+        if order == 2 and self.predict_x0:
+            gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                        h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                            (1 + tau ** 2) ** 2)) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(
+                t_prev_list[-2]))
+            gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                        h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                            (1 + tau ** 2) ** 2)) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(
+                t_prev_list[-2]))
 
         for i in range(order):
             if self.predict_x0:
@@ -714,18 +709,13 @@ class SASolver:
         gradient_coefficients = self.get_coefficients_fn(order, ns.marginal_lambda(t_prev_list[-1]), lambda_t,
                                                          lambda_list, tau)
 
-        if order == 2:
-            if self.predict_x0:  ## if order = 2 we do a modification that does not influence the convergence order similar to UniPC. Note: This is used only for few steps sampling.
-                # The added term is O(h^3). Empirically we find it will slightly improve the image quality.
-                # ODE case
-                # gradient_coefficients[0] += 1.0 * torch.exp(lambda_t) * (h / 2 - (h - 1 + torch.exp(-h)) / h)
-                # gradient_coefficients[1] -= 1.0 * torch.exp(lambda_t) * (h / 2 - (h - 1 + torch.exp(-h)) / h)
-                gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                            h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                                (1 + tau ** 2) ** 2 * h))
-                gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                            h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                                (1 + tau ** 2) ** 2 * h))
+        if order == 2 and self.predict_x0:
+            gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                        h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                            (1 + tau ** 2) ** 2 * h))
+            gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                        h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                            (1 + tau ** 2) ** 2 * h))
 
         for i in range(order):
             if self.predict_x0:
@@ -820,11 +810,10 @@ class SASolver:
                     x = x_p
 
                 # evaluation step if correction and mode = pece
-                if corrector_order > 0:
-                    if pc_mode == 'PECE':
-                        model_x = self.model_fn(x, t)
-                        del model_prev_list[-1]
-                        model_prev_list.append(model_x)
+                if corrector_order > 0 and pc_mode == 'PECE':
+                    model_x = self.model_fn(x, t)
+                    del model_prev_list[-1]
+                    model_prev_list.append(model_x)
 
                 if self.correcting_xt_fn is not None:
                     x = self.correcting_xt_fn(x, t, step)
@@ -873,11 +862,10 @@ class SASolver:
                 else:
                     x = x_p
                 # evaluation step if mode = pece and step != steps
-                if corrector_order > 0:
-                    if pc_mode == 'PECE' and step < steps:
-                        model_x = self.model_fn(x, t)
-                        del model_prev_list[-1]
-                        model_prev_list.append(model_x)
+                if corrector_order > 0 and (pc_mode == 'PECE' and step < steps):
+                    model_x = self.model_fn(x, t)
+                    del model_prev_list[-1]
+                    model_prev_list.append(model_x)
 
                 if self.correcting_xt_fn is not None:
                     x = self.correcting_xt_fn(x, t, step)
@@ -969,11 +957,10 @@ class SASolver:
                     x = x_p
 
                 # evaluation step if mode = pece
-                if corrector_order > 0:
-                    if pc_mode == 'PECE':
-                        model_x = self.model_fn(x, t)
-                        del model_prev_list[-1]
-                        model_prev_list.append(model_x)
+                if corrector_order > 0 and pc_mode == 'PECE':
+                    model_x = self.model_fn(x, t)
+                    del model_prev_list[-1]
+                    model_prev_list.append(model_x)
                 if self.correcting_xt_fn is not None:
                     x = self.correcting_xt_fn(x, t, step)
                 if return_intermediate:
@@ -1025,11 +1012,10 @@ class SASolver:
                     x = x_p
 
                 # evaluation step if mode = pece and step != steps
-                if corrector_order > 0:
-                    if pc_mode == 'PECE' and step < steps:
-                        model_x = self.model_fn(x, t)
-                        del model_prev_list[-1]
-                        model_prev_list.append(model_x)
+                if corrector_order > 0 and (pc_mode == 'PECE' and step < steps):
+                    model_x = self.model_fn(x, t)
+                    del model_prev_list[-1]
+                    model_prev_list.append(model_x)
 
                 if self.correcting_xt_fn is not None:
                     x = self.correcting_xt_fn(x, t, step)

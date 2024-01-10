@@ -175,7 +175,7 @@ if __name__ == '__main__':
     try:
         epoch_name = re.search(r'.*epoch_(\d+).*.pth', args.model_path).group(1)
         step_name = re.search(r'.*step_(\d+).*.pth', args.model_path).group(1)
-    except:
+    except Exception:
         epoch_name = 'unknown'
         step_name = 'unknown'
     img_save_dir = os.path.join(work_dir, 'vis')

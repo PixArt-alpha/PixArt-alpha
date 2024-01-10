@@ -120,7 +120,7 @@ class SAM(Dataset):
         for _ in range(20):
             try:
                 return self.getdata(idx)
-            except:
+            except Exception:
                 print(self.img_samples[idx], ' info is not correct')
                 idx = np.random.randint(len(self))
         raise RuntimeError('Too many bad data.')

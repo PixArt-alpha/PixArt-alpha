@@ -41,11 +41,10 @@ def generic_param_init_fn_(module: nn.Module, init_fn_, n_layers: int, d_model: 
     else:
         div_is_residual = 1.0
         raise ValueError(f'Expected init_div_is_residual to be boolean or numeric, got {init_div_is_residual}')
-    if init_div_is_residual is not False:
-        if verbose > 1:
-            warnings.warn(
-                f'Initializing _is_residual layers then dividing them by {div_is_residual:.3f}. Set `init_div_is_residual: false` in init config to disable this.'
-            )
+    if init_div_is_residual is not False and verbose > 1:
+        warnings.warn(
+            f'Initializing _is_residual layers then dividing them by {div_is_residual:.3f}. Set `init_div_is_residual: false` in init config to disable this.'
+        )
     if isinstance(module, nn.Linear):
         if hasattr(module, '_fused'):
             fused_init_helper_(module, init_fn_)
@@ -93,13 +92,7 @@ def generic_param_init_fn_(module: nn.Module, init_fn_, n_layers: int, d_model: 
             torch.nn.init.zeros_(module.bias)
     elif isinstance(module, nn.MultiheadAttention):
         if module._qkv_same_embed_dim:
-            assert module.in_proj_weight is not None
-            assert module.q_proj_weight is None and module.k_proj_weight is None and (module.v_proj_weight is None)
-            assert d_model is not None
-            _d = d_model
-            splits = (0, _d, 2 * _d, 3 * _d)
-            for (s, e) in zip(splits[:-1], splits[1:]):
-                init_fn_(module.in_proj_weight[s:e])
+            _extracted_from_generic_param_init_fn__69(module, d_model, init_fn_)
         else:
             assert module.q_proj_weight is not None and module.k_proj_weight is not None and (module.v_proj_weight is not None)
             assert module.in_proj_weight is None
@@ -121,6 +114,17 @@ def generic_param_init_fn_(module: nn.Module, init_fn_, n_layers: int, d_model: 
     else:
         for _ in module.parameters(recurse=False):
             raise NotImplementedError(f'{module.__class__.__name__} parameters are not initialized by param_init_fn.')
+
+
+# TODO Rename this here and in `generic_param_init_fn_`
+def _extracted_from_generic_param_init_fn__69(module, d_model, init_fn_):
+    assert module.in_proj_weight is not None
+    assert module.q_proj_weight is None and module.k_proj_weight is None and (module.v_proj_weight is None)
+    assert d_model is not None
+    _d = d_model
+    splits = (0, _d, 2 * _d, 3 * _d)
+    for (s, e) in zip(splits[:-1], splits[1:]):
+        init_fn_(module.in_proj_weight[s:e])
 
 def _normal_init_(std, mean=0.0):
     return partial(torch.nn.init.normal_, mean=mean, std=std)

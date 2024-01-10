@@ -766,11 +766,7 @@ class GaussianDiffusion:
                 else model_output
             )
             if self.return_startx and self.model_mean_type == ModelMeanType.EPSILON:
-                B, C = x_t.shape[:2]
-                assert output.shape == (B, C * 2, *x_t.shape[2:])
-                output = th.split(output, C, dim=1)[0]
-                return output, self._predict_xstart_from_eps(x_t=x_t, t=t, eps=output), x_t
-
+                return self._extracted_from_training_losses_diffusers_56(x_t, output, t)
             if self.model_var_type in [
                 ModelVarType.LEARNED,
                 ModelVarType.LEARNED_RANGE,
@@ -872,11 +868,7 @@ class GaussianDiffusion:
             output = model(x_t, timestep=t, **model_kwargs, return_dict=False)[0]
 
             if self.return_startx and self.model_mean_type == ModelMeanType.EPSILON:
-                B, C = x_t.shape[:2]
-                assert output.shape == (B, C * 2, *x_t.shape[2:])
-                output = th.split(output, C, dim=1)[0]
-                return output, self._predict_xstart_from_eps(x_t=x_t, t=t, eps=output), x_t
-
+                return self._extracted_from_training_losses_diffusers_56(x_t, output, t)
             if self.model_var_type in [
                 ModelVarType.LEARNED,
                 ModelVarType.LEARNED_RANGE,
@@ -929,6 +921,13 @@ class GaussianDiffusion:
             raise NotImplementedError(self.loss_type)
 
         return terms
+
+    # TODO Rename this here and in `training_losses` and `training_losses_diffusers`
+    def _extracted_from_training_losses_diffusers_56(self, x_t, output, t):
+        B, C = x_t.shape[:2]
+        assert output.shape == (B, C * 2, *x_t.shape[2:])
+        output = th.split(output, C, dim=1)[0]
+        return output, self._predict_xstart_from_eps(x_t=x_t, t=t, eps=output), x_t
 
     def _prior_bpd(self, x_start):
         """

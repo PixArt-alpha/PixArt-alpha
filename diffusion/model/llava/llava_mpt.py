@@ -242,17 +242,11 @@ class LlavaMPTForCausalLM(MPTForCausalLM):
             vision_config.im_start_token, vision_config.im_end_token = tokenizer.convert_tokens_to_ids([DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN])
 
             if num_new_tokens > 0:
-                input_embeddings = self.get_input_embeddings().weight.data
-                output_embeddings = self.get_output_embeddings().weight.data
-
-                input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(
-                    dim=0, keepdim=True)
-                output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(
-                    dim=0, keepdim=True)
-
-                input_embeddings[-num_new_tokens:] = input_embeddings_avg
-                output_embeddings[-num_new_tokens:] = output_embeddings_avg
-
+                input_embeddings = (
+                    self._extracted_from_initialize_vision_tokenizer_14(
+                        num_new_tokens
+                    )
+                )
             if tune_mm_mlp_adapter:
                 self.get_model().orig_embeds_params = [self.get_input_embeddings().weight.data.clone().to(device=device)]
                 for p in self.get_input_embeddings().parameters():
@@ -272,6 +266,20 @@ class LlavaMPTForCausalLM(MPTForCausalLM):
                     raise ValueError(f"Unexpected embed_tokens_weight shape. Pretrained: {embed_tokens_weight.shape}. Current: {input_embeddings.shape}. Numer of new tokens: {num_new_tokens}.")
 
         vision_config.im_patch_token = tokenizer.convert_tokens_to_ids([DEFAULT_IMAGE_PATCH_TOKEN])[0]
+
+    # TODO Rename this here and in `initialize_vision_tokenizer`
+    def _extracted_from_initialize_vision_tokenizer_14(self, num_new_tokens):
+        result = self.get_input_embeddings().weight.data
+        output_embeddings = self.get_output_embeddings().weight.data
+
+        input_embeddings_avg = result[:-num_new_tokens].mean(dim=0, keepdim=True)
+        output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(
+            dim=0, keepdim=True)
+
+        result[-num_new_tokens:] = input_embeddings_avg
+        output_embeddings[-num_new_tokens:] = output_embeddings_avg
+
+        return result
 
 AutoConfig.register("llava_mpt", LlavaMPTConfig)
 AutoModelForCausalLM.register(LlavaMPTConfig, LlavaMPTForCausalLM)

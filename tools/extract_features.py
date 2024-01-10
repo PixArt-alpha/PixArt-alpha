@@ -35,16 +35,9 @@ def get_closest_ratio(height: float, width: float, ratios: dict):
 
 @DATASETS.register_module()
 class DatasetMS(InternalData):
-    def __init__(self,
-                 root,  # Notice: need absolute path here
-                 image_list_json=['data_info.json'],
-                 transform=None,
-                 resolution=1024,
-                 load_vae_feat=False,
-                 aspect_ratio_type=None,
-                 start_index=0,
-                 end_index=100000000,
-                 **kwargs):
+    def __init__(self, root, image_list_json=None, transform=None, resolution=1024, load_vae_feat=False, aspect_ratio_type=None, start_index=0, end_index=100000000, **kwargs):
+        if image_list_json is None:
+            image_list_json = ['data_info.json']
         assert os.path.isabs(root), 'root must be a absolute path'
         self.root = root
         self.img_dir_name = 'InternalImgs'        # need to change to according to your data structure

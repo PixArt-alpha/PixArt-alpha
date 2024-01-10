@@ -1,6 +1,6 @@
 import torchvision.transforms as T
 
-TRANSFORMS = dict()
+TRANSFORMS = {}
 
 
 def register_transform(transform):
