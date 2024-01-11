@@ -24,7 +24,6 @@ num_epochs = 10 # 3
 gradient_accumulation_steps = 1
 grad_checkpointing = True
 gradient_clip = 0.01
-# optimizer = dict(type='AdamW', lr=1e-6, weight_decay=0.0, eps=1e-10)
 optimizer = dict(type='AdamW', lr=2e-5, weight_decay=0.0, eps=1e-10)
 # optimizer = dict(type='CAMEWrapper', lr=1e-7, weight_decay=0.0, betas=(0.9, 0.999, 0.9999), eps=(1e-30, 1e-16))
 lr_schedule_args = dict(num_warmup_steps=100)
