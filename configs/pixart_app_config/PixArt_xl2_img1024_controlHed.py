@@ -7,7 +7,7 @@ image_size = 1024
 
 # model setting
 model = 'PixArtMS_XL_2'
-fp32_attention = True
+fp32_attention = False  # Set to True if you got NaN loss
 load_from = 'path-to-pixart-checkpoints'
 vae_pretrained = "output/pretrained_models/sd-vae-ft-ema"
 window_block_indexes = []

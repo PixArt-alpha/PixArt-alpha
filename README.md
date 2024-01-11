@@ -262,7 +262,7 @@ Currently support:
 To get started, first install the required dependencies. Make sure you've downloaded the [models](https://huggingface.co/PixArt-alpha/PixArt-alpha) to the output/pretrained_models folder, and then run on your local machine:
 
 ```bash
-DEMO_PORT=12345 python scripts/app.py
+DEMO_PORT=12345 python app/app.py
 ```
 
 As an alternative, a sample [Dockerfile](Dockerfile) is provided to make a runtime container that starts the Gradio app.
@@ -335,7 +335,7 @@ To get started, first install the required dependencies, then run on your local 
 
 ```bash
 # diffusers version
-DEMO_PORT=12345 python scripts/app.py
+DEMO_PORT=12345 python app/app.py
 ```
 Let's have a look at a simple example using the `http://your-server-ip:12345`.
 
