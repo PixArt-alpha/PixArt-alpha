@@ -4,14 +4,11 @@
 # but it generates smoother edges and is more suitable for ControlNet as well as other image-to-image translations.
 # Different from official models and other implementations, this is an RGB-input model (rather than BGR)
 # and in this way it works better for gradio's RGB protocol
-import os
 import sys
 from pathlib import Path
 current_file_path = Path(__file__).resolve()
 sys.path.insert(0, str(current_file_path.parent.parent.parent))
-import torch
 from torch import nn
-import cv2
 import torch
 import numpy as np
 from torchvision import transforms as T
@@ -66,10 +63,10 @@ class ControlNetHED_Apache2(nn.Module):
         return projection1, projection2, projection3, projection4, projection5
 
 
-class MJData(Dataset):
+class InternData(Dataset):
     def __init__(self):
         ####
-        with open('data/MJData/partition/mj_1_new.json', 'r') as f:
+        with open('data/MJData/partition/data_info.json', 'r') as f:
             self.j = json.load(f)
         self.transform = T.Compose([
             T.Lambda(lambda img: img.convert('RGB')),
@@ -84,7 +81,7 @@ class MJData(Dataset):
     def getdata(self, idx):
 
         path = self.j[idx]['path']
-        image = Image.open("data/MJImgs/" + path)
+        image = Image.open("data/InternImgs/" + path)
         image = self.transform(image)
         return image, path
 
@@ -131,7 +128,7 @@ class HEDdetector(nn.Module):
 
 
 def main():
-    dataset = MJData()
+    dataset = InternData()
     dataloader = DataLoader(dataset, batch_size=10, shuffle=False, num_workers=8, pin_memory=True)
     hed = HEDdetector()
 
@@ -142,7 +139,7 @@ def main():
     for img, path in tqdm(dataloader):
         out = hed(img.cuda())
         for p, o in zip(path, out):
-            save = f'data/MJData/hed_feature_{image_resize}/' + p.replace('.png', '.npz')
+            save = f'data/InternalData/hed_feature_{image_resize}/' + p.replace('.png', '.npz')
             if os.path.exists(save):
                 continue
             os.makedirs(os.path.dirname(save), exist_ok=True)
