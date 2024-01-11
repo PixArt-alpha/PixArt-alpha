@@ -126,8 +126,8 @@ Let us stress again how liberating it is to explore image generation so easily w
 | Hardware                    | PIXART-δ (4 steps) | SDXL LoRA LCM (4 steps) | PixArt-α (14 steps) | SDXL standard (25 steps) |
 |-----------------------------|--------------------|-------------------------|---------------------|---------------------------|
 | T4 (Google Colab Free Tier) | 3.3s               | 8.4s                    | 16.0s               | 26.5s                     |
-| A100 (80 GB)                | 0.51s              | 1.2s                    | 2.2s                | 3.8s                      |
 | V100 (32 GB)                | 0.8s               | 1.2s                    | 5.5s                | 7.7s                      |
+| A100 (80 GB)                | 0.51s              | 1.2s                    | 2.2s                | 3.8s                      |
 
 These tests were run with a batch size of 1 in all cases.
 
@@ -426,8 +426,10 @@ python tools/extract_features.py --img_size=1024 \
 - [ ] SAM-LLaVA caption dataset
 - [ ] PixArt-Ω: Next version model with much better ability is training!
 
-[//]: # (.mp4)
+# Other Source
+We make a video comparing PixArt with current most powerful Text-to-Image models.
 
+[![Watch the video](https://img.youtube.com/vi/7_6KsIITgWY/maxresdefault.jpg)](https://www.youtube.com/watch?v=7_6KsIITgWY)
 
 # 📖BibTeX
     @misc{chen2023pixartalpha,
