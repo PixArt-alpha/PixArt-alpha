@@ -144,6 +144,7 @@ output_cv/
 # added by ylw
 *.pt
 *.pth
+*mj*
 s3helper/
 TODO.md
 pretrained_models
@@ -151,6 +152,13 @@ work_dir
 #demo.py
 develop/
 tmp.py
+data/
+output_cv/
+output_all/
+output_demo/
+output_debug/
+data/
+output/
 
 #cache for docker
 docker/cache/gradio

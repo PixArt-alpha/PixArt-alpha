@@ -7,7 +7,7 @@ image_size = 1024
 
 # model setting
 model = 'PixArtMS_XL_2'     # model for multi-scale training
-fp32_attention = True
+fp32_attention = False  # Set to True if you got NaN loss
 load_from = None
 vae_pretrained = "output/pretrained_models/sd-vae-ft-ema"
 window_block_indexes = []

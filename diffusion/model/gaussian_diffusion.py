@@ -767,7 +767,7 @@ class GaussianDiffusion:
                 assert output.shape == (B, C * 2, *x_t.shape[2:])
                 output = th.split(output, C, dim=1)[0]
                 return output, self._predict_xstart_from_eps(x_t=x_t, t=t, eps=output), x_t
-
+            # self.model_var_type = ModelVarType.LEARNED_RANGE:4
             if self.model_var_type in [
                 ModelVarType.LEARNED,
                 ModelVarType.LEARNED_RANGE,
@@ -777,6 +777,7 @@ class GaussianDiffusion:
                 output, model_var_values = th.split(output, C, dim=1)
                 # Learn the variance using the variational bound, but don't let it affect our mean prediction.
                 frozen_out = th.cat([output.detach(), model_var_values], dim=1)
+                # vb variational bound
                 terms["vb"] = self._vb_terms_bpd(
                     model=lambda *args, r=frozen_out, **kwargs: r,
                     x_start=x_start,
