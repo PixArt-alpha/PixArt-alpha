@@ -255,10 +255,7 @@ Following the `PixArt + LCM` [training guidance](asset/docs/pixart_lcm.md)
 
 ## 4. PixArt + ControlNet Training
 
-Following the `PixArt + ControlNet` [training guidance](asset/docs/pixart_controlnet.md)(Working on)
-```bash
-python -m torch.distributed.launch --nproc_per_node=1 --master_port=26662 train_scripts/train_controlnet.py configs/pixart_app_config/PixArt_xl2_img1024_controlHed.py --work-dir output/debug
-```
+Following the `PixArt + ControlNet` [training guidance](asset/docs/pixart_controlnet.md)
 
 ## 4. PixArt + LoRA Training
 
