@@ -348,7 +348,7 @@ prompt = "A small cactus with a happy face in the Sahara desert."
 image = pipe(prompt).images[0]
 image.save("./catcus.png")
 ```
-Check out the [documentation](./asset/docs/sasolver.md) for more information abount SA-Solver Sampler.
+Check out the [documentation](./asset/docs/sasolver.md) for more information about SA-Solver Sampler.
 
 This integration allows running the pipeline with a batch size of 4 under 11 GBs of GPU VRAM. 
 Check out the [documentation](https://huggingface.co/docs/diffusers/main/en/api/pipelines/pixart) to learn more.
