@@ -45,6 +45,7 @@ Fast training diffusion models with transformers. You can find more visualizatio
 
 ---
 ## Breaking News 🔥🔥!!
+- (🔥 New) Jan. 12, 2024. 💥 We release the [SAM-LLaVA-Captions](https://huggingface.co/datasets/PixArt-alpha/SAM-LLaVA-Captions10M) used in PixArt-α training.
 - (🔥 New) Jan. 11, 2024. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252): We are excited to announce the release of the [PixArt-δ](https://arxiv.org/abs/2401.05252) technical report!!!
 This report offers valuable insights into the training of LCM and ControlNet-like modules in Transformer Models. Along with the report, we have also released all the training and inference code for LCM & ControlNet [in this repository](https://github.com/PixArt-alpha/PixArt-alpha). 
 We encourage you to try them out and warmly welcome any Pull Requests from our users. Your contributions and feedback are highly appreciated!
@@ -419,8 +420,8 @@ python tools/extract_features.py --img_size=1024 \
 - [x] PixArt-α-LCM-LoRA scripts will release soon
 - [x] PixArt-α-LoRA training scripts will release soon
 - [x] ControlNet code will be released
+- [x] SAM-LLaVA caption dataset
 - [ ] 256px pre-trained models
-- [ ] SAM-LLaVA caption dataset
 - [ ] PixArt-Ω: Next version model with much better ability is training!
 
 # Other Source
