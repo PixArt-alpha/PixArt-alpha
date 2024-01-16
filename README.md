@@ -3,7 +3,7 @@
 </p>
 
 
-### <div align="center">👉 PixArt-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis (ICLR 2024)<div> 
+### <div align="center">👉 PixArt-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis<div> 
 ### <div align="center"> ICLR 2024 Spotlight <div> 
 
 <div align="center">
