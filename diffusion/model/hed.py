@@ -66,7 +66,7 @@ class ControlNetHED_Apache2(nn.Module):
 class InternData(Dataset):
     def __init__(self):
         ####
-        with open('data/MJData/partition/data_info.json', 'r') as f:
+        with open('data/InternData/partition/data_info.json', 'r') as f:
             self.j = json.load(f)
         self.transform = T.Compose([
             T.Lambda(lambda img: img.convert('RGB')),

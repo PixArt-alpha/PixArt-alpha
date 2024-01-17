@@ -16,7 +16,7 @@ import json, time
 class InternalDataHed(Dataset):
     def __init__(self,
                  root,
-                 image_list_json='mj_1_new.json',
+                 image_list_json='data_info.json',
                  transform=None,
                  resolution=256,
                  sample_subset=None,
@@ -49,8 +49,7 @@ class InternalDataHed(Dataset):
             self.ori_imgs_nums += len(meta_data)
             meta_data_clean = [item for item in meta_data if item['ratio'] <= 4]
             self.meta_data_clean.extend(meta_data_clean)
-            # self.img_samples.extend([os.path.join(self.root.replace('InternData', "InternImgs"), item['path']) for item in meta_data_clean])
-            self.img_samples.extend([os.path.join(self.root.replace('MJData', "MJImgs"), item['path']) for item in meta_data_clean])
+            self.img_samples.extend([os.path.join(self.root.replace('InternData', "InternImgs"), item['path']) for item in meta_data_clean])
             self.txt_feat_samples.extend([os.path.join(self.root, 'caption_features', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npz')) for item in meta_data_clean])
             self.vae_feat_samples.extend([os.path.join(self.root, f'img_vae_features_{resolution}resolution/noflip', '_'.join(item['path'].rsplit('/', 1)).replace('.png', '.npy')) for item in meta_data_clean])
             self.hed_feat_samples.extend([os.path.join(self.root, f'hed_feature_{resolution}', item['path'].replace('.png', '.npz')) for item in meta_data_clean])

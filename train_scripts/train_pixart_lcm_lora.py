@@ -303,7 +303,6 @@ if __name__ == '__main__':
         config.train_batch_size = 4
         config.valid_num = 10
         config.save_model_steps = 10
-        config.data.image_list_json = ['mj_1-5_nounfilter0.3_700K.json']
 
     os.umask(0o000)
     os.makedirs(config.work_dir, exist_ok=True)
