@@ -34,10 +34,10 @@ python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 train_
 ## Testing the `PixArt + ControlNet`
 ```bash
 # Test on 1024px
-python scripts/interface_control.py  configs/pixart_app_config/PixArt_xl2_img1024_controlHed.py --model_path path/to/1024px/pixart_controlnet_ckpt --port 12345
+DEMO_PORT= 12345 python app/app_controlnet.py configs/pixart_app_config/PixArt_xl2_img1024_controlHed.py --model_path path/to/1024px/PixArt-XL-2-1024-ControlNet.pth
 
 # Test on 512px
-python scripts/interface_control.py  configs/pixart_app_config/PixArt_xl2_img512_controlHed.py --model_path path/to/512px/pixart_controlnet_ckpt --port 12345
+DEMO_PORT= 12345 python app/app_controlnet.py configs/pixart_app_config/PixArt_xl2_img512_controlHed.py --model_path path/to/512px/pixart_controlnet_ckpt
 ```
 Then have a look at a simple example using the http://your-server-ip:12345
 

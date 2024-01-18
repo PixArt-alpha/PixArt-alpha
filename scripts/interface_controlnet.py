@@ -145,9 +145,7 @@ def generate_img(prompt, given_image, seed):
             skip_type="time_uniform",
             method="multistep",
         )
-        samples = vae.decode(samples / vae_scale).sample
-        torch.cuda.empty_cache()
-        samples = resize_and_crop_tensor(samples, custom_hw[0, 1], custom_hw[0, 0])
+
     elif args.sampling_algo == 'sa-solver':
         # Create sampling noise:
         n = len(prompts)
@@ -164,8 +162,11 @@ def generate_img(prompt, given_image, seed):
             model_kwargs=model_kwargs,
         )[0]
 
-    display_model_info = f'Model path: {args.model_path},\nBase image size: {args.image_size}, \nSampling Algo: {args.sampling_algo}'
-    return ndarr_image(samples, normalize=True, value_range=(-1, 1)), c_vis, prompt_show, display_model_info
+    samples = vae.decode(samples / vae_scale).sample
+    torch.cuda.empty_cache()
+    samples = resize_and_crop_tensor(samples, custom_hw[0, 1], custom_hw[0, 0])
+
+    return ndarr_image(samples, normalize=True, value_range=(-1, 1)), c_vis, prompt_show
 
 
 if __name__ == '__main__':
@@ -224,6 +225,6 @@ if __name__ == '__main__':
                             ],
                         outputs=[Image(type="numpy", label="Img"),
                                  Image(type="numpy", label="HED Edge Map"),
-                                 Textbox(label="clean prompt"),
-                                 Textbox(label="model info")], )
+                                 Textbox(label="clean prompt"),]
+                        )
     demo.queue(max_size=20).launch(server_name="0.0.0.0", server_port=args.port, debug=True)
