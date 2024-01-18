@@ -17,7 +17,7 @@ lewei_scale = 2.0
 
 # training setting
 num_workers=10
-train_batch_size = 3 #  set the batch size according to your VRAM
+train_batch_size = 4 #  set the batch size according to your VRAM
 num_epochs = 10 # 3
 gradient_accumulation_steps = 4
 grad_checkpointing = True

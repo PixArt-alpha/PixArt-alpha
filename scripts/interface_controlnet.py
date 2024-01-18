@@ -1,4 +1,5 @@
 import argparse
+import os
 from datetime import datetime
 import numpy as np
 import sys
@@ -73,20 +74,8 @@ def generate_img(prompt, given_image, seed):
     torch.cuda.empty_cache()
     strength = 1.0
     c_vis = given_image
-    if given_image is not None:
-        given_image = condition_transform(given_image).unsqueeze(0).to(device)
-        hed_edge = hed(given_image) * strength
-        hed_edge = TF.normalize(hed_edge, [.5], [.5])
-        hed_edge = hed_edge.repeat(1, 3, 1, 1)
-        posterior = vae.encode(hed_edge).latent_dist
-        condition = posterior.sample()
-        c = condition * vae_scale
-        c_vis = vae.decode(condition)['sample']
-        c_vis = torch.clamp(127.5 * c_vis + 128.0, 0, 255).permute(0, 2, 3, 1).to("cpu", dtype=torch.uint8).numpy()[0]
-    else:
-        c = None
 
-    save_promt_path = f'output/demo/online_demo_prompts/tested_prompts{datetime.now().date()}.txt'
+    save_promt_path = f'{save_prompt_path}/tested_prompts{datetime.now().date()}.txt'
     with open(save_promt_path, 'a') as f:
         f.write(prompt + '\n')
     prompt_clean, prompt_show, hw, ar, custom_hw = prepare_prompt_ar(prompt, base_ratios, device=device)  # ar for aspect ratio
@@ -98,6 +87,31 @@ def generate_img(prompt, given_image, seed):
     caption_embs = caption_embs[:, None]
 
     null_y = model.y_embedder.y_embedding[None].repeat(len(prompts), 1, 1)[:, None]
+
+    # condition process
+    if given_image is not None:
+        ar = torch.tensor([given_image.size[1] / given_image.size[0]], device=device)[None]
+        custom_hw = torch.tensor([given_image.size[1], given_image.size[0]], device=device)[None]
+        closest_hw = base_ratios[min(base_ratios.keys(), key=lambda ratio: abs(float(ratio) - ar))]
+        hw = torch.tensor(closest_hw, device=device)[None]
+        condition_transform = T.Compose([
+            T.Lambda(lambda img: img.convert('RGB')),
+            T.Resize(int(min(closest_hw))),
+            T.CenterCrop([int(closest_hw[0]), int(closest_hw[1])]),
+            T.ToTensor(),
+        ])
+
+        given_image = condition_transform(given_image).unsqueeze(0).to(device)
+        hed_edge = hed(given_image) * strength
+        hed_edge = TF.normalize(hed_edge, [.5], [.5])
+        hed_edge = hed_edge.repeat(1, 3, 1, 1)
+        posterior = vae.encode(hed_edge).latent_dist
+        condition = posterior.sample()
+        c = condition * vae_scale
+        c_vis = vae.decode(condition)['sample']
+        c_vis = torch.clamp(127.5 * c_vis + 128.0, 0, 255).permute(0, 2, 3, 1).to("cpu", dtype=torch.uint8).numpy()[0]
+    else:
+        c = None
 
     latent_size_h, latent_size_w = int(hw[0, 0] // 8), int(hw[0, 1] // 8)
     # Sample images:
@@ -159,10 +173,14 @@ if __name__ == '__main__':
     config = read_config(args.config)
     set_env()
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    save_prompt_path = 'output/demo/online_demo_prompts/'
+    os.makedirs(save_prompt_path, exist_ok=True)
 
     assert args.image_size in [512, 1024], "We only provide pre-trained models for 512x512 and 1024x1024 resolutions."
     lewei_scale = {512: 1, 1024: 2}
     latent_size = args.image_size // 8
+    weight_dtype = torch.float16
+    print(f"Inference with {weight_dtype}")
 
     model = PixArtMS_XL_2(input_size=latent_size, lewei_scale=lewei_scale[args.image_size])
     if config.image_size == 512:
@@ -178,9 +196,10 @@ if __name__ == '__main__':
     elif 'base_model.pos_embed' in state_dict:
         del state_dict['base_model.pos_embed']
     missing, unexpected = model.load_state_dict(state_dict, strict=False)
-    print('Missing keys: ', missing)
+    print('Missing keys (missing pos_embed is normal): ', missing)
     print('Unexpected keys', unexpected)
     model.eval()
+    model.to(weight_dtype)
     display_model_info = f'model path: {args.model_path},\n base image size: {args.image_size}'
     base_ratios = eval(f'ASPECT_RATIO_{args.image_size}_TEST')
 
@@ -194,12 +213,6 @@ if __name__ == '__main__':
     else:
         print(f'We support t5 only, please initialize the llm again')
         sys.exit()
-    condition_transform = T.Compose([
-        T.Lambda(lambda img: img.convert('RGB')),
-        T.Resize(args.image_size),  # Image.BICUBIC
-        T.CenterCrop(args.image_size),
-        T.ToTensor(),
-    ])
 
     gr.Markdown(DESCRIPTION)
     demo = gr.Interface(fn=generate_img,
@@ -213,4 +226,4 @@ if __name__ == '__main__':
                                  Image(type="numpy", label="HED Edge Map"),
                                  Textbox(label="clean prompt"),
                                  Textbox(label="model info")], )
-    demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True)
+    demo.queue(max_size=20).launch(server_name="0.0.0.0", server_port=args.port, debug=True)
