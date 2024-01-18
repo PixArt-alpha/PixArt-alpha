@@ -55,9 +55,7 @@ class InternalDataHed(Dataset):
             self.hed_feat_samples.extend([os.path.join(self.root, f'hed_feature_{resolution}', item['path'].replace('.png', '.npz')) for item in meta_data_clean])
             self.prompt_samples.extend([item['prompt'] for item in meta_data_clean])
 
-
         total_sample = len(self.img_samples)
-        print(total_sample, self.ori_imgs_nums)
         used_sample_num = int(total_sample * train_ratio)
         print("using mode", mode)
         if mode == 'train':

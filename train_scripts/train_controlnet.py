@@ -191,7 +191,7 @@ if __name__ == '__main__':
             resume_lr_scheduler=args.resume_lr_scheduler)
     if args.debug:
         config.log_interval = 1
-        config.train_batch_size = 2
+        config.train_batch_size = 6
         config.optimizer.update({'lr': args.lr})
 
     os.umask(0o000)  # file permission: 666; dir permission: 777
