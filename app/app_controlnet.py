@@ -6,13 +6,13 @@ import os
 import random
 import sys
 
-current_file_path = Path(__file__).resolve()
-sys.path.insert(0, str(current_file_path.parent.parent))
-
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple, Union
+
+current_file_path = Path(__file__).resolve()
+sys.path.insert(0, str(current_file_path.parent.parent))
 
 import gradio as gr
 import numpy as np
@@ -22,25 +22,26 @@ import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 from torchvision.utils import _log_api_usage_once, make_grid, save_image
 
-from diffusers import ConsistencyDecoderVAE, PixArtAlphaPipeline, DPMSolverMultistepScheduler
-from diffusion import IDDPM, DPMS, SASolverSampler
+from diffusers import PixArtAlphaPipeline
+from diffusion import DPMS, SASolverSampler
 from diffusion.data.datasets import *
 from diffusion.model.hed import HEDdetector
-from diffusion.model.nets import PixArtMS_XL_2, ControlPixArtHalf, ControlPixArtMSHalf
-from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor
+from diffusion.model.nets import PixArt_XL_2, PixArtMS_XL_2, ControlPixArtHalf, ControlPixArtMSHalf
+from diffusion.model.utils import resize_and_crop_tensor
 from diffusion.utils.misc import read_config
 from tools.download import find_model
 
 
 DESCRIPTION = """![Logo](https://raw.githubusercontent.com/PixArt-alpha/PixArt-alpha.github.io/master/static/images/logo.png)
-        # PixArt-Delta (ControlNet) 1024px
+        # PixArt-Delta (ControlNet)
         #### [PixArt-Alpha 1024px](https://github.com/PixArt-alpha/PixArt-alpha) is a transformer-based text-to-image diffusion system trained on text embeddings from T5. 
-        #### This demo uses the [PixArt-alpha/PixArt-XL-2-1024-ControlNet](https://huggingface.co/PixArt-alpha/PixArt-alpha/blob/main/PixArt-XL-2-1024-ControlNet.pth) checkpoint.
+        #### This demo uses the [PixArt-alpha/PixArt-XL-2-1024-ControlNet](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main) checkpoint.
+        #### This demo uses the [PixArt-alpha/PixArt-XL-2-512-ControlNet](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main) checkpoint.
         #### English prompts ONLY; 提示词仅限英文
-        ### <span style='color: red;'>You may change the DPM-Solver inference steps from 14 to 20, if you didn't get satisfied results.
+        ### <span style='color: red;'>Please use the image size corresponding to the model as input to get the best performance. (eg. 1024px for PixArt-XL-2-1024-ControlNet.pth)
         """
 if not torch.cuda.is_available():
-    DESCRIPTION += "\n<p>Running on CPU 🥶 This demo does not work on CPU.</p>"
+    DESCRIPTION += "\n<p>Running on CPU �� This demo does not work on CPU.</p>"
 
 MAX_SEED = np.iinfo(np.int32).max
 CACHE_EXAMPLES = torch.cuda.is_available() and os.getenv("CACHE_EXAMPLES", "1") == "1"
@@ -199,9 +200,10 @@ def generate(
         c_vis = torch.clamp(127.5 * c_vis + 128.0, 0, 255).permute(0, 2, 3, 1).to("cpu", dtype=torch.uint8).numpy()[0]
     else:
         c = None
-        hw = torch.tensor([int(height), int(width)], device=device)[None]
         ar = torch.tensor([int(height) / int(width)], device=device)[None]
         custom_hw = torch.tensor([int(height), int(width)], device=device)[None]
+        closest_hw = base_ratios[min(base_ratios.keys(), key=lambda ratio: abs(float(ratio) - ar))]
+        hw = torch.tensor(closest_hw, device=device)[None]
 
     latent_size_h, latent_size_w = int(hw[0, 0] // 8), int(hw[0, 1] // 8)
 
@@ -282,11 +284,13 @@ if torch.cuda.is_available():
     text_encoder = pipe.text_encoder
     tokenizer = pipe.tokenizer
 
-    model = PixArtMS_XL_2(input_size=latent_size, lewei_scale=lewei_scale[args.image_size])
+    assert args.image_size == config.image_size
     if config.image_size == 512:
+        model = PixArt_XL_2(input_size=latent_size, lewei_scale=lewei_scale[config.image_size])
         print('model architecture ControlPixArtHalf and image size is 512')
         model = ControlPixArtHalf(model).to(device)
     elif config.image_size == 1024:
+        model = PixArtMS_XL_2(input_size=latent_size, lewei_scale=lewei_scale[config.image_size])
         print('model architecture ControlPixArtMSHalf and image size is 1024')
         model = ControlPixArtMSHalf(model).to(device)
 
@@ -371,14 +375,14 @@ with gr.Blocks(css="app/style_controlnet.css") as demo:
                 minimum=256,
                 maximum=MAX_IMAGE_SIZE,
                 step=32,
-                value=1024,
+                value=config.image_size,
             )
             height = gr.Slider(
                 label="Height",
                 minimum=256,
                 maximum=MAX_IMAGE_SIZE,
                 step=32,
-                value=1024,
+                value=config.image_size,
             )
         with gr.Row():
             dpms_guidance_scale = gr.Slider(

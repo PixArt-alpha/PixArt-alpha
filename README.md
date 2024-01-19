@@ -47,7 +47,7 @@ Fast training diffusion models with transformers. You can find more visualizatio
 
 ---
 ## Breaking News 🔥🔥!!
-- (🔥 New) Jan. 19, 2023. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252) ControlNet [app_controlnet.py](app/app_controlnet.py) and [Checkpoint](https://huggingface.co/PixArt-alpha/PixArt-alpha/blob/main/PixArt-XL-2-1024-ControlNet.pth) are released!!!
+- (🔥 New) Jan. 19, 2023. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252) ControlNet [app_controlnet.py](app/app_controlnet.py) and [Checkpoint](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main) are released!!!
 - (🔥 New) Jan. 16, 2024. 💥 Glad to announce that [PixArt-α](https://arxiv.org/abs/2310.00426) is accepted by ICLR 2024 (Spotlight).
 - (🔥 New) Jan. 11, 2024. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252): We are excited to announce the release of the [PixArt-δ](https://arxiv.org/abs/2401.05252) technical report!!!
 This report offers valuable insights into the training of LCM and ControlNet-like modules in Transformer Models. Along with the report, we have also released all the training and inference code for LCM & ControlNet [in this repository](https://github.com/PixArt-alpha/PixArt-alpha). 
@@ -59,7 +59,7 @@ Detailed **inference speed** and **code guidance** can be found in [docs](asset/
 
 ---
 ## 🚩 **New Features/Updates**
-- ✅ Jan. 19, 2023. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252) ControlNet [app_controlnet.py](app/app_controlnet.py) and [Checkpoint](https://huggingface.co/PixArt-alpha/PixArt-alpha/blob/main/PixArt-XL-2-1024-ControlNet.pth) is released!!!
+- ✅ Jan. 19, 2023. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252) ControlNet [app_controlnet.py](app/app_controlnet.py) and [Checkpoint](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main) is released!!!
 - ✅ Jan. 12, 2024. 💥 We release the [SAM-LLaVA-Captions](https://huggingface.co/datasets/PixArt-alpha/SAM-LLaVA-Captions10M) used in PixArt-α training.
 - ✅ Dec. 27, 2023. [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha) incorporates into [ControlLLM](https://github.com/OpenGVLab/ControlLLM)!
 - ✅ Dec. 17, 2023. [PixArt-LCM-Lora](train_scripts/train_pixart_lcm_lora.py) & [PixArt-Lora](train_scripts/train_pixart_lora_hf.py) training scripts in Hugging Face style is released.
@@ -183,8 +183,9 @@ All models will be automatically downloaded. You can also choose to download man
 | PixArt-α-SAM-256         | 0.6B    | [256](about:blank)                                                                                                                                                                               | [256](about:blank)                                                                                       |
 | PixArt-α-512             | 0.6B    | [PixArt-XL-2-512x512.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-512x512.pth) or [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-512x512) | [512](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-512x512.pth)  |
 | PixArt-α-1024            | 0.6B    | [PixArt-XL-2-1024-MS.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-1024-MS.pth) or [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) | [1024](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-1024-MS.pth) |
-| PixArt-δ-1024-LCM        | 0.6B    | [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-LCM-XL-2-1024-MS)                    |                                                                                                          |
-| PixArt-δ-1024-ControlNet | 0.9B    | [PixArt-XL-2-1024-ControlNet.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/blob/main/PixArt-XL-2-1024-ControlNet.pth)                                                                    |                                                                                                          |
+| PixArt-δ-1024-LCM        | 0.6B    | [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-LCM-XL-2-1024-MS)                                                                                                                 |                                                                                                          |
+| PixArt-δ-512-ControlNet  | 0.9B    | [PixArt-XL-2-512-ControlNet.pth](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main)                                                                                                | [512](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-ControlNet)                              |
+| PixArt-δ-1024-ControlNet | 0.9B    | [PixArt-XL-2-1024-ControlNet.pth](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main)                                                                                               | [1024](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-ControlNet)                             |
 
 ALSO find all models in [OpenXLab_PixArt-alpha](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-alpha)
 
