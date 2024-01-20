@@ -45,6 +45,7 @@ def set_env(seed=0):
     for _ in range(30):
         torch.randn(1, 4, args.image_size, args.image_size)
 
+
 @torch.inference_mode()
 def visualize(items, bs, sample_steps, cfg_scale):
 
@@ -63,8 +64,7 @@ def visualize(items, bs, sample_steps, cfg_scale):
         else:
             hw = torch.tensor([[args.image_size, args.image_size]], dtype=torch.float, device=device).repeat(bs, 1)
             ar = torch.tensor([[1.]], device=device).repeat(bs, 1)
-            for prompt in chunk:
-                prompts.append(prepare_prompt_ar(prompt, base_ratios, device=device, show=False)[0].strip())
+            prompts.append(prepare_prompt_ar(prompt, base_ratios, device=device, show=False)[0].strip())
             latent_size_h, latent_size_w = latent_size, latent_size
 
         null_y = model.y_embedder.y_embedding[None].repeat(len(prompts), 1, 1)[:, None]
@@ -72,7 +72,7 @@ def visualize(items, bs, sample_steps, cfg_scale):
         with torch.no_grad():
             caption_embs, emb_masks = t5.get_text_embeddings(prompts)
             caption_embs = caption_embs.float()[:, None]
-            print(f'finish embedding')
+            print('finish embedding')
 
             if args.sampling_algo == 'iddpm':
                 # Create sampling noise:
@@ -149,7 +149,7 @@ if __name__ == '__main__':
     else:
         model = PixArtMS_XL_2(input_size=latent_size, lewei_scale=lewei_scale[args.image_size]).to(device)
 
-    print("Generating sample from ckpt: %s" % args.model_path)
+    print(f"Generating sample from ckpt: {args.model_path}")
     state_dict = find_model(args.model_path)
     del state_dict['state_dict']['pos_embed']
     missing, unexpected = model.load_state_dict(state_dict['state_dict'], strict=False)
@@ -161,7 +161,7 @@ if __name__ == '__main__':
     vae = AutoencoderKL.from_pretrained(args.tokenizer_path).to(device)
     t5 = T5Embedder(device="cuda", local_cache=True, cache_dir=args.t5_path, torch_dtype=torch.float)
     work_dir = os.path.join(*args.model_path.split('/')[:-2])
-    work_dir = '/'+work_dir if args.model_path[0] == '/' else work_dir
+    work_dir = f'/{work_dir}' if args.model_path[0] == '/' else work_dir
 
     # data setting
     with open(args.txt_file, 'r') as f:
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     try:
         epoch_name = re.search(r'.*epoch_(\d+).*.pth', args.model_path).group(1)
         step_name = re.search(r'.*step_(\d+).*.pth', args.model_path).group(1)
-    except:
+    except Exception:
         epoch_name = 'unknown'
         step_name = 'unknown'
     img_save_dir = os.path.join(work_dir, 'vis')

@@ -22,56 +22,28 @@ class SASolverSampler(object):
         self.register_buffer('alphas_cumprod', to_torch(np.cumprod(alphas, axis=0)))
 
     def register_buffer(self, name, attr):
-        if type(attr) == torch.Tensor:
-            if attr.device != torch.device("cuda"):
-                attr = attr.to(torch.device("cuda"))
+        if type(attr) == torch.Tensor and attr.device != torch.device("cuda"):
+            attr = attr.to(torch.device("cuda"))
         setattr(self, name, attr)
 
     @torch.no_grad()
-    def sample(self,
-               S,
-               batch_size,
-               shape,
-               conditioning=None,
-               callback=None,
-               normals_sequence=None,
-               img_callback=None,
-               quantize_x0=False,
-               eta=0.,
-               mask=None,
-               x0=None,
-               temperature=1.,
-               noise_dropout=0.,
-               score_corrector=None,
-               corrector_kwargs=None,
-               verbose=True,
-               x_T=None,
-               log_every_t=100,
-               unconditional_guidance_scale=1.,
-               unconditional_conditioning=None,
-               model_kwargs={},
-               # this has to come in the same format as the conditioning, # e.g. as encoded tokens, ...
-               **kwargs
-               ):
+    def sample(self, S, batch_size, shape, conditioning=None, callback=None, normals_sequence=None, img_callback=None, quantize_x0=False, eta=0., mask=None, x0=None, temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None, verbose=True, x_T=None, log_every_t=100, unconditional_guidance_scale=1., unconditional_conditioning=None, model_kwargs=None, **kwargs):
+        if model_kwargs is None:
+            model_kwargs = {}
         if conditioning is not None:
             if isinstance(conditioning, dict):
                 cbs = conditioning[list(conditioning.keys())[0]].shape[0]
                 if cbs != batch_size:
                     print(f"Warning: Got {cbs} conditionings but batch-size is {batch_size}")
-            else:
-                if conditioning.shape[0] != batch_size:
-                    print(f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}")
+            elif conditioning.shape[0] != batch_size:
+                print(f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}")
 
         # sampling
         C, H, W = shape
         size = (batch_size, C, H, W)
 
         device = self.device
-        if x_T is None:
-            img = torch.randn(size, device=device)
-        else:
-            img = x_T
-
+        img = torch.randn(size, device=device) if x_T is None else x_T
         ns = NoiseScheduleVP('discrete', alphas_cumprod=self.alphas_cumprod)
 
         model_fn = model_wrapper(

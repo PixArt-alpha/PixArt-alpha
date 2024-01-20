@@ -39,8 +39,7 @@ def ndarr_image(tensor: Union[torch.Tensor, List[torch.Tensor]], **kwargs,) -> N
         _log_api_usage_once(save_image)
     grid = make_grid(tensor, **kwargs)
     # Add 0.5 after unnormalizing to [0, 255] to round to the nearest integer
-    ndarr = grid.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
-    return ndarr
+    return grid.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
 
 
 def set_env(seed=0):
@@ -52,7 +51,7 @@ def set_env(seed=0):
 
 @torch.inference_mode()
 def generate_img(prompt, sampler, sample_steps, scale):
-    os.makedirs(f'output/demo/online_demo_prompts/', exist_ok=True)
+    os.makedirs('output/demo/online_demo_prompts/', exist_ok=True)
     save_promt_path = f'output/demo/online_demo_prompts/tested_prompts{datetime.now().date()}.txt'
     with open(save_promt_path, 'a') as f:
         f.write(prompt + '\n')
@@ -148,7 +147,7 @@ if __name__ == '__main__':
     if args.llm_model == 't5':
         llm_embed_model = T5Embedder(device=t5_device[args.image_size], local_cache=True, cache_dir=args.t5_path, torch_dtype=torch.float)
     else:
-        print(f'We support t5 only, please initialize the llm again')
+        print('We support t5 only, please initialize the llm again')
         sys.exit()
 
     title = f"""
@@ -167,32 +166,38 @@ if __name__ == '__main__':
     if not torch.cuda.is_available():
         DESCRIPTION += "\n<p>Running on CPU 🥶 This demo does not work on CPU.</p>"
 
-    demo = gr.Interface(fn=generate_img,
-                        inputs=[Textbox(label="Note: If you want to specify a aspect ratio or determine a customized height and width, "
-                                             "use --ar h:w (or --aspect_ratio h:w) or --hw h:w. If no aspect ratio or hw is given, all setting will be default.",
-                                       placeholder="Please enter your prompt. \n"),
-                                gr.Radio(
-                                    choices=["iddpm", "dpm-solver"],
-                                    label=f"Sampler",
-                                    interactive=True,
-                                    value='dpm-solver',
-                                ),
-                                gr.Slider(label='Sample Steps',
-                                          minimum=1,
-                                          maximum=100,
-                                          value=20,
-                                          step=1),
-                                gr.Slider(label='Guidance Scale',
-                                          minimum=0.1,
-                                          maximum=30.0,
-                                          value=4.5,
-                                          step=0.1)
-                                ],
-                        outputs=[Image(type="numpy", label="Img"),
-                                 Textbox(label="clean prompt"),
-                                 Textbox(label="model info")],
-                        title=title,
-                        description=DESCRIPTION,
-                        examples=examples
-                        )
+    demo = gr.Interface(
+        fn=generate_img,
+        inputs=[
+            Textbox(
+                label="Note: If you want to specify a aspect ratio or determine a customized height and width, "
+                "use --ar h:w (or --aspect_ratio h:w) or --hw h:w. If no aspect ratio or hw is given, all setting will be default.",
+                placeholder="Please enter your prompt. \n",
+            ),
+            gr.Radio(
+                choices=["iddpm", "dpm-solver"],
+                label="Sampler",
+                interactive=True,
+                value='dpm-solver',
+            ),
+            gr.Slider(
+                label='Sample Steps', minimum=1, maximum=100, value=20, step=1
+            ),
+            gr.Slider(
+                label='Guidance Scale',
+                minimum=0.1,
+                maximum=30.0,
+                value=4.5,
+                step=0.1,
+            ),
+        ],
+        outputs=[
+            Image(type="numpy", label="Img"),
+            Textbox(label="clean prompt"),
+            Textbox(label="model info"),
+        ],
+        title=title,
+        description=DESCRIPTION,
+        examples=examples,
+    )
     demo.launch(server_name="0.0.0.0", server_port=args.port, debug=True)

@@ -3,17 +3,9 @@ from .model import gaussian_diffusion as gd
 from .model.dpm_solver import model_wrapper, DPM_Solver, NoiseScheduleVP
 
 
-def DPMS(
-        model,
-        condition,
-        uncondition,
-        cfg_scale,
-        model_type='noise',  # or "x_start" or "v" or "score"
-        noise_schedule="linear",
-        guidance_type='classifier-free',
-        model_kwargs={},
-        diffusion_steps=1000
-):
+def DPMS(model, condition, uncondition, cfg_scale, model_type='noise', noise_schedule="linear", guidance_type='classifier-free', model_kwargs=None, diffusion_steps=1000):
+    if model_kwargs is None:
+        model_kwargs = {}
     betas = torch.tensor(gd.get_named_beta_schedule(noise_schedule, diffusion_steps))
 
     ## 1. Define the noise schedule.

@@ -8,7 +8,7 @@ from diffusion.utils.logger import get_root_logger
 
 def build_lr_scheduler(config, optimizer, train_dataloader, lr_scale_ratio):
     if not config.get('lr_schedule_args', None):
-        config.lr_schedule_args = dict()
+        config.lr_schedule_args = {}
     if config.get('lr_warmup_steps', None):
         config['num_warmup_steps'] = config.get('lr_warmup_steps')  # for compatibility with old version
 
@@ -78,7 +78,12 @@ def get_cosine_decay_to_constant_with_warmup(optimizer: Optimizer,
             return final_lr
 
         progress = float(current_step - num_warmup_steps) / float(max(1, num_decay_steps - num_warmup_steps))
-        return max(0.0, 0.5 * (1.0 + math.cos(math.pi * float(num_cycles) * 2.0 * progress))) * (
-                1 - final_lr) + final_lr
+        return (
+            max(
+                0.0,
+                0.5 * (1.0 + math.cos(math.pi * num_cycles * 2.0 * progress)),
+            )
+            * (1 - final_lr)
+        ) + final_lr
 
     return LambdaLR(optimizer, lr_lambda, last_epoch)

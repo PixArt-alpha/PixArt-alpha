@@ -30,11 +30,10 @@ def find_model(model_name):
     """
     Finds a pre-trained G.pt model, downloading it if necessary. Alternatively, loads a model from a local path.
     """
-    if model_name in pretrained_models:  # Find/download our pre-trained G.pt checkpoints
+    if model_name in pretrained_models:
         return download_model(model_name)
-    else:  # Load a custom PixArt checkpoint:
-        assert os.path.isfile(model_name), f'Could not find PixArt checkpoint at {model_name}'
-        return torch.load(model_name, map_location=lambda storage, loc: storage)
+    assert os.path.isfile(model_name), f'Could not find PixArt checkpoint at {model_name}'
+    return torch.load(model_name, map_location=lambda storage, loc: storage)
 
 
 def download_model(model_name):
@@ -47,8 +46,7 @@ def download_model(model_name):
         os.makedirs('output/pretrained_models', exist_ok=True)
         web_path = f'https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/{model_name}'
         download_url(web_path, 'output/pretrained_models')
-    model = torch.load(local_path, map_location=lambda storage, loc: storage)
-    return model
+    return torch.load(local_path, map_location=lambda storage, loc: storage)
 
 
 def download_other(model_name, model_zoo, output_dir):

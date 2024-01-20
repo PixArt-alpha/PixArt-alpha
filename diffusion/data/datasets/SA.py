@@ -69,10 +69,7 @@ class SAM(Dataset):
         data_info = {'img_hw': torch.tensor([self.resolution, self.resolution], dtype=torch.float32),
                      'aspect_ratio': torch.tensor(1.)}
 
-        if self.load_vae_feat:
-            img = self.loader(npy_path)
-        else:
-            img = self.loader(img_path)
+        img = self.loader(npy_path) if self.load_vae_feat else self.loader(img_path)
         npz_info = np.load(npz_path)
         txt_fea = torch.from_numpy(npz_info['caption_feature'])
         attention_mask = torch.ones(1, 1, txt_fea.shape[1])
@@ -87,11 +84,10 @@ class SAM(Dataset):
         return img, txt_fea, attention_mask, data_info
 
     def __getitem__(self, idx):
-        for i in range(20):
+        for _ in range(20):
             try:
-                data = self.getdata(idx)
-                return data
-            except:
+                return self.getdata(idx)
+            except Exception:
                 print(self.img_samples[idx], ' info is not correct')
                 idx = np.random.randint(len(self))
         raise RuntimeError('Too many bad data.')

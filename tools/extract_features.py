@@ -35,16 +35,9 @@ def get_closest_ratio(height: float, width: float, ratios: dict):
 
 @DATASETS.register_module()
 class DatasetMS(InternalData):
-    def __init__(self,
-                 root,  # Notice: need absolute path here
-                 image_list_json=['data_info.json'],
-                 transform=None,
-                 resolution=1024,
-                 load_vae_feat=False,
-                 aspect_ratio_type=None,
-                 start_index=0,
-                 end_index=100000000,
-                 **kwargs):
+    def __init__(self, root, image_list_json=None, transform=None, resolution=1024, load_vae_feat=False, aspect_ratio_type=None, start_index=0, end_index=100000000, **kwargs):
+        if image_list_json is None:
+            image_list_json = ['data_info.json']
         assert os.path.isabs(root), 'root must be a absolute path'
         self.root = root
         self.img_dir_name = 'InternalImgs'        # need to change to according to your data structure
@@ -86,7 +79,7 @@ class DatasetMS(InternalData):
 
     def __getitem__(self, idx):
         data_info = {}
-        for i in range(20):
+        for _ in range(20):
             try:
                 img_path = self.img_samples[idx]
                 img = self.loader(img_path)
@@ -138,7 +131,7 @@ def extract_caption_t5_job(item):
             caption = [caption]
 
         save_path = os.path.join(t5_save_dir, Path(item['path']).stem)
-        if os.path.exists(save_path + ".npz"):
+        if os.path.exists(f"{save_path}.npz"):
             return
         try:
             mutex.acquire()
@@ -207,8 +200,7 @@ def extract_img_vae():
         if image_name in image_names:
             continue
         image_names.add(image_name)
-    lines = list(image_names)
-    lines.sort()
+    lines = sorted(image_names)
     lines = lines[args.start_index: args.end_index]
 
     _, images_extension = os.path.splitext(lines[0])
@@ -224,7 +216,7 @@ def extract_img_vae():
     os.umask(0o000)  # file permission: 666; dir permission: 777
     for image_name in tqdm(lines):
         save_path = os.path.join(vae_save_dir, Path(image_name).stem)
-        if os.path.exists(save_path + ".npy"):
+        if os.path.exists(f"{save_path}.npy"):
             continue
         try:
             img = Image.open(f'{args.dataset_root}/{image_name}')
@@ -241,7 +233,7 @@ def extract_img_vae():
 
 
 def save_results(results, paths, signature, work_dir):
-    timer = SimpleTimer(len(results), log_interval=100, desc=f"Saving Results")
+    timer = SimpleTimer(len(results), log_interval=100, desc="Saving Results")
     # save to npy
     new_paths = []
     os.umask(0o000)  # file permission: 666; dir permission: 777
@@ -261,9 +253,9 @@ def save_results(results, paths, signature, work_dir):
 
 
 def inference(vae, dataloader, signature, work_dir):
-    timer = SimpleTimer(len(dataloader), log_interval=100, desc=f"VAE-Inference")
+    timer = SimpleTimer(len(dataloader), log_interval=100, desc="VAE-Inference")
 
-    for step, batch in enumerate(dataloader):
+    for batch in dataloader:
         with torch.no_grad():
             with torch.cuda.amp.autocast(enabled=True):
                 posterior = vae.encode(batch[0]).latent_dist
@@ -330,8 +322,8 @@ if __name__ == '__main__':
 
     # prepare extracted image vae features for training
     if args.multi_scale:
-        print('Extracting Multi-scale Image Resolution based on %s' % image_resize)
+        print(f'Extracting Multi-scale Image Resolution based on {image_resize}')
         extract_img_vae_multiscale(bs=1)    # recommend bs = 1 for AspectRatioBatchSampler
     else:
-        print('Extracting Single Image Resolution %s' % image_resize)
+        print(f'Extracting Single Image Resolution {image_resize}')
         extract_img_vae()

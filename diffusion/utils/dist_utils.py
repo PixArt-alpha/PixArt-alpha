@@ -19,26 +19,19 @@ def is_distributed():
 def get_world_size():
     if not dist.is_available():
         return 1
-    if not dist.is_initialized():
-        return 1
-    return dist.get_world_size()
+    return dist.get_world_size() if dist.is_initialized() else 1
 
 
 def get_rank():
     if not dist.is_available():
         return 0
-    if not dist.is_initialized():
-        return 0
-    return dist.get_rank()
+    return dist.get_rank() if dist.is_initialized() else 0
 
 
 def get_local_rank():
     if not dist.is_available():
         return 0
-    if not dist.is_initialized():
-        return 0
-    local_rank = int(os.getenv('LOCAL_RANK', 0))
-    return local_rank
+    return int(os.getenv('LOCAL_RANK', 0)) if dist.is_initialized() else 0
 
 
 def is_master():
@@ -54,7 +47,7 @@ def get_local_proc_group(group_size=8):
     if world_size <= group_size or group_size == 1:
         return None
     assert world_size % group_size == 0, f'world size ({world_size}) should be evenly divided by group size ({group_size}).'
-    process_groups = getattr(get_local_proc_group, 'process_groups', dict())
+    process_groups = getattr(get_local_proc_group, 'process_groups', {})
     if group_size not in process_groups:
         num_groups = dist.get_world_size() // group_size
         groups = [list(range(i * group_size, (i + 1) * group_size)) for i in range(num_groups)]
@@ -62,8 +55,7 @@ def get_local_proc_group(group_size=8):
         get_local_proc_group.process_groups = process_groups
 
     group_idx = get_rank() // group_size
-    process_groups = get_local_proc_group.process_groups.get(group_size)[group_idx]
-    return process_groups
+    return get_local_proc_group.process_groups.get(group_size)[group_idx]
 
 
 def synchronize():
@@ -108,12 +100,9 @@ def all_gather(data):
     size_list = [int(size.item()) for size in size_list]
     max_size = max(size_list)
 
-    # receiving Tensor from all ranks
-    # we pad the tensor because torch all_gather does not support
-    # gathering tensors of different shapes
-    tensor_list = []
-    for _ in size_list:
-        tensor_list.append(torch.ByteTensor(size=(max_size,)).to(to_device))
+    tensor_list = [
+        torch.ByteTensor(size=(max_size,)).to(to_device) for _ in size_list
+    ]
     if local_size != max_size:
         padding = torch.ByteTensor(size=(max_size - local_size,)).to(to_device)
         tensor = torch.cat((tensor, padding), dim=0)
@@ -140,20 +129,25 @@ def reduce_dict(input_dict, average=True):
     if world_size < 2:
         return input_dict
     with torch.no_grad():
-        names = []
-        values = []
-        # sort the keys so that they are consistent across processes
-        for k in sorted(input_dict.keys()):
-            names.append(k)
-            values.append(input_dict[k])
-        values = torch.stack(values, dim=0)
-        dist.reduce(values, dst=0)
-        if dist.get_rank() == 0 and average:
-            # only main process gets accumulated, so only divide by
-            # world_size in this case
-            values /= world_size
-        reduced_dict = {k: v for k, v in zip(names, values)}
+        reduced_dict = _extracted_from_reduce_dict_14(input_dict, average, world_size)
     return reduced_dict
+
+
+# TODO Rename this here and in `reduce_dict`
+def _extracted_from_reduce_dict_14(input_dict, average, world_size):
+    names = []
+    values = []
+    # sort the keys so that they are consistent across processes
+    for k in sorted(input_dict.keys()):
+        names.append(k)
+        values.append(input_dict[k])
+    values = torch.stack(values, dim=0)
+    dist.reduce(values, dst=0)
+    if dist.get_rank() == 0 and average:
+        # only main process gets accumulated, so only divide by
+        # world_size in this case
+        values /= world_size
+    return dict(zip(names, values))
 
 
 def broadcast(data, **kwargs):
@@ -174,15 +168,13 @@ def all_gather_cpu(result_part, tmpdir=None, collect_by_master=True):
     # dump the part result to the dir
     mmcv.dump(result_part, os.path.join(tmpdir, f'part_{rank}.pkl'))
     synchronize()
-    # collect all parts
     if collect_by_master and rank != 0:
         return None
-    else:
-        # load results of all parts from tmp dir
-        results = []
-        for i in range(world_size):
-            part_file = os.path.join(tmpdir, f'part_{i}.pkl')
-            results.append(mmcv.load(part_file))
+    # load results of all parts from tmp dir
+    results = []
+    for i in range(world_size):
+        part_file = os.path.join(tmpdir, f'part_{i}.pkl')
+        results.append(mmcv.load(part_file))
     if not collect_by_master:
         synchronize()
     # remove tmp dir
@@ -204,9 +196,7 @@ def all_gather_tensor(tensor, group_size=None, group=None):
 def gather_difflen_tensor(feat, num_samples_list, concat=True, group=None, group_size=None):
     world_size = get_world_size()
     if world_size == 1:
-        if not concat:
-            return [feat]
-        return feat
+        return feat if concat else [feat]
     num_samples, *feat_dim = feat.size()
     # padding to max number of samples
     feat_padding = feat.new_zeros((max(num_samples_list), *feat_dim))
@@ -271,8 +261,7 @@ class GatherLayerWithGroup(torch.autograd.Function):
 def gather_layer_with_group(data, group=None, group_size=None):
     if group_size is None:
         group_size = get_world_size()
-    output = GatherLayer.apply(data, group, group_size)
-    return output
+    return GatherLayer.apply(data, group, group_size)
 
 from typing import Union
 import math

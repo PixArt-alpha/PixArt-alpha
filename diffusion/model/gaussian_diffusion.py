@@ -53,7 +53,7 @@ class LossType(enum.Enum):
     RESCALED_KL = enum.auto()  # like KL, but rescale to estimate the full VLB
 
     def is_vb(self):
-        return self == LossType.KL or self == LossType.RESCALED_KL
+        return self in [LossType.KL, LossType.RESCALED_KL]
 
 
 def _warmup_beta(beta_start, beta_end, num_diffusion_timesteps, warmup_frac):
@@ -318,9 +318,7 @@ class GaussianDiffusion:
         def process_xstart(x):
             if denoised_fn is not None:
                 x = denoised_fn(x)
-            if clip_denoised:
-                return x.clamp(-1, 1)
-            return x
+            return x.clamp(-1, 1) if clip_denoised else x
 
         if self.model_mean_type == ModelMeanType.START_X:
             pred_xstart = process_xstart(model_output)
@@ -360,8 +358,7 @@ class GaussianDiffusion:
         This uses the conditioning strategy from Sohl-Dickstein et al. (2015).
         """
         gradient = cond_fn(x, t, **model_kwargs)
-        new_mean = p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float()
-        return new_mean
+        return p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float()
 
     def condition_score(self, cond_fn, p_mean_var, x, t, model_kwargs=None):
         """
@@ -491,10 +488,7 @@ class GaussianDiffusion:
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
-        if noise is not None:
-            img = noise
-        else:
-            img = th.randn(*shape, device=device)
+        img = noise if noise is not None else th.randn(*shape, device=device)
         indices = list(range(self.num_timesteps))[::-1]
 
         if progress:
@@ -659,10 +653,7 @@ class GaussianDiffusion:
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
-        if noise is not None:
-            img = noise
-        else:
-            img = th.randn(*shape, device=device)
+        img = noise if noise is not None else th.randn(*shape, device=device)
         indices = list(range(self.num_timesteps))[::-1]
 
         if progress:
@@ -755,7 +746,7 @@ class GaussianDiffusion:
             )["output"]
             if self.loss_type == LossType.RESCALED_KL:
                 terms["loss"] *= self.num_timesteps
-        elif self.loss_type == LossType.MSE or self.loss_type == LossType.RESCALED_MSE:
+        elif self.loss_type in [LossType.MSE, LossType.RESCALED_MSE]:
             model_output = model(x_t, t, **model_kwargs)
             if isinstance(model_output, dict) and model_output.get('x', None) is not None:
                 output = model_output['x']
@@ -763,10 +754,7 @@ class GaussianDiffusion:
                 output = model_output
 
             if self.return_startx and self.model_mean_type == ModelMeanType.EPSILON:
-                B, C = x_t.shape[:2]
-                assert output.shape == (B, C * 2, *x_t.shape[2:])
-                output = th.split(output, C, dim=1)[0]
-                return output, self._predict_xstart_from_eps(x_t=x_t, t=t, eps=output), x_t
+                return self._extracted_from_training_losses_diffusers(x_t, output, t)
             # self.model_var_type = ModelVarType.LEARNED_RANGE:4
             if self.model_var_type in [
                 ModelVarType.LEARNED,
@@ -823,10 +811,7 @@ class GaussianDiffusion:
                     terms['mae'] = model_kwargs['mask_loss_coef'] * mean_flat(loss * mask) * mask.shape[1]/mask.sum(1)
             else:
                 terms["mse"] = mean_flat(loss)
-            if "vb" in terms:
-                terms["loss"] = terms["mse"] + terms["vb"]
-            else:
-                terms["loss"] = terms["mse"]
+            terms["loss"] = terms["mse"] + terms["vb"] if "vb" in terms else terms["mse"]
             if "mae" in terms:
                 terms["loss"] = terms["loss"] + terms["mae"]
         else:
@@ -858,7 +843,7 @@ class GaussianDiffusion:
 
         terms = {}
 
-        if self.loss_type == LossType.KL or self.loss_type == LossType.RESCALED_KL:
+        if self.loss_type in [LossType.KL, LossType.RESCALED_KL]:
             terms["loss"] = self._vb_terms_bpd(
                 model=model,
                 x_start=x_start,
@@ -869,14 +854,11 @@ class GaussianDiffusion:
             )["output"]
             if self.loss_type == LossType.RESCALED_KL:
                 terms["loss"] *= self.num_timesteps
-        elif self.loss_type == LossType.MSE or self.loss_type == LossType.RESCALED_MSE:
+        elif self.loss_type in [LossType.MSE, LossType.RESCALED_MSE]:
             output = model(x_t, timestep=t, **model_kwargs, return_dict=False)[0]
 
             if self.return_startx and self.model_mean_type == ModelMeanType.EPSILON:
-                B, C = x_t.shape[:2]
-                assert output.shape == (B, C * 2, *x_t.shape[2:])
-                output = th.split(output, C, dim=1)[0]
-                return output, self._predict_xstart_from_eps(x_t=x_t, t=t, eps=output), x_t
+                return self._extracted_from_training_losses_diffusers(x_t, output, t)
 
             if self.model_var_type in [
                 ModelVarType.LEARNED,
@@ -923,16 +905,19 @@ class GaussianDiffusion:
                 output = th.where(t > 249, pred_noise, pred_startx)
             loss = (target - output) ** 2
             terms["mse"] = mean_flat(loss)
-            if "vb" in terms:
-                terms["loss"] = terms["mse"] + terms["vb"]
-            else:
-                terms["loss"] = terms["mse"]
+            terms["loss"] = terms["mse"] + terms["vb"] if "vb" in terms else terms["mse"]
             if "mae" in terms:
                 terms["loss"] = terms["loss"] + terms["mae"]
         else:
             raise NotImplementedError(self.loss_type)
 
         return terms
+
+    def _extracted_from_training_losses_diffusers(self, x_t, output, t):
+        B, C = x_t.shape[:2]
+        assert output.shape == (B, C * 2, *x_t.shape[2:])
+        output = th.split(output, C, dim=1)[0]
+        return output, self._predict_xstart_from_eps(x_t=x_t, t=t, eps=output), x_t
 
     def _prior_bpd(self, x_start):
         """

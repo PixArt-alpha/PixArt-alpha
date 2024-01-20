@@ -87,28 +87,9 @@ class PixArtMS(PixArt):
     Diffusion model with a Transformer backbone.
     """
 
-    def __init__(
-            self,
-            input_size=32,
-            patch_size=2,
-            in_channels=4,
-            hidden_size=1152,
-            depth=28,
-            num_heads=16,
-            mlp_ratio=4.0,
-            class_dropout_prob=0.1,
-            learn_sigma=True,
-            pred_sigma=True,
-            drop_path: float = 0.,
-            window_size=0,
-            window_block_indexes=[],
-            use_rel_pos=False,
-            caption_channels=4096,
-            lewei_scale=1.,
-            config=None,
-            model_max_length=120,
-            **kwargs,
-    ):
+    def __init__(self, input_size=32, patch_size=2, in_channels=4, hidden_size=1152, depth=28, num_heads=16, mlp_ratio=4.0, class_dropout_prob=0.1, learn_sigma=True, pred_sigma=True, drop_path: float = 0., window_size=0, window_block_indexes=None, use_rel_pos=False, caption_channels=4096, lewei_scale=1., config=None, model_max_length=120, **kwargs):
+        if window_block_indexes is None:
+            window_block_indexes = []
         super().__init__(
             input_size=input_size,
             patch_size=patch_size,
@@ -217,8 +198,7 @@ class PixArtMS(PixArt):
 
         x = x.reshape(shape=(x.shape[0], self.h, self.w, p, p, c))
         x = torch.einsum('nhwpqc->nchpwq', x)
-        imgs = x.reshape(shape=(x.shape[0], c, self.h * p, self.w * p))
-        return imgs
+        return x.reshape(shape=(x.shape[0], c, self.h * p, self.w * p))
 
     def initialize(self):
         # Initialize transformer layers:

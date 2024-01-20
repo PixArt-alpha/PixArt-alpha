@@ -331,8 +331,7 @@ class SASolverScheduler(SchedulerMixin, ConfigMixin):
         ramp = np.linspace(0, 1, num_inference_steps)
         min_inv_rho = sigma_min ** (1 / rho)
         max_inv_rho = sigma_max ** (1 / rho)
-        sigmas = (max_inv_rho + ramp * (min_inv_rho - max_inv_rho)) ** rho
-        return sigmas
+        return (max_inv_rho + ramp * (min_inv_rho - max_inv_rho)) ** rho
 
     def convert_model_output(
             self, model_output: torch.FloatTensor, timestep: int, sample: torch.FloatTensor
@@ -529,15 +528,18 @@ class SASolverScheduler(SchedulerMixin, ConfigMixin):
         coefficients = []
         lagrange_coefficient = self.lagrange_polynomial_coefficient(order - 1, lambda_list)
         for i in range(order):
-            coefficient = 0
-            for j in range(order):
-                if self.predict_x0:
-
-                    coefficient += lagrange_coefficient[i][j] * self.get_coefficients_exponential_positive(
-                        order - 1 - j, interval_start, interval_end, tau)
-                else:
-                    coefficient += lagrange_coefficient[i][j] * self.get_coefficients_exponential_negative(
-                        order - 1 - j, interval_start, interval_end)
+            coefficient = sum(
+                lagrange_coefficient[i][j]
+                * self.get_coefficients_exponential_positive(
+                    order - 1 - j, interval_start, interval_end, tau
+                )
+                if self.predict_x0
+                else lagrange_coefficient[i][j]
+                * self.get_coefficients_exponential_negative(
+                    order - 1 - j, interval_start, interval_end
+                )
+                for j in range(order)
+            )
             coefficients.append(coefficient)
         assert len(coefficients) == order, 'the length of coefficients does not match the order'
         return coefficients
@@ -578,29 +580,20 @@ class SASolverScheduler(SchedulerMixin, ConfigMixin):
         sigma_t, sigma_s0 = self.sigma_t[t], self.sigma_t[s0]
         gradient_part = torch.zeros_like(sample)
         h = lambda_t - lambda_s0
-        lambda_list = []
-
-        for i in range(order):
-            lambda_list.append(self.lambda_t[timestep_list[-(i + 1)]])
-
+        lambda_list = [self.lambda_t[timestep_list[-(i + 1)]] for i in range(order)]
         gradient_coefficients = self.get_coefficients_fn(order, lambda_s0, lambda_t, lambda_list, tau)
 
         x = sample
 
-        if self.predict_x0:
-            if order == 2:  ## if order = 2 we do a modification that does not influence the convergence order similar to unipc. Note: This is used only for few steps sampling.
-                # The added term is O(h^3). Empirically we find it will slightly improve the image quality.
-                # ODE case
-                # gradient_coefficients[0] += 1.0 * torch.exp(lambda_t) * (h ** 2 / 2 - (h - 1 + torch.exp(-h))) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(t_prev_list[-2]))
-                # gradient_coefficients[1] -= 1.0 * torch.exp(lambda_t) * (h ** 2 / 2 - (h - 1 + torch.exp(-h))) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(t_prev_list[-2]))
-                gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                            h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                                (1 + tau ** 2) ** 2)) / (self.lambda_t[timestep_list[-1]] - self.lambda_t[
-                    timestep_list[-2]])
-                gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                            h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                                (1 + tau ** 2) ** 2)) / (self.lambda_t[timestep_list[-1]] - self.lambda_t[
-                    timestep_list[-2]])
+        if self.predict_x0 and order == 2:
+            gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                        h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                            (1 + tau ** 2) ** 2)) / (self.lambda_t[timestep_list[-1]] - self.lambda_t[
+                timestep_list[-2]])
+            gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                        h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                            (1 + tau ** 2) ** 2)) / (self.lambda_t[timestep_list[-1]] - self.lambda_t[
+                timestep_list[-2]])
 
         for i in range(order):
             if self.predict_x0:
@@ -663,28 +656,20 @@ class SASolverScheduler(SchedulerMixin, ConfigMixin):
         gradient_part = torch.zeros_like(this_sample)
         h = lambda_t - lambda_s0
         t_list = timestep_list + [this_timestep]
-        lambda_list = []
-        for i in range(order):
-            lambda_list.append(self.lambda_t[t_list[-(i + 1)]])
-
+        lambda_list = [self.lambda_t[t_list[-(i + 1)]] for i in range(order)]
         model_prev_list = model_output_list + [this_model_output]
 
         gradient_coefficients = self.get_coefficients_fn(order, lambda_s0, lambda_t, lambda_list, tau)
 
         x = last_sample
 
-        if self.predict_x0:
-            if order == 2:  ## if order = 2 we do a modification that does not influence the convergence order similar to UniPC. Note: This is used only for few steps sampling.
-                # The added term is O(h^3). Empirically we find it will slightly improve the image quality.
-                # ODE case
-                # gradient_coefficients[0] += 1.0 * torch.exp(lambda_t) * (h / 2 - (h - 1 + torch.exp(-h)) / h)
-                # gradient_coefficients[1] -= 1.0 * torch.exp(lambda_t) * (h / 2 - (h - 1 + torch.exp(-h)) / h)
-                gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                            h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                                (1 + tau ** 2) ** 2 * h))
-                gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                            h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                                (1 + tau ** 2) ** 2 * h))
+        if self.predict_x0 and order == 2:
+            gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                        h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                            (1 + tau ** 2) ** 2 * h))
+            gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                        h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                            (1 + tau ** 2) ** 2 * h))
 
         for i in range(order):
             if self.predict_x0:
@@ -849,8 +834,7 @@ class SASolverScheduler(SchedulerMixin, ConfigMixin):
         while len(sqrt_one_minus_alpha_prod.shape) < len(original_samples.shape):
             sqrt_one_minus_alpha_prod = sqrt_one_minus_alpha_prod.unsqueeze(-1)
 
-        noisy_samples = sqrt_alpha_prod * original_samples + sqrt_one_minus_alpha_prod * noise
-        return noisy_samples
+        return sqrt_alpha_prod * original_samples + sqrt_one_minus_alpha_prod * noise
 
     def __len__(self):
         return self.config.num_train_timesteps

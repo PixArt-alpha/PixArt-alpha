@@ -19,7 +19,20 @@ class MPTMLP(nn.Module):
 
 class MPTBlock(nn.Module):
 
-    def __init__(self, d_model: int, n_heads: int, expansion_ratio: int, attn_config: Dict={'attn_type': 'multihead_attention', 'attn_pdrop': 0.0, 'attn_impl': 'triton', 'qk_ln': False, 'clip_qkv': None, 'softmax_scale': None, 'prefix_lm': False, 'attn_uses_sequence_id': False, 'alibi': False, 'alibi_bias_max': 8}, resid_pdrop: float=0.0, norm_type: str='low_precision_layernorm', device: Optional[str]=None, **kwargs):
+    def __init__(self, d_model: int, n_heads: int, expansion_ratio: int, attn_config: Dict = None, resid_pdrop: float=0.0, norm_type: str='low_precision_layernorm', device: Optional[str]=None, **kwargs):
+        if attn_config is None:
+            attn_config = {
+                'attn_type': 'multihead_attention',
+                'attn_pdrop': 0.0,
+                'attn_impl': 'triton',
+                'qk_ln': False,
+                'clip_qkv': None,
+                'softmax_scale': None,
+                'prefix_lm': False,
+                'attn_uses_sequence_id': False,
+                'alibi': False,
+                'alibi_bias_max': 8,
+            }
         del kwargs
         super().__init__()
         norm_class = NORM_CLASS_REGISTRY[norm_type.lower()]

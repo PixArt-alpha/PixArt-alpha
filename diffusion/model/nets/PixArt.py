@@ -63,27 +63,9 @@ class PixArt(nn.Module):
     Diffusion model with a Transformer backbone.
     """
 
-    def __init__(
-            self,
-            input_size=32,
-            patch_size=2,
-            in_channels=4,
-            hidden_size=1152,
-            depth=28,
-            num_heads=16,
-            mlp_ratio=4.0,
-            class_dropout_prob=0.1,
-            pred_sigma=True,
-            drop_path: float = 0.,
-            window_size=0,
-            window_block_indexes=[],
-            use_rel_pos=False,
-            caption_channels=4096,
-            lewei_scale=1.0,
-            config=None,
-            model_max_length=120,
-            **kwargs,
-    ):
+    def __init__(self, input_size=32, patch_size=2, in_channels=4, hidden_size=1152, depth=28, num_heads=16, mlp_ratio=4.0, class_dropout_prob=0.1, pred_sigma=True, drop_path: float = 0., window_size=0, window_block_indexes=None, use_rel_pos=False, caption_channels=4096, lewei_scale=1.0, config=None, model_max_length=120, **kwargs):
+        if window_block_indexes is None:
+            window_block_indexes = []
         super().__init__()
         self.pred_sigma = pred_sigma
         self.in_channels = in_channels
@@ -185,8 +167,7 @@ class PixArt(nn.Module):
 
         x = x.reshape(shape=(x.shape[0], h, w, p, p, c))
         x = torch.einsum('nhwpqc->nchpwq', x)
-        imgs = x.reshape(shape=(x.shape[0], c, h * p, h * p))
-        return imgs
+        return x.reshape(shape=(x.shape[0], c, h * p, h * p))
 
     def initialize_weights(self):
         # Initialize transformer layers:
@@ -252,8 +233,7 @@ def get_2d_sincos_pos_embed_from_grid(embed_dim, grid):
     emb_h = get_1d_sincos_pos_embed_from_grid(embed_dim // 2, grid[0])  # (H*W, D/2)
     emb_w = get_1d_sincos_pos_embed_from_grid(embed_dim // 2, grid[1])  # (H*W, D/2)
 
-    emb = np.concatenate([emb_h, emb_w], axis=1)  # (H*W, D)
-    return emb
+    return np.concatenate([emb_h, emb_w], axis=1)
 
 
 def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
@@ -273,8 +253,7 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
     emb_sin = np.sin(out)  # (M, D/2)
     emb_cos = np.cos(out)  # (M, D/2)
 
-    emb = np.concatenate([emb_sin, emb_cos], axis=1)  # (M, D)
-    return emb
+    return np.concatenate([emb_sin, emb_cos], axis=1)
 
 
 #################################################################################
