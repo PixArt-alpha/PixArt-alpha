@@ -3,19 +3,23 @@
 </p>
 
 
-### <div align="center">👉 PixArt-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis <div> 
+### <div align="center">👉 PixArt-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis<div> 
+### <div align="center"> ICLR 2024 Spotlight <div> 
 
 <div align="center">
   <a href="https://pixart-alpha.github.io/"><img src="https://img.shields.io/static/v1?label=Project%20Page&message=Github&color=blue&logo=github-pages"></a> &ensp;
+  <a href="https://huggingface.co/datasets/PixArt-alpha/SAM-LLaVA-Captions10M"><img src="https://img.shields.io/static/v1?label=SAM-LLaVA&message=HF&color=yellow"></a> &ensp;
+  <a href="https://arxiv.org/abs/2310.00426"><img src="https://img.shields.io/static/v1?label=Paper&message=Arxiv:Alpha&color=red&logo=arxiv"></a> &ensp;
+  <a href="https://arxiv.org/abs/2401.05252"><img src="https://img.shields.io/static/v1?label=Paper&message=Arxiv:Delta&color=red&logo=arxiv"></a> &ensp;
+  <a href="https://discord.gg/rde6eaE5Ta"><img src="https://img.shields.io/static/v1?label=Discuss&message=Discord&color=purple&logo=discord"></a> &ensp;
   <a href="https://huggingface.co/docs/diffusers/main/en/api/pipelines/pixart"><img src="https://img.shields.io/static/v1?label=Usage&message=Diffusers&color=green&"></a> &ensp;
+  <a href="https://github.com/city96/ComfyUI_ExtraModels"><img src="https://img.shields.io/static/v1?label=App&message=ComfyUI&&color=green"></a> &ensp;
+
   <a href="https://huggingface.co/spaces/PixArt-alpha/PixArt-alpha"><img src="https://img.shields.io/static/v1?label=Demo PixArt&message=HuggingFace&color=yellow"></a> &ensp;
   <a href="https://huggingface.co/spaces/PixArt-alpha/PixArt-LCM"><img src="https://img.shields.io/static/v1?label=Demo PixArt-LCM&message=HuggingFace&color=yellow"></a> &ensp;
   <a href="https://openxlab.org.cn/apps/detail/PixArt-alpha/PixArt-alpha"><img src="https://img.shields.io/static/v1?label=Demo PixArt&message=OpenXLab&color=purple"></a> &ensp;
   <a href="https://openxlab.org.cn/apps/detail/houshaowei/PixArt-LCM"><img src="https://img.shields.io/static/v1?label=Demo PixArt-LCM&message=OpenXLab&color=purple"></a> &ensp;
   <a href="https://colab.research.google.com/drive/1jZ5UZXk7tcpTfVwnX33dDuefNMcnW9ME?usp=sharing"><img src="https://img.shields.io/static/v1?label=Free%20Trial&message=Google%20Colab&logo=google&color=orange"></a> &ensp;
-  <a href="https://github.com/city96/ComfyUI_ExtraModels"><img src="https://img.shields.io/static/v1?label=App&message=ComfyUI&&color=green"></a> &ensp;
-  <a href="https://arxiv.org/abs/2310.00426"><img src="https://img.shields.io/static/v1?label=Paper&message=Arxiv&color=red&logo=arxiv"></a> &ensp;
-  <a href="https://discord.gg/rde6eaE5Ta"><img src="https://img.shields.io/static/v1?label=Discuss&message=Discord&color=purple&logo=discord"></a> &ensp;
 </div>
 
 ---
@@ -23,7 +27,7 @@
 This repo contains PyTorch model definitions, pre-trained weights and inference/sampling code for our paper exploring 
 Fast training diffusion models with transformers. You can find more visualizations on our [project page](https://pixart-alpha.github.io/).
 
-<img src="asset/logo.png" width="10%" alt="" /> **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/hWT7caau" style="text-decoration:none;">
+<img src="asset/logo.png" width="10%" alt="" /> **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/rde6eaE5Ta" style="text-decoration:none;">
 <img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a> for discussions. Coders are welcome to contribute.
 
 > [**PixArt-α: Fast Training of Diffusion Transformer for Photorealistic Text-to-Image Synthesis**](https://pixart-alpha.github.io/)<br>
@@ -36,17 +40,29 @@ Fast training diffusion models with transformers. You can find more visualizatio
 > [Zhenguo Li](https://scholar.google.com/citations?user=XboZC1AAAAAJ)
 > <br>Huawei Noah’s Ark Lab, Dalian University of Technology, HKU, HKUST<br>
 
+> [**PIXART-δ: Fast and Controllable Image Generation with Latent Consistency Models**](https://pixart-alpha.github.io/)<br>
+> [Junsong Chen](https://lawrence-cj.github.io/), [Yue Wu](https://yuewuhkust.github.io/), [Simian Luo](https://luosiallen.github.io/),  [Enze Xie](https://xieenze.github.io/)&#8224;,
+> [Sayak Paul](https://sayak.dev/), [Ping Luo](http://luoping.me/), [Hang Zhao](), [Zhenguo Li](https://scholar.google.com/citations?user=XboZC1AAAAAJ)
+> <br>Huawei Noah’s Ark Lab, DLUT, Tsinghua University, HKU, Hugging Face<br>
+
 ---
 ## Breaking News 🔥🔥!!
-- (🔥 New) Dec. 17, 2023. 💥 [PixArt-LCM-Lora](train_scripts/train_pixart_lcm_lora.py) & [PixArt-Lora](train_scripts/train_pixart_lora_hf.py) training scripts in Hugging Face style is released.
+- (🔥 New) Jan. 19, 2023. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252) ControlNet [app_controlnet.py](app/app_controlnet.py) and [Checkpoint](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main) are released!!!
+- (🔥 New) Jan. 16, 2024. 💥 Glad to announce that [PixArt-α](https://arxiv.org/abs/2310.00426) is accepted by ICLR 2024 (Spotlight).
+- (🔥 New) Jan. 11, 2024. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252): We are excited to announce the release of the [PixArt-δ](https://arxiv.org/abs/2401.05252) technical report!!!
+This report offers valuable insights into the training of LCM and ControlNet-like modules in Transformer Models. Along with the report, we have also released all the training and inference code for LCM & ControlNet [in this repository](https://github.com/PixArt-alpha/PixArt-alpha). 
+We encourage you to try them out and warmly welcome any Pull Requests from our users. Your contributions and feedback are highly appreciated!
 - (🔥 New) Dec. 17, 2023. 💥 PixArt supports [ComfyUI](https://github.com/comfyanonymous/ComfyUI#manual-install-windows-linux). Thanks to [@city96](https://github.com/city96/ComfyUI_ExtraModels) with his great work.
-- (🔥 New) Dec. 17, 2023. PixArt-ControlNet training scripts will be released very soon. Stay tuned!!
 - (🔥 New) Nov. 30, 2023. 💥 PixArt collaborates with [LCMs](https://github.com/luosiallen/latent-consistency-model) team to make the **fastest** [Training & Inference Text-to-Image Generation System](https://github.com/PixArt-alpha/PixArt-alpha).
 Here, [Training code](train_scripts/train_pixart_lcm.py) & [Inference code](scripts/inference_lcm.py) & [Weights](https://huggingface.co/PixArt-alpha/PixArt-LCM-XL-2-1024-MS) & [HF Demo](https://huggingface.co/spaces/PixArt-alpha/PixArt-LCM) [OpenXLab Demo](https://openxlab.org.cn/apps/detail/houshaowei/PixArt-LCM) are all released, we hope users will enjoy them. 
 Detailed **inference speed** and **code guidance** can be found in [docs](asset/docs/pixart_lcm.md). At the same time, we update the codebase for better user experience and fix some bugs in the newest version.
 
 ---
 ## 🚩 **New Features/Updates**
+- ✅ Jan. 19, 2023. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252) ControlNet [app_controlnet.py](app/app_controlnet.py) and [Checkpoint](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main) is released!!!
+- ✅ Jan. 12, 2024. 💥 We release the [SAM-LLaVA-Captions](https://huggingface.co/datasets/PixArt-alpha/SAM-LLaVA-Captions10M) used in PixArt-α training.
+- ✅ Dec. 27, 2023. [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha) incorporates into [ControlLLM](https://github.com/OpenGVLab/ControlLLM)!
+- ✅ Dec. 17, 2023. [PixArt-LCM-Lora](train_scripts/train_pixart_lcm_lora.py) & [PixArt-Lora](train_scripts/train_pixart_lora_hf.py) training scripts in Hugging Face style is released.
 - ✅ Dec. 13, 2023. Add multi-scale vae feature extraction in [tools/extract_features.py](https://github.com/PixArt-alpha/PixArt-alpha/blob/3b4f0afdbe39def80b41ab05c664c963edeebbcd/tools/extract_features.py#L276).
 - ✅ Dec. 01, 2023. Add a [Notebook folder](./notebooks) to help users get started with PixArt quickly! Thanks to [@kopyl](https://github.com/kopyl) for his contribution!
 - ✅ Nov. 27, 2023. 💥 **PixArt-α Community**: Join our PixArt-α discord channels <a href="https://discord.gg/rde6eaE5Ta" style="text-decoration:none;">
@@ -107,6 +123,22 @@ PixArt-α only takes 12% of Stable Diffusion v1.5's training time (753 vs. 6,250
 | PixArt-α  | Diff | 0.6B    | 25M    | 7.32 (zero-shot) | 753           |
 | PixArt-α  | Diff | 0.6B    | 25M    | 5.51 (COCO FT)   | 753           |
 
+## Inference Efficiency
+PIXART-δ successfully generates **1024x1024 high resolution** images within **0.5 seconds** on an A100. With the implementation
+of 8-bit inference technology, PIXART-δ requires **less than 8GB of GPU VRAM**. 
+
+Let us stress again how liberating it is to explore image generation so easily with PixArt-LCM.
+
+| Hardware                    | PIXART-δ (4 steps) | SDXL LoRA LCM (4 steps) | PixArt-α (14 steps) | SDXL standard (25 steps) |
+|-----------------------------|--------------------|-------------------------|---------------------|---------------------------|
+| T4 (Google Colab Free Tier) | 3.3s               | 8.4s                    | 16.0s               | 26.5s                     |
+| V100 (32 GB)                | 0.8s               | 1.2s                    | 5.5s                | 7.7s                      |
+| A100 (80 GB)                | 0.51s              | 1.2s                    | 2.2s                | 3.8s                      |
+
+These tests were run with a batch size of 1 in all cases.
+
+For cards with a lot of capacity, such as A100, performance increases significantly when generating multiple images at once, which is usually the case for production workloads.
+
 ## High-quality Generation from PixArt-α
 
 - More samples
@@ -134,7 +166,7 @@ PixArt-α only takes 12% of Stable Diffusion v1.5's training time (753 vs. 6,250
 ```bash
 conda create -n pixart python==3.9.0
 conda activate pixart
-pip install torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1 --index-url https://download.pytorch.org/whl/cu117
+pip install torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1 --index-url https://download.pytorch.org/whl/cu118
 
 git clone https://github.com/PixArt-alpha/PixArt-alpha.git
 cd PixArt-alpha
@@ -144,13 +176,16 @@ pip install -r requirements.txt
 # ⏬ Download Models
 All models will be automatically downloaded. You can also choose to download manually from this [url](https://huggingface.co/PixArt-alpha/PixArt-alpha).
 
-| Model            | #Params  | url                                                                                                                                                                                             | Download in OpenXLab                           |
-|:-----------------|:---------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------|
-| T5               | 4.3B     | [T5](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/t5-v1_1-xxl)                                                                                                                    | [T5](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/t5-v1_1-xxl.zip)  |
-| VAE              | 80M      | [VAE](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/sd-vae-ft-ema)                                                                                                                 | [VAE](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/sd-vae-ft-ema.zip)   |
-| PixArt-α-SAM-256 | 0.6B     | [256](about:blank)                                                                                                                                                                              | [256](about:blank)                          |
-| PixArt-α-512     | 0.6B     | [PixArt-XL-2-512x512.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-512x512.pth) or [diffuser version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-512x512) | [512](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-512x512.pth)   |
-| PixArt-α-1024    | 0.6B     | [PixArt-XL-2-1024-MS.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-1024-MS.pth) or [diffuser version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) |[1024](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-1024-MS.pth)  |
+| Model                    | #Params | url                                                                                                                                                                                              | Download in OpenXLab                                                                                     |
+|:-------------------------|:--------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------|
+| T5                       | 4.3B    | [T5](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/t5-v1_1-xxl)                                                                                                                     | [T5](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/t5-v1_1-xxl.zip)           |
+| VAE                      | 80M     | [VAE](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/sd-vae-ft-ema)                                                                                                                  | [VAE](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/sd-vae-ft-ema.zip)        |
+| PixArt-α-SAM-256         | 0.6B    | [256](about:blank)                                                                                                                                                                               | [256](about:blank)                                                                                       |
+| PixArt-α-512             | 0.6B    | [PixArt-XL-2-512x512.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-512x512.pth) or [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-512x512) | [512](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-512x512.pth)  |
+| PixArt-α-1024            | 0.6B    | [PixArt-XL-2-1024-MS.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-1024-MS.pth) or [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) | [1024](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-1024-MS.pth) |
+| PixArt-δ-1024-LCM        | 0.6B    | [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-LCM-XL-2-1024-MS)                                                                                                                 |                                                                                                          |
+| PixArt-δ-512-ControlNet  | 0.9B    | [PixArt-XL-2-512-ControlNet.pth](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main)                                                                                                | [512](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-ControlNet)                              |
+| PixArt-δ-1024-ControlNet | 0.9B    | [PixArt-XL-2-1024-ControlNet.pth](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main)                                                                                               | [1024](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-ControlNet)                             |
 
 ALSO find all models in [OpenXLab_PixArt-alpha](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-alpha)
 
@@ -168,9 +203,9 @@ Thanks to [@kopyl](https://github.com/kopyl), you can reproduce the full fine-tu
 
 Here we take SAM dataset training config as an example, but of course, you can also prepare your own dataset following this method.
 
-You **ONLY** need to change the **config** file in [config](./configs/pixart_config) and **dataloader** in [dataset](./diffusion/data/datasets).
+You **ONLY** need to change the **config** file in [config](./configs/pixart_config_stage2) and **dataloader** in [dataset](./diffusion/data/datasets).
 ```bash
-python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 train_scripts/train.py configs/pixart_config/PixArt_xl2_img256_SAM.py --work-dir output/train_SAM_256
+python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 train_scripts/train.py configs/pixart_config_stage2/PixArt_xl2_img256_SAM.py --work-dir output/train_SAM_256
 ```
 
 The directory structure for SAM dataset is:
@@ -227,6 +262,9 @@ Following the `Pixart + DreamBooth` [training guidance](asset/docs/pixart-dreamb
 
 Following the `PixArt + LCM` [training guidance](asset/docs/pixart_lcm.md)
 
+## 4. PixArt + ControlNet Training
+
+Following the `PixArt + ControlNet` [training guidance](asset/docs/pixart_controlnet.md)
 
 ## 4. PixArt + LoRA Training
 
@@ -261,7 +299,7 @@ Currently support:
 To get started, first install the required dependencies. Make sure you've downloaded the [models](https://huggingface.co/PixArt-alpha/PixArt-alpha) to the output/pretrained_models folder, and then run on your local machine:
 
 ```bash
-DEMO_PORT=12345 python scripts/app.py
+DEMO_PORT=12345 python app/app.py
 ```
 
 As an alternative, a sample [Dockerfile](Dockerfile) is provided to make a runtime container that starts the Gradio app.
@@ -319,7 +357,7 @@ prompt = "A small cactus with a happy face in the Sahara desert."
 image = pipe(prompt).images[0]
 image.save("./catcus.png")
 ```
-Check out the [documentation](./asset/docs/sasolver.md) for more information abount SA-Solver Sampler.
+Check out the [documentation](./asset/docs/sasolver.md) for more information about SA-Solver Sampler.
 
 This integration allows running the pipeline with a batch size of 4 under 11 GBs of GPU VRAM. 
 Check out the [documentation](https://huggingface.co/docs/diffusers/main/en/api/pipelines/pixart) to learn more.
@@ -334,7 +372,7 @@ To get started, first install the required dependencies, then run on your local 
 
 ```bash
 # diffusers version
-DEMO_PORT=12345 python scripts/app.py
+DEMO_PORT=12345 python app/app.py
 ```
 Let's have a look at a simple example using the `http://your-server-ip:12345`.
 
@@ -389,11 +427,16 @@ python tools/extract_features.py --img_size=1024 \
 - [x] Multi-scale vae feature extraction code
 - [x] PixArt-α-LCM-LoRA scripts will release soon
 - [x] PixArt-α-LoRA training scripts will release soon
-- [ ] ControlNet code will be released
-- [ ] SAM-LLaVA caption dataset
+- [x] ControlNet code will be released
+- [x] SAM-LLaVA caption dataset
+- [x] ControlNet checkpoint
+- [ ] 256px pre-trained models
+- [ ] PixArt-Ω: Next version model with much better ability is training!
 
-[//]: # (.mp4)
+# Other Source
+We make a video comparing PixArt with current most powerful Text-to-Image models.
 
+[![Watch the video](https://img.youtube.com/vi/7_6KsIITgWY/maxresdefault.jpg)](https://www.youtube.com/watch?v=7_6KsIITgWY)
 
 # 📖BibTeX
     @misc{chen2023pixartalpha,
@@ -401,6 +444,14 @@ python tools/extract_features.py --img_size=1024 \
           author={Junsong Chen and Jincheng Yu and Chongjian Ge and Lewei Yao and Enze Xie and Yue Wu and Zhongdao Wang and James Kwok and Ping Luo and Huchuan Lu and Zhenguo Li},
           year={2023},
           eprint={2310.00426},
+          archivePrefix={arXiv},
+          primaryClass={cs.CV}
+    }
+    @misc{chen2024pixartdelta,
+          title={PIXART-{\delta}: Fast and Controllable Image Generation with Latent Consistency Models}, 
+          author={Junsong Chen and Yue Wu and Simian Luo and Enze Xie and Sayak Paul and Ping Luo and Hang Zhao and Zhenguo Li},
+          year={2024},
+          eprint={2401.05252},
           archivePrefix={arXiv},
           primaryClass={cs.CV}
     }

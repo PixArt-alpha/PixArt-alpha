@@ -42,7 +42,7 @@ python -m torch.distributed.launch --nproc_per_node=2 --master_port=12345 train_
 ## Testing the `PixArt + LCM` on your machine
 
 ```bash
-DEMO_PORT=12345 python scripts/app_lcm.py
+DEMO_PORT=12345 python app/app_lcm.py
 
 Then have a look at a simple example using the http://your-server-ip:12345
 ```
@@ -50,7 +50,7 @@ Then have a look at a simple example using the http://your-server-ip:12345
 ## Testing the `PixArt + LCM-LoRA`
 
 ```bash
-DEMO_PORT=12345 python scripts/app_lcm.py --is_lora --lora_repo_id output/pixartlcm-lora-xl2-img1024_ft/checkpoint-xxx
+DEMO_PORT=12345 python app/app_lcm.py --is_lora --lora_repo_id output/pixartlcm-lora-xl2-img1024_ft/checkpoint-xxx
 
 Then have a look at a simple example using the http://your-server-ip:12345
 ```

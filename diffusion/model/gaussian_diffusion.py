@@ -735,18 +735,7 @@ class GaussianDiffusion:
 
         terms = {}
 
-        if self.loss_type == LossType.KL:
-            terms["loss"] = self._vb_terms_bpd(
-                model=model,
-                x_start=x_start,
-                x_t=x_t,
-                t=t,
-                clip_denoised=False,
-                model_kwargs=model_kwargs,
-            )["output"]
-            if self.loss_type == LossType.RESCALED_KL:
-                terms["loss"] *= self.num_timesteps
-        elif self.loss_type == LossType.RESCALED_KL:
+        if self.loss_type == LossType.KL or self.loss_type == LossType.RESCALED_KL:
             terms["loss"] = self._vb_terms_bpd(
                 model=model,
                 x_start=x_start,
@@ -759,14 +748,14 @@ class GaussianDiffusion:
                 terms["loss"] *= self.num_timesteps
         elif self.loss_type in [LossType.MSE, LossType.RESCALED_MSE]:
             model_output = model(x_t, t, **model_kwargs)
-            output = (
-                model_output['x']
-                if isinstance(model_output, dict)
-                and model_output.get('x', None) is not None
-                else model_output
-            )
+            if isinstance(model_output, dict) and model_output.get('x', None) is not None:
+                output = model_output['x']
+            else:
+                output = model_output
+
             if self.return_startx and self.model_mean_type == ModelMeanType.EPSILON:
-                return self._extracted_from_training_losses_diffusers_56(x_t, output, t)
+                return self._extracted_from_training_losses_diffusers(x_t, output, t)
+            # self.model_var_type = ModelVarType.LEARNED_RANGE:4
             if self.model_var_type in [
                 ModelVarType.LEARNED,
                 ModelVarType.LEARNED_RANGE,
@@ -776,6 +765,7 @@ class GaussianDiffusion:
                 output, model_var_values = th.split(output, C, dim=1)
                 # Learn the variance using the variational bound, but don't let it affect our mean prediction.
                 frozen_out = th.cat([output.detach(), model_var_values], dim=1)
+                # vb variational bound
                 terms["vb"] = self._vb_terms_bpd(
                     model=lambda *args, r=frozen_out, **kwargs: r,
                     x_start=x_start,
@@ -868,7 +858,8 @@ class GaussianDiffusion:
             output = model(x_t, timestep=t, **model_kwargs, return_dict=False)[0]
 
             if self.return_startx and self.model_mean_type == ModelMeanType.EPSILON:
-                return self._extracted_from_training_losses_diffusers_56(x_t, output, t)
+                return self._extracted_from_training_losses_diffusers(x_t, output, t)
+
             if self.model_var_type in [
                 ModelVarType.LEARNED,
                 ModelVarType.LEARNED_RANGE,
@@ -922,8 +913,7 @@ class GaussianDiffusion:
 
         return terms
 
-    # TODO Rename this here and in `training_losses` and `training_losses_diffusers`
-    def _extracted_from_training_losses_diffusers_56(self, x_t, output, t):
+    def _extracted_from_training_losses_diffusers(self, x_t, output, t):
         B, C = x_t.shape[:2]
         assert output.shape == (B, C * 2, *x_t.shape[2:])
         output = th.split(output, C, dim=1)[0]

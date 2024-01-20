@@ -266,8 +266,13 @@ class TimestepEmbedder(nn.Module):
         return embedding
 
     def forward(self, t):
-        t_freq = self.timestep_embedding(t, self.frequency_embedding_size)
+        t_freq = self.timestep_embedding(t, self.frequency_embedding_size).to(self.dtype)
         return self.mlp(t_freq)
+
+    @property
+    def dtype(self):
+        # 返回模型参数的数据类型
+        return next(self.parameters()).dtype
 
 
 class SizeEmbedder(TimestepEmbedder):
@@ -294,10 +299,15 @@ class SizeEmbedder(TimestepEmbedder):
             assert s.shape[0] == bs
         b, dims = s.shape[0], s.shape[1]
         s = rearrange(s, "b d -> (b d)")
-        s_freq = self.timestep_embedding(s, self.frequency_embedding_size)
+        s_freq = self.timestep_embedding(s, self.frequency_embedding_size).to(self.dtype)
         s_emb = self.mlp(s_freq)
         s_emb = rearrange(s_emb, "(b d) d2 -> b (d d2)", b=b, d=dims, d2=self.outdim)
         return s_emb
+
+    @property
+    def dtype(self):
+        # 返回模型参数的数据类型
+        return next(self.parameters()).dtype
 
 
 class LabelEmbedder(nn.Module):
