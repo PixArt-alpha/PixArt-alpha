@@ -38,14 +38,8 @@ def ndarr_image(tensor: Union[torch.Tensor, List[torch.Tensor]], **kwargs,) -> N
     if not torch.jit.is_scripting() and not torch.jit.is_tracing():
         _log_api_usage_once(save_image)
     grid = make_grid(tensor, **kwargs)
-    return (
-        grid.mul(255)
-        .add_(0.5)
-        .clamp_(0, 255)
-        .permute(1, 2, 0)
-        .to("cpu", torch.uint8)
-        .numpy()
-    )
+    # Add 0.5 after unnormalizing to [0, 255] to round to the nearest integer
+    return grid.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
 
 
 def set_env(seed=0):

@@ -68,12 +68,7 @@ def visualize(items, bs, sample_steps, cfg_scale):
         else:
             hw = torch.tensor([[args.image_size, args.image_size]], dtype=torch.float, device=device).repeat(bs, 1)
             ar = torch.tensor([[1.]], device=device).repeat(bs, 1)
-            prompts.extend(
-                prepare_prompt_ar(
-                    prompt, base_ratios, device=device, show=False
-                )[0].strip()
-                for prompt in chunk
-            )
+            prompts.append(prepare_prompt_ar(prompt, base_ratios, device=device, show=False)[0].strip())
             latent_size_h, latent_size_w = latent_size, latent_size
 
         with torch.no_grad():

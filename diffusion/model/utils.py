@@ -465,7 +465,7 @@ def prepare_prompt_ar(prompt, ratios, device='cpu', show=True):
 
 def resize_and_crop_tensor(samples: torch.Tensor, new_width: int, new_height: int):
     orig_hw = torch.tensor([samples.shape[2], samples.shape[3]], dtype=torch.int)
-    custom_hw = torch.tensor([new_height, new_width], dtype=torch.int)
+    custom_hw = torch.tensor([int(new_height), int(new_width)], dtype=torch.int)
 
     if (orig_hw != custom_hw).all():
         ratio = max(custom_hw[0] / orig_hw[0], custom_hw[1] / orig_hw[1])

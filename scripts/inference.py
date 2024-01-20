@@ -45,6 +45,7 @@ def set_env(seed=0):
     for _ in range(30):
         torch.randn(1, 4, args.image_size, args.image_size)
 
+
 @torch.inference_mode()
 def visualize(items, bs, sample_steps, cfg_scale):
 
@@ -63,12 +64,7 @@ def visualize(items, bs, sample_steps, cfg_scale):
         else:
             hw = torch.tensor([[args.image_size, args.image_size]], dtype=torch.float, device=device).repeat(bs, 1)
             ar = torch.tensor([[1.]], device=device).repeat(bs, 1)
-            prompts.extend(
-                prepare_prompt_ar(
-                    prompt, base_ratios, device=device, show=False
-                )[0].strip()
-                for prompt in chunk
-            )
+            prompts.append(prepare_prompt_ar(prompt, base_ratios, device=device, show=False)[0].strip())
             latent_size_h, latent_size_w = latent_size, latent_size
 
         null_y = model.y_embedder.y_embedding[None].repeat(len(prompts), 1, 1)[:, None]

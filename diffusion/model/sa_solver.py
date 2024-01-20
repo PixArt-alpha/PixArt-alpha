@@ -326,7 +326,7 @@ class SASolver:
     ):
         """
         Construct a SA-Solver
-        The default value for algorithm_type is "data_prediction" and we recommend not to change it to 
+        The default value for algorithm_type is "data_prediction" and we recommend not to change it to
         "noise_prediction". For details, please see Appendix A.2.4 in SA-Solver paper https://arxiv.org/pdf/2309.05019.pdf
         """
 
@@ -397,11 +397,8 @@ class SASolver:
                 order).to(device)
             return self.noise_schedule.inverse_lambda(logSNR_steps)
         elif skip_type == 'time':
-            return (
-                torch.linspace(t_T ** (1.0 / order), t_0 ** (1.0 / order), N + 1)
-                .pow(order)
-                .to(device)
-            )
+            t = torch.linspace(t_T ** (1. / order), t_0 ** (1. / order), N + 1).pow(order).to(device)
+            return t
         elif skip_type == 'karras':
             sigma_min = max(0.002, self.sigma_min)
             sigma_max = min(80, self.sigma_max)
@@ -589,13 +586,12 @@ class SASolver:
         else:
             noise_part = tau * sigma_t * torch.sqrt(torch.exp(2 * h) - 1) * noise
 
-        return (
-            torch.exp(-(tau**2) * h) * (sigma_t / sigma_prev) * x
-            + gradient_part
-            + noise_part
-            if self.predict_x0
-            else (alpha_t / alpha_prev) * x + gradient_part + noise_part
-        )
+        if self.predict_x0:
+            x_t = torch.exp(-tau ** 2 * h) * (sigma_t / sigma_prev) * x + gradient_part + noise_part
+        else:
+            x_t = (alpha_t / alpha_prev) * x + gradient_part + noise_part
+
+        return x_t
 
     def adams_moulton_update(self, order, x, tau, model_prev_list, t_prev_list, noise, t):
         """
@@ -630,13 +626,12 @@ class SASolver:
         else:
             noise_part = tau * sigma_t * torch.sqrt(torch.exp(2 * h) - 1) * noise
 
-        return (
-            torch.exp(-(tau**2) * h) * (sigma_t / sigma_prev) * x
-            + gradient_part
-            + noise_part
-            if self.predict_x0
-            else (alpha_t / alpha_prev) * x + gradient_part + noise_part
-        )
+        if self.predict_x0:
+            x_t = torch.exp(-tau ** 2 * h) * (sigma_t / sigma_prev) * x + gradient_part + noise_part
+        else:
+            x_t = (alpha_t / alpha_prev) * x + gradient_part + noise_part
+
+        return x_t
 
     def adams_bashforth_update_few_steps(self, order, x, tau, model_prev_list, t_prev_list, noise, t):
         """
@@ -658,15 +653,20 @@ class SASolver:
         gradient_coefficients = self.get_coefficients_fn(order, ns.marginal_lambda(t_prev_list[-1]), lambda_t,
                                                          lambda_list, tau)
 
-        if order == 2 and self.predict_x0:
-            gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                        h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                            (1 + tau ** 2) ** 2)) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(
-                t_prev_list[-2]))
-            gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                        h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                            (1 + tau ** 2) ** 2)) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(
-                t_prev_list[-2]))
+        if self.predict_x0:
+            if order == 2:  ## if order = 2 we do a modification that does not influence the convergence order similar to unipc. Note: This is used only for few steps sampling.
+                # The added term is O(h^3). Empirically we find it will slightly improve the image quality.
+                # ODE case
+                # gradient_coefficients[0] += 1.0 * torch.exp(lambda_t) * (h ** 2 / 2 - (h - 1 + torch.exp(-h))) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(t_prev_list[-2]))
+                # gradient_coefficients[1] -= 1.0 * torch.exp(lambda_t) * (h ** 2 / 2 - (h - 1 + torch.exp(-h))) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(t_prev_list[-2]))
+                gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                            h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                                (1 + tau ** 2) ** 2)) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(
+                    t_prev_list[-2]))
+                gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                            h ** 2 / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                                (1 + tau ** 2) ** 2)) / (ns.marginal_lambda(t_prev_list[-1]) - ns.marginal_lambda(
+                    t_prev_list[-2]))
 
         for i in range(order):
             if self.predict_x0:
@@ -680,13 +680,12 @@ class SASolver:
         else:
             noise_part = tau * sigma_t * torch.sqrt(torch.exp(2 * h) - 1) * noise
 
-        return (
-            torch.exp(-(tau**2) * h) * (sigma_t / sigma_prev) * x
-            + gradient_part
-            + noise_part
-            if self.predict_x0
-            else (alpha_t / alpha_prev) * x + gradient_part + noise_part
-        )
+        if self.predict_x0:
+            x_t = torch.exp(-tau ** 2 * h) * (sigma_t / sigma_prev) * x + gradient_part + noise_part
+        else:
+            x_t = (alpha_t / alpha_prev) * x + gradient_part + noise_part
+
+        return x_t
 
     def adams_moulton_update_few_steps(self, order, x, tau, model_prev_list, t_prev_list, noise, t):
         """
@@ -709,13 +708,18 @@ class SASolver:
         gradient_coefficients = self.get_coefficients_fn(order, ns.marginal_lambda(t_prev_list[-1]), lambda_t,
                                                          lambda_list, tau)
 
-        if order == 2 and self.predict_x0:
-            gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                        h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                            (1 + tau ** 2) ** 2 * h))
-            gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
-                        h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
-                            (1 + tau ** 2) ** 2 * h))
+        if self.predict_x0:
+            if order == 2:  ## if order = 2 we do a modification that does not influence the convergence order similar to UniPC. Note: This is used only for few steps sampling.
+                # The added term is O(h^3). Empirically we find it will slightly improve the image quality.
+                # ODE case
+                # gradient_coefficients[0] += 1.0 * torch.exp(lambda_t) * (h / 2 - (h - 1 + torch.exp(-h)) / h)
+                # gradient_coefficients[1] -= 1.0 * torch.exp(lambda_t) * (h / 2 - (h - 1 + torch.exp(-h)) / h)
+                gradient_coefficients[0] += 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                            h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                                (1 + tau ** 2) ** 2 * h))
+                gradient_coefficients[1] -= 1.0 * torch.exp((1 + tau ** 2) * lambda_t) * (
+                            h / 2 - (h * (1 + tau ** 2) - 1 + torch.exp((1 + tau ** 2) * (-h))) / (
+                                (1 + tau ** 2) ** 2 * h))
 
         for i in range(order):
             if self.predict_x0:
@@ -729,19 +733,18 @@ class SASolver:
         else:
             noise_part = tau * sigma_t * torch.sqrt(torch.exp(2 * h) - 1) * noise
 
-        return (
-            torch.exp(-(tau**2) * h) * (sigma_t / sigma_prev) * x
-            + gradient_part
-            + noise_part
-            if self.predict_x0
-            else (alpha_t / alpha_prev) * x + gradient_part + noise_part
-        )
+        if self.predict_x0:
+            x_t = torch.exp(-tau ** 2 * h) * (sigma_t / sigma_prev) * x + gradient_part + noise_part
+        else:
+            x_t = (alpha_t / alpha_prev) * x + gradient_part + noise_part
+
+        return x_t
 
     def sample_few_steps(self, x, tau, steps=5, t_start=None, t_end=None, skip_type='time', skip_order=1,
                          predictor_order=3, corrector_order=4, pc_mode='PEC', return_intermediate=False
                          ):
         """
-        For the PC-mode, please refer to the wiki page 
+        For the PC-mode, please refer to the wiki page
         https://en.wikipedia.org/wiki/Predictor%E2%80%93corrector_method#PEC_mode_and_PECE_mode
         'PEC' needs one model evaluation per step while 'PECE' needs two model evaluations
         We recommend use pc_mode='PEC' for NFEs is limited. 'PECE' mode is only for test with sufficient NFEs.
@@ -861,6 +864,7 @@ class SASolver:
                                                             t_prev_list=t_prev_list, noise=noise, t=t)
                 else:
                     x = x_p
+
                 # evaluation step if mode = pece and step != steps
                 if corrector_order > 0 and (pc_mode == 'PECE' and step < steps):
                     model_x = self.model_fn(x, t)
@@ -888,7 +892,7 @@ class SASolver:
                           predictor_order=3, corrector_order=4, pc_mode='PEC', return_intermediate=False
                           ):
         """
-        For the PC-mode, please refer to the wiki page 
+        For the PC-mode, please refer to the wiki page
         https://en.wikipedia.org/wiki/Predictor%E2%80%93corrector_method#PEC_mode_and_PECE_mode
         'PEC' needs one model evaluation per step while 'PECE' needs two model evaluations
         We recommend use pc_mode='PEC' for NFEs is limited. 'PECE' mode is only for test with sufficient NFEs.

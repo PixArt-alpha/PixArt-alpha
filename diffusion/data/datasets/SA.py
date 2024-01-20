@@ -39,49 +39,16 @@ class SAM(Dataset):
                 image_list = os.path.join(self.root, 'partition', txt)
                 with open(image_list, 'r') as f:
                     lines = [line.strip() for line in f.readlines()]
-                    self.img_samples.extend(
-                        [
-                            os.path.join(self.root, 'images', f'{i}.jpg')
-                            for i in lines
-                        ]
-                    )
-                    self.txt_feat_samples.extend(
-                        [
-                            os.path.join(
-                                self.root, 'caption_feature_wmask', f'{i}.npz'
-                            )
-                            for i in lines
-                        ]
-                    )
+                    self.img_samples.extend([os.path.join(self.root, 'images', i+'.jpg') for i in lines])
+                    self.txt_feat_samples.extend([os.path.join(self.root, 'caption_feature_wmask', i+'.npz') for i in lines])
         elif isinstance(image_list_txt, list):
             for txt in image_list_txt:
                 image_list = os.path.join(self.root, 'partition', txt)
                 with open(image_list, 'r') as f:
                     lines = [line.strip() for line in f.readlines()]
-                    self.img_samples.extend(
-                        [
-                            os.path.join(self.root, 'images', f'{i}.jpg')
-                            for i in lines
-                        ]
-                    )
-                    self.txt_feat_samples.extend(
-                        [
-                            os.path.join(
-                                self.root, 'caption_feature_wmask', f'{i}.npz'
-                            )
-                            for i in lines
-                        ]
-                    )
-                    self.vae_feat_samples.extend(
-                        [
-                            os.path.join(
-                                self.root,
-                                'img_vae_feature/train_vae_256/noflip',
-                                f'{i}.npy',
-                            )
-                            for i in lines
-                        ]
-                    )
+                    self.img_samples.extend([os.path.join(self.root, 'images', i + '.jpg') for i in lines])
+                    self.txt_feat_samples.extend([os.path.join(self.root, 'caption_feature_wmask', i + '.npz') for i in lines])
+                    self.vae_feat_samples.extend([os.path.join(self.root, 'img_vae_feature/train_vae_256/noflip', i + '.npy') for i in lines])
 
         self.ori_imgs_nums = len(self)
         # self.img_samples = self.img_samples[:10000]
