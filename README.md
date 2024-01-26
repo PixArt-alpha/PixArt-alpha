@@ -59,6 +59,7 @@ Detailed **inference speed** and **code guidance** can be found in [docs](asset/
 
 ---
 ## 🚩 **New Features/Updates**
+- ✅ Jan. 26, 2024. 💥 All checkpoints of [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha), including 256px checkpoints are all available here [Download Models](#-download-models).
 - ✅ Jan. 19, 2024. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252) ControlNet [app_controlnet.py](app/app_controlnet.py) and [Checkpoint](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main) is released!!!
 - ✅ Jan. 12, 2024. 💥 We release the [SAM-LLaVA-Captions](https://huggingface.co/datasets/PixArt-alpha/SAM-LLaVA-Captions10M) used in PixArt-α training.
 - ✅ Dec. 27, 2023. [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha) incorporates into [ControlLLM](https://github.com/OpenGVLab/ControlLLM)!
@@ -176,16 +177,17 @@ pip install -r requirements.txt
 # ⏬ Download Models
 All models will be automatically downloaded. You can also choose to download manually from this [url](https://huggingface.co/PixArt-alpha/PixArt-alpha).
 
-| Model                    | #Params | url                                                                                                                                                                                              | Download in OpenXLab                                                                                     |
-|:-------------------------|:--------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------|
-| T5                       | 4.3B    | [T5](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/t5-v1_1-xxl)                                                                                                                     | [T5](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/t5-v1_1-xxl.zip)           |
-| VAE                      | 80M     | [VAE](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/sd-vae-ft-ema)                                                                                                                  | [VAE](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/sd-vae-ft-ema.zip)        |
-| PixArt-α-SAM-256         | 0.6B    | [256](about:blank)                                                                                                                                                                               | [256](about:blank)                                                                                       |
-| PixArt-α-512             | 0.6B    | [PixArt-XL-2-512x512.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-512x512.pth) or [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-512x512) | [512](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-512x512.pth)  |
-| PixArt-α-1024            | 0.6B    | [PixArt-XL-2-1024-MS.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-1024-MS.pth) or [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS) | [1024](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-1024-MS.pth) |
-| PixArt-δ-1024-LCM        | 0.6B    | [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-LCM-XL-2-1024-MS)                                                                                                                 |                                                                                                          |
-| PixArt-δ-512-ControlNet  | 0.9B    | [PixArt-XL-2-512-ControlNet.pth](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main)                                                                                                | [512](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-ControlNet)                              |
-| PixArt-δ-1024-ControlNet | 0.9B    | [PixArt-XL-2-1024-ControlNet.pth](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main)                                                                                               | [1024](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-ControlNet)                             |
+| Model                    | #Params | url                                                                                                                                                                                                          | Download in OpenXLab                                                                                             |
+|:-------------------------|:--------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------|
+| T5                       | 4.3B    | [T5](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/t5-v1_1-xxl)                                                                                                                                 | [T5](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/t5-v1_1-xxl.zip)                   |
+| VAE                      | 80M     | [VAE](https://huggingface.co/PixArt-alpha/PixArt-alpha/tree/main/sd-vae-ft-ema)                                                                                                                              | [VAE](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/sd-vae-ft-ema.zip)                |
+| PixArt-α-SAM-256         | 0.6B    | [PixArt-XL-2-SAM-256x256.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-SAM-256x256.pth) or [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-SAM-256x256) | [256-SAM](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-SAM-256x256.pth) |
+| PixArt-α-256             | 0.6B    | [PixArt-XL-2-256x256.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-256x256.pth) or [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-256x256)             | [256](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-256x256.pth)          |
+| PixArt-α-512             | 0.6B    | [PixArt-XL-2-512x512.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-512x512.pth) or [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-512x512)             | [512](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-512x512.pth)          |
+| PixArt-α-1024            | 0.6B    | [PixArt-XL-2-1024-MS.pth](https://huggingface.co/PixArt-alpha/PixArt-alpha/resolve/main/PixArt-XL-2-1024-MS.pth) or [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-XL-2-1024-MS)             | [1024](https://download.openxlab.org.cn/models/PixArt-alpha/PixArt-alpha/weight/PixArt-XL-2-1024-MS.pth)         |
+| PixArt-δ-1024-LCM        | 0.6B    | [diffusers version](https://huggingface.co/PixArt-alpha/PixArt-LCM-XL-2-1024-MS)                                                                                                                             |                                                                                                                  |
+| PixArt-δ-512-ControlNet  | 0.9B    | [PixArt-XL-2-512-ControlNet.pth](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main)                                                                                                            | [512](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-ControlNet)                                      |
+| PixArt-δ-1024-ControlNet | 0.9B    | [PixArt-XL-2-1024-ControlNet.pth](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main)                                                                                                           | [1024](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-ControlNet)                                     |
 
 ALSO find all models in [OpenXLab_PixArt-alpha](https://openxlab.org.cn/models/detail/PixArt-alpha/PixArt-alpha)
 
@@ -430,7 +432,7 @@ python tools/extract_features.py --img_size=1024 \
 - [x] ControlNet code will be released
 - [x] SAM-LLaVA caption dataset
 - [x] ControlNet checkpoint
-- [ ] 256px pre-trained models
+- [x] 256px pre-trained models
 - [ ] PixArt-Ω: Next version model with much better ability is training!
 
 # Other Source
