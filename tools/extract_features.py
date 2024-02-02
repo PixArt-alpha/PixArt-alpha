@@ -26,6 +26,8 @@ from diffusion.utils.data_sampler import AspectRatioBatchSampler
 from diffusion.data.builder import DATASETS
 from diffusion.data import ASPECT_RATIO_512, ASPECT_RATIO_1024
 
+rng = np.random.default_rng()
+
 
 def get_closest_ratio(height: float, width: float, ratios: dict):
     aspect_ratio = height / width
@@ -105,7 +107,7 @@ class DatasetMS(InternalData):
                 return img, '_'.join(self.img_samples[idx].rsplit('/', 2)[-2:]) # change from 'serial-number-of-dir/serial-number-of-image.png' ---> 'serial-number-of-dir_serial-number-of-image.png'
             except Exception as e:
                 print(f"Error details: {str(e)}")
-                idx = np.random.randint(len(self))
+                idx = rng.integers(len(self))
         raise RuntimeError('Too many bad data.')
 
     def get_data_info(self, idx):
