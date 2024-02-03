@@ -16,6 +16,9 @@ from diffusers.models import AutoencoderKL
 from mmcv.runner import LogBuffer
 from torch.utils.data import RandomSampler
 
+current_file_path = Path(__file__).resolve()
+sys.path.insert(0, str(current_file_path.parent.parent))
+
 from diffusion import IDDPM
 from diffusion.data.builder import build_dataset, build_dataloader, set_data_root
 from diffusion.model.builder import build_model
@@ -29,8 +32,6 @@ from diffusion.utils.optimizer import build_optimizer, auto_scale_lr
 
 warnings.filterwarnings("ignore")  # ignore warning
 
-current_file_path = Path(__file__).resolve()
-sys.path.insert(0, str(current_file_path.parent.parent))
 
 
 def set_fsdp_env():
