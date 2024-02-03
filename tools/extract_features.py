@@ -263,8 +263,7 @@ def save_results(results, paths, signature, work_dir):
             # raise FileExistsError(f"{save_folder} exists. BE careful not to overwrite your files. Comment this error raising for overwriting!!")
         # os.makedirs(save_folder, exist_ok=True)
         output_path = get_output_file_path(img_path=p, 
-                                           signature=signature, 
-                                           work_dir=work_dir)
+                                           signature=signature)
         dirname_base = os.path.basename(os.path.dirname(output_path))
         filename = os.path.basename(output_path)
         new_paths.append(os.path.join(dirname_base, filename))
@@ -328,6 +327,9 @@ def get_args():
     parser.add_argument('--dataset_root', default='data/data_toy', type=str)
     parser.add_argument('--pretrained_models_dir', default='output/pretrained_models', type=str)
 
+    parser.add_argument('--skip_t5', action='store_true', default=False, help="skip t5 feature extraction")
+    parser.add_argument('--skip_vae', action='store_true', default=False, help="skip vae feature extraction")
+
     ### for multi-scale(ms) vae feauture extraction
     parser.add_argument('--json_file', type=str)
     return parser.parse_args()
@@ -340,13 +342,15 @@ if __name__ == '__main__':
     image_resize = args.img_size
     work_dir = os.path.abspath(args.vae_save_root)
 
-    # prepare extracted caption t5 features for training
-    extract_caption_t5()
+    if not args.skip_t5:
+        # prepare extracted caption t5 features for training
+        extract_caption_t5()
 
-    # prepare extracted image vae features for training
-    if args.multi_scale:
-        print(f'Extracting Multi-scale Image Resolution based on {image_resize}')
-        extract_img_vae_multiscale(bs=1)    # recommend bs = 1 for AspectRatioBatchSampler
-    else:
-        print(f'Extracting Single Image Resolution {image_resize}')
-        extract_img_vae()
+    if not args.skip_vae:
+        # prepare extracted image vae features for training
+        if args.multi_scale:
+            print(f'Extracting Multi-scale Image Resolution based on {image_resize}')
+            extract_img_vae_multiscale(bs=1)    # recommend bs = 1 for AspectRatioBatchSampler
+        else:
+            print(f'Extracting Single Image Resolution {image_resize}')
+            extract_img_vae()
