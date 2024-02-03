@@ -1,0 +1,165 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    python_version: 3.10.12
+    cli_version: 0.16.2
+    framework: huggingface
+    huggingface_version: 4.37.2
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1707002987.7432
+    t:
+      1:
+      - 1
+      - 11
+      - 37
+      - 41
+      - 49
+      - 55
+      - 63
+      - 71
+      - 83
+      - 105
+      2:
+      - 1
+      - 11
+      - 37
+      - 41
+      - 49
+      - 55
+      - 63
+      - 71
+      - 83
+      - 105
+      3:
+      - 23
+      4: 3.10.12
+      5: 0.16.2
+      6: 4.37.2
+      8:
+      - 5
+      13: linux-x86_64
+_cfg_dict:
+  desc: null
+  value:
+    data_root: /workspace/pixart-v0-1
+    data:
+      type: InternalDataMS
+      root: /workspace/pixart-v0-1
+      image_list_json:
+      - data_info.json
+      load_vae_feat: true
+      image_list_dir: partition
+    image_size: 1024
+    train_batch_size: 12
+    eval_batch_size: 16
+    use_fsdp: false
+    valid_num: 0
+    model: PixArtMS_XL_2
+    aspect_ratio_type: ASPECT_RATIO_1024
+    multi_scale: true
+    lewei_scale: 2.0
+    num_workers: 10
+    train_sampling_steps: 1000
+    eval_sampling_steps: 200
+    model_max_length: 120
+    lora_rank: 4
+    num_epochs: 10
+    gradient_accumulation_steps: 1
+    grad_checkpointing: true
+    gradient_clip: 0.01
+    gc_step: 1
+    auto_lr:
+      rule: sqrt
+    optimizer:
+      type: AdamW
+      lr: 4.330127018922193e-06
+      weight_decay: 0.03
+      eps: 1.0e-10
+      constructor: MyOptimizerConstructor
+      paramwise_cfg:
+        custom_keys: {}
+    lr_schedule: constant
+    lr_schedule_args:
+      num_warmup_steps: 1000
+    save_image_epochs: 1
+    save_model_epochs: 1
+    save_model_steps: 2000
+    sample_posterior: true
+    mixed_precision: fp16
+    scale_factor: 0.18215
+    ema_rate: 0.9999
+    tensorboard_mox_interval: 50
+    log_interval: 20
+    cfg_scale: 4
+    mask_type: 'null'
+    num_group_tokens: 0
+    mask_loss_coef: 0.0
+    load_mask_index: false
+    vae_pretrained: output/pretrained_models/sd-vae-ft-ema
+    load_from: null
+    resume_from:
+      checkpoint: null
+      load_ema: false
+      resume_optimizer: true
+      resume_lr_scheduler: true
+    snr_loss: false
+    work_dir: work_dir
+    s3_work_dir: null
+    seed: 43
+    image_list_json:
+    - data_info.json
+    fp32_attention: true
+    window_block_indexes: []
+    window_size: 0
+    use_rel_pos: false
+_filename:
+  desc: null
+  value: /workspace/sd-scripts-work-area/scripts/pixart/PixArt_xl2_img1024_internalms.py
+_text:
+  desc: null
+  value: "/PixArt-alpha/configs/PixArt_xl2_internal.py\ndata_root = '/data/data'\n\
+    data = dict(type='InternalData', root='images', image_list_json=['data_info.json'],\
+    \ transform='default_train', load_vae_feat=True)\nimage_size = 256  # the generated\
+    \ image resolution\ntrain_batch_size = 32\neval_batch_size = 16\nuse_fsdp=False\
+    \   # if use FSDP mode\nvalid_num=0      # take as valid aspect-ratio when sample\
+    \ number >= valid_num\n\n# model setting\nmodel = 'PixArt_XL_2'\naspect_ratio_type\
+    \ = None         # base aspect ratio [ASPECT_RATIO_512 or ASPECT_RATIO_256]\n\
+    multi_scale = False     # if use multiscale dataset model training\nlewei_scale\
+    \ = 1.0    # lewei_scale for positional embedding interpolation\n# training setting\n\
+    num_workers=4\ntrain_sampling_steps = 1000\neval_sampling_steps = 250\nmodel_max_length\
+    \ = 120\nlora_rank = 4\n\nnum_epochs = 80\ngradient_accumulation_steps = 1\ngrad_checkpointing\
+    \ = False\ngradient_clip = 1.0\ngc_step = 1\nauto_lr = dict(rule='sqrt')\n\n#\
+    \ we use different weight decay with the official implementation since it results\
+    \ better result\noptimizer = dict(type='AdamW', lr=1e-4, weight_decay=3e-2, eps=1e-10)\n\
+    lr_schedule = 'constant'\nlr_schedule_args = dict(num_warmup_steps=500)\n\nsave_image_epochs\
+    \ = 1\nsave_model_epochs = 1\nsave_model_steps=1000000\n\nsample_posterior = True\n\
+    mixed_precision = 'fp16'\nscale_factor = 0.18215\nema_rate = 0.9999\ntensorboard_mox_interval\
+    \ = 50\nlog_interval = 50\ncfg_scale = 4\nmask_type='null'\nnum_group_tokens=0\n\
+    mask_loss_coef=0.\nload_mask_index=False    # load prepared mask_type index\n\
+    # load model settings\nvae_pretrained = \"/cache/pretrained_models/sd-vae-ft-ema\"\
+    \nload_from = None\nresume_from = dict(checkpoint=None, load_ema=False, resume_optimizer=True,\
+    \ resume_lr_scheduler=True)\nsnr_loss=False\n\n# work dir settings\nwork_dir =\
+    \ '/cache/exps/'\ns3_work_dir = None\n\nseed = 43\n\n/workspace/sd-scripts-work-area/scripts/pixart/PixArt_xl2_img1024_internalms.py\n\
+    # copied and modified https://github.com/PixArt-alpha/PixArt-alpha/blob/master/configs/pixart_config/PixArt_xl2_img1024_internalms.py\n\
+    \n_base_ = ['/PixArt-alpha/configs/PixArt_xl2_internal.py']\ndata_root = '/workspace/pixart-v0-1'\n\
+    image_list_json = ['data_info.json',]\nwork_dir = 'work_dir'\n\ndata = dict(\n\
+    \    type='InternalDataMS', \n    root=data_root, \n    image_list_dir='partition',\n\
+    \    image_list_json=image_list_json, \n    transform='default_train', \n    load_vae_feat=True\n\
+    \    )\nimage_size = 1024\n\n# model setting\nmodel = 'PixArtMS_XL_2'     # model\
+    \ for multi-scale training\nfp32_attention = True\nload_from = None\nvae_pretrained\
+    \ = \"output/pretrained_models/sd-vae-ft-ema\"\nwindow_block_indexes = []\nwindow_size=0\n\
+    use_rel_pos=False\naspect_ratio_type = 'ASPECT_RATIO_1024'         # base aspect\
+    \ ratio [ASPECT_RATIO_512 or ASPECT_RATIO_256]\nmulti_scale = True     # if use\
+    \ multiscale dataset model training\nlewei_scale = 2.0\n\n# pixart-alpha paper\
+    \ high aesthetics 1024 was\n# 16k steps\n# batch size 12×32\n# 2×10−5 LR\n# if\
+    \ the first number is the batch size and second is the node count, then this config\
+    \ matches that.\n# LR matches too.\n\n# pokemon example batch size 38 and has\
+    \ grad checkpointing\n\n# training setting\nnum_workers=10\ntrain_batch_size =\
+    \ 12   # max 14 for PixArt-xL/2 when grad_checkpoint\nnum_epochs = 10 # 3\ngradient_accumulation_steps\
+    \ = 1\ngrad_checkpointing = True\ngradient_clip = 0.01\noptimizer = dict(type='AdamW',\
+    \ lr=2e-5, weight_decay=3e-2, eps=1e-10)\nlr_schedule_args = dict(num_warmup_steps=1000)\n\
+    save_model_epochs=1\nsave_model_steps=2000\n\nlog_interval = 20\neval_sampling_steps\
+    \ = 200\n"
