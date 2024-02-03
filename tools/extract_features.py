@@ -32,13 +32,17 @@ def get_closest_ratio(height: float, width: float, ratios: dict):
     closest_ratio = min(ratios.keys(), key=lambda ratio: abs(float(ratio) - aspect_ratio))
     return ratios[closest_ratio], float(closest_ratio)
 
-def get_output_file_path(img_path, signature):
+def get_img_output_file_path(img_path, signature):
     path_aware_name = '_'.join(img_path.rsplit('/', 2)[-2:]) # change from 'serial-number-of-dir/serial-number-of-image.png' ---> 'serial-number-of-dir_serial-number-of-image.png'
     npy_name = os.path.splitext(path_aware_name)[0] + '.npy'
     output_folder = os.path.join(work_dir, signature)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder, exist_ok=True)
     return os.path.join(output_folder, npy_name)
+
+def get_caption_output_path(caption_path):
+    save_path = os.path.join(t5_save_dir, Path(caption_path).stem + '.npz')
+    return save_path
 
 @DATASETS.register_module()
 class DatasetMS(InternalData):
@@ -70,7 +74,7 @@ class DatasetMS(InternalData):
             for item in meta_data:
                 if item['ratio'] <= 4:
                     sample_path = os.path.join(self.root.replace(self.json_dir_name, self.img_dir_name), item['path'])
-                    output_file_path = get_output_file_path(img_path=sample_path, signature='ms')
+                    output_file_path = get_img_output_file_path(img_path=sample_path, signature='ms')
                     if not os.path.exists(output_file_path):
                         self.meta_data_clean.append(item)
                         self.img_samples.append(sample_path)
@@ -146,9 +150,12 @@ def extract_caption_t5_job(item):
         if isinstance(caption, str):
             caption = [caption]
 
-        save_path = os.path.join(t5_save_dir, Path(item['path']).stem)
-        if os.path.exists(f"{save_path}.npz"):
+        # save_path = os.path.join(t5_save_dir, Path(item['path']).stem)
+        output_path = get_caption_output_path(caption_path=item['path'])
+        if os.path.exists(output_path):
             return
+        # if os.path.exists(f"{save_path}.npz"):
+        #     return
         try:
             mutex.acquire()
             caption_emb, emb_mask = t5.get_text_embeddings(caption)
@@ -157,7 +164,7 @@ def extract_caption_t5_job(item):
                 'caption_feature': caption_emb.float().cpu().data.numpy(),
                 'attention_mask': emb_mask.cpu().data.numpy(),
             }
-            np.savez_compressed(save_path, **emb_dict)
+            np.savez_compressed(output_path, **emb_dict)
         except Exception as e:
             print(e)
 
@@ -165,27 +172,33 @@ def extract_caption_t5_job(item):
 def extract_caption_t5():
     global t5
     global t5_save_dir
-    # global images_extension
-    t5 = T5Embedder(device="cuda", local_cache=True, cache_dir=f'{args.pretrained_models_dir}/t5_ckpts', model_max_length=120)
-    t5_save_dir = args.t5_save_root
+    global mutex
+
     os.makedirs(t5_save_dir, exist_ok=True)
 
     train_data_json = json.load(open(args.json_path, 'r'))
     train_data = train_data_json[args.start_index: args.end_index]
 
-    global mutex
+    completed_paths = set([item['path'] for item in train_data if os.path.exists(get_caption_output_path(caption_path=item['path']))])
+    print(f"Skipping t5 extraction for {len(completed_paths)} items with existing .npz files.")
+
+    # global images_extension
+    t5 = T5Embedder(device="cuda", local_cache=True, cache_dir=f'{args.pretrained_models_dir}/t5_ckpts', model_max_length=120)
+    
     mutex = threading.Lock()
     jobs = Queue()
 
     for item in tqdm(train_data):
-        jobs.put(item)
+        if item['path'] not in completed_paths:
+            jobs.put(item)
+            # remove later
+            print(f"Adding {item['path']} to queue")
 
     for _ in range(20):
         worker = threading.Thread(target=extract_caption_t5_do, args=(jobs,))
         worker.start()
 
     jobs.join()
-
 
 def extract_img_vae_do(q):
     while not q.empty():
@@ -254,7 +267,7 @@ def save_results(results, paths, signature, work_dir):
     new_paths = []
     os.umask(0o000)  # file permission: 666; dir permission: 777
     for res, p in zip(results, paths):
-        output_path = get_output_file_path(img_path=p, 
+        output_path = get_img_output_file_path(img_path=p, 
                                            signature=signature)
         dirname_base = os.path.basename(os.path.dirname(output_path))
         filename = os.path.basename(output_path)
@@ -332,6 +345,7 @@ if __name__ == '__main__':
     device = "cuda" if torch.cuda.is_available() else "cpu"
     image_resize = args.img_size
     work_dir = os.path.abspath(args.vae_save_root)
+    t5_save_dir = args.t5_save_root
 
     if not args.skip_t5:
         # prepare extracted caption t5 features for training
