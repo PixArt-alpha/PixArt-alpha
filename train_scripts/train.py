@@ -156,7 +156,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Process some integers.")
     parser.add_argument("config", type=str, help="config")
     parser.add_argument("--cloud", action='store_true', default=False, help="cloud or local machine")
-    parser.add_argument('--work-dir', help='the dir to save logs and models')
+    parser.add_argument('--work_dir', help='the dir to save logs and models')
     parser.add_argument('--resume-from', help='the dir to resume the training')
     parser.add_argument('--load-from', default=None, help='the dir to load a ckpt for training')
     parser.add_argument('--local-rank', type=int, default=-1)
