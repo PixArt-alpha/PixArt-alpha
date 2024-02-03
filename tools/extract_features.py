@@ -33,7 +33,8 @@ def get_closest_ratio(height: float, width: float, ratios: dict):
     return ratios[closest_ratio], float(closest_ratio)
 
 def get_output_file_path(img_path, signature):
-    base_name = os.path.basename(img_path).split('.')[0] + '.npy'
+    path_aware_name = '_'.join(img_path.rsplit('/', 2)[-2:]) # change from 'serial-number-of-dir/serial-number-of-image.png' ---> 'serial-number-of-dir_serial-number-of-image.png'
+    base_name = path_aware_name.split('.')[0] + '.npy'
     output_folder = os.path.join(work_dir, signature)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder, exist_ok=True)
@@ -70,7 +71,6 @@ class DatasetMS(InternalData):
                 if item['ratio'] <= 4:
                     sample_path = os.path.join(self.root.replace(self.json_dir_name, self.img_dir_name), item['path'])
                     output_file_path = get_output_file_path(img_path=sample_path, signature='ms')
-                    import pdb; pdb.set_trace()
                     if not os.path.exists(output_file_path):
                         self.meta_data_clean.append(item)
                         self.img_samples.append(sample_path)
@@ -78,9 +78,6 @@ class DatasetMS(InternalData):
                         vae_already_processed.append(sample_path)
 
         print(f"VAE processing skipping {len(vae_already_processed)} images already processed")
-            # meta_data_clean = [item for item in meta_data if item['ratio'] <= 4]
-            # self.meta_data_clean.extend(meta_data_clean)
-            # self.img_samples.extend([os.path.join(self.root.replace(self.json_dir_name, self.img_dir_name), item['path']) for item in meta_data_clean])
 
         self.img_samples = self.img_samples[start_index: end_index]
         # scan the dataset for ratio static
@@ -121,7 +118,7 @@ class DatasetMS(InternalData):
                     data_info['img_hw'] = torch.tensor([h, w], dtype=torch.float32)
                     data_info['aspect_ratio'] = closest_ratio
                 # change the path according to your data structure
-                return img, '_'.join(self.img_samples[idx].rsplit('/', 2)[-2:]) # change from 'serial-number-of-dir/serial-number-of-image.png' ---> 'serial-number-of-dir_serial-number-of-image.png'
+                return img, self.img_samples[idx]
             except Exception as e:
                 print(f"Error details: {str(e)}")
                 idx = np.random.randint(len(self))
@@ -257,18 +254,11 @@ def save_results(results, paths, signature, work_dir):
     new_paths = []
     os.umask(0o000)  # file permission: 666; dir permission: 777
     for res, p in zip(results, paths):
-        # file_name = p.split('.')[0] + '.npy'
-        # new_folder = signature
-        # save_folder = os.path.join(work_dir, new_folder)
-        # if os.path.exists(save_folder):
-            # raise FileExistsError(f"{save_folder} exists. BE careful not to overwrite your files. Comment this error raising for overwriting!!")
-        # os.makedirs(save_folder, exist_ok=True)
         output_path = get_output_file_path(img_path=p, 
                                            signature=signature)
         dirname_base = os.path.basename(os.path.dirname(output_path))
         filename = os.path.basename(output_path)
         new_paths.append(os.path.join(dirname_base, filename))
-        print(f"new_paths: {new_paths}")
         np.save(output_path, res)
         timer.log()
     # save paths
