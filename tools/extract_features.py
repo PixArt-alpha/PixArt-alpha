@@ -70,6 +70,7 @@ class DatasetMS(InternalData):
                 if item['ratio'] <= 4:
                     sample_path = os.path.join(self.root.replace(self.json_dir_name, self.img_dir_name), item['path'])
                     output_file_path = get_output_file_path(img_path=sample_path, signature='ms')
+                    import pdb; pdb.set_trace()
                     if not os.path.exists(output_file_path):
                         self.meta_data_clean.append(item)
                         self.img_samples.append(sample_path)
@@ -271,8 +272,8 @@ def save_results(results, paths, signature, work_dir):
         np.save(output_path, res)
         timer.log()
     # save paths
-    with open(os.path.join(work_dir, f"VAE-{signature}.txt"), 'w') as f:
-        f.write('\n'.join(new_paths))
+    with open(os.path.join(work_dir, f"VAE-{signature}.txt"), 'a') as f:
+        f.write('\n'.join(new_paths) + '\n')
 
 
 def inference(vae, dataloader, signature, work_dir):
