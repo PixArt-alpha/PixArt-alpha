@@ -34,11 +34,11 @@ def get_closest_ratio(height: float, width: float, ratios: dict):
 
 def get_output_file_path(img_path, signature):
     path_aware_name = '_'.join(img_path.rsplit('/', 2)[-2:]) # change from 'serial-number-of-dir/serial-number-of-image.png' ---> 'serial-number-of-dir_serial-number-of-image.png'
-    base_name = path_aware_name.split('.')[0] + '.npy'
+    npy_name = os.path.splitext(path_aware_name)[0] + '.npy'
     output_folder = os.path.join(work_dir, signature)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder, exist_ok=True)
-    return os.path.join(output_folder, base_name)
+    return os.path.join(output_folder, npy_name)
 
 @DATASETS.register_module()
 class DatasetMS(InternalData):
