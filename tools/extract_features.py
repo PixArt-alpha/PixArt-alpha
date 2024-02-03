@@ -32,7 +32,7 @@ def get_closest_ratio(height: float, width: float, ratios: dict):
     closest_ratio = min(ratios.keys(), key=lambda ratio: abs(float(ratio) - aspect_ratio))
     return ratios[closest_ratio], float(closest_ratio)
 
-def get_output_file_path(img_path, signature, work_dir):
+def get_output_file_path(img_path, signature):
     base_name = os.path.basename(img_path).split('.')[0] + '.npy'
     output_folder = os.path.join(work_dir, signature)
     if not os.path.exists(output_folder):
@@ -62,12 +62,24 @@ class DatasetMS(InternalData):
             self.ratio_index[float(k)] = []     # used for self.getitem
             self.ratio_nums[float(k)] = 0      # used for batch-sampler
 
+        vae_already_processed = []
         image_list_json = image_list_json if isinstance(image_list_json, list) else [image_list_json]
         for json_file in image_list_json:
             meta_data = self.load_json(os.path.join(self.root, 'partition', json_file))
-            meta_data_clean = [item for item in meta_data if item['ratio'] <= 4]
-            self.meta_data_clean.extend(meta_data_clean)
-            self.img_samples.extend([os.path.join(self.root.replace(self.json_dir_name, self.img_dir_name), item['path']) for item in meta_data_clean])
+            for item in meta_data:
+                if item['ratio'] <= 4:
+                    sample_path = os.path.join(self.root.replace(self.json_dir_name, self.img_dir_name), item['path'])
+                    output_file_path = get_output_file_path(img_path=sample_path, signature='ms')
+                    if not os.path.exists(output_file_path):
+                        self.meta_data_clean.append(item)
+                        self.img_samples.append(sample_path)
+                    else:
+                        vae_already_processed.append(sample_path)
+
+        print(f"VAE processing skipping {len(vae_already_processed)} images already processed")
+            # meta_data_clean = [item for item in meta_data if item['ratio'] <= 4]
+            # self.meta_data_clean.extend(meta_data_clean)
+            # self.img_samples.extend([os.path.join(self.root.replace(self.json_dir_name, self.img_dir_name), item['path']) for item in meta_data_clean])
 
         self.img_samples = self.img_samples[start_index: end_index]
         # scan the dataset for ratio static
@@ -278,9 +290,7 @@ def inference(vae, dataloader, signature, work_dir):
 
 
 def extract_img_vae_multiscale(bs=1):
-
     assert image_resize in [512, 1024]
-    work_dir = os.path.abspath(args.vae_save_root)
     os.umask(0o000)  # file permission: 666; dir permission: 777
     os.makedirs(work_dir, exist_ok=True)
     accelerator = Accelerator(mixed_precision='fp16')
@@ -328,6 +338,7 @@ if __name__ == '__main__':
     args = get_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     image_resize = args.img_size
+    work_dir = os.path.abspath(args.vae_save_root)
 
     # prepare extracted caption t5 features for training
     extract_caption_t5()
