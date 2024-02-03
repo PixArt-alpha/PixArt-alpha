@@ -32,6 +32,12 @@ def get_closest_ratio(height: float, width: float, ratios: dict):
     closest_ratio = min(ratios.keys(), key=lambda ratio: abs(float(ratio) - aspect_ratio))
     return ratios[closest_ratio], float(closest_ratio)
 
+def get_output_file_path(img_path, signature, work_dir):
+    base_name = os.path.basename(img_path).split('.')[0] + '.npy'
+    output_folder = os.path.join(work_dir, signature)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder, exist_ok=True)
+    return os.path.join(output_folder, base_name)
 
 @DATASETS.register_module()
 class DatasetMS(InternalData):
@@ -238,14 +244,20 @@ def save_results(results, paths, signature, work_dir):
     new_paths = []
     os.umask(0o000)  # file permission: 666; dir permission: 777
     for res, p in zip(results, paths):
-        file_name = p.split('.')[0] + '.npy'
-        new_folder = signature
-        save_folder = os.path.join(work_dir, new_folder)
-        if os.path.exists(save_folder):
-            raise FileExistsError(f"{save_folder} exists. BE careful not to overwrite your files. Comment this error raising for overwriting!!")
-        os.makedirs(save_folder, exist_ok=True)
-        new_paths.append(os.path.join(new_folder, file_name))
-        np.save(os.path.join(save_folder, file_name), res)
+        # file_name = p.split('.')[0] + '.npy'
+        # new_folder = signature
+        # save_folder = os.path.join(work_dir, new_folder)
+        # if os.path.exists(save_folder):
+            # raise FileExistsError(f"{save_folder} exists. BE careful not to overwrite your files. Comment this error raising for overwriting!!")
+        # os.makedirs(save_folder, exist_ok=True)
+        output_path = get_output_file_path(img_path=p, 
+                                           signature=signature, 
+                                           work_dir=work_dir)
+        dirname_base = os.path.basename(os.path.dirname(output_path))
+        filename = os.path.basename(output_path)
+        new_paths.append(os.path.join(dirname_base, filename))
+        print(f"new_paths: {new_paths}")
+        np.save(output_path, res)
         timer.log()
     # save paths
     with open(os.path.join(work_dir, f"VAE-{signature}.txt"), 'w') as f:
