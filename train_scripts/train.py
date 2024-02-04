@@ -255,6 +255,22 @@ if __name__ == '__main__':
     model_kwargs={"window_block_indexes": config.window_block_indexes, "window_size": config.window_size,
                   "use_rel_pos": config.use_rel_pos, "lewei_scale": config.lewei_scale, 'config':config,
                   'model_max_length': config.model_max_length}
+    
+    # build dataloader
+    set_data_root(config.data_root)
+    dataset = build_dataset(config.data, resolution=image_size, aspect_ratio_type=config.aspect_ratio_type)
+    
+    if config.multi_scale:
+        batch_sampler = AspectRatioBatchSampler(sampler=RandomSampler(dataset), dataset=dataset,
+                                                batch_size=config.train_batch_size, aspect_ratios=dataset.aspect_ratio, drop_last=True,
+                                                ratio_nums=dataset.ratio_nums, config=config, valid_num=config.valid_num)
+        # used for balanced sampling
+        # batch_sampler = BalancedAspectRatioBatchSampler(sampler=RandomSampler(dataset), dataset=dataset,
+        #                                                 batch_size=config.train_batch_size, aspect_ratios=dataset.aspect_ratio,
+        #                                                 ratio_nums=dataset.ratio_nums)
+        train_dataloader = build_dataloader(dataset, batch_sampler=batch_sampler, num_workers=config.num_workers)
+    else:
+        train_dataloader = build_dataloader(dataset, num_workers=config.num_workers, batch_size=config.train_batch_size, shuffle=True)
 
     # build models
     train_diffusion = IDDPM(str(config.train_sampling_steps), learn_sigma=learn_sigma, pred_sigma=pred_sigma, snr=config.snr_loss)
@@ -284,21 +300,6 @@ if __name__ == '__main__':
     if accelerator.distributed_type == DistributedType.FSDP:
         for m in accelerator._models:
             m.clip_grad_norm_ = types.MethodType(clip_grad_norm_, m)
-
-    # build dataloader
-    set_data_root(config.data_root)
-    dataset = build_dataset(config.data, resolution=image_size, aspect_ratio_type=config.aspect_ratio_type)
-    if config.multi_scale:
-        batch_sampler = AspectRatioBatchSampler(sampler=RandomSampler(dataset), dataset=dataset,
-                                                batch_size=config.train_batch_size, aspect_ratios=dataset.aspect_ratio, drop_last=True,
-                                                ratio_nums=dataset.ratio_nums, config=config, valid_num=config.valid_num)
-        # used for balanced sampling
-        # batch_sampler = BalancedAspectRatioBatchSampler(sampler=RandomSampler(dataset), dataset=dataset,
-        #                                                 batch_size=config.train_batch_size, aspect_ratios=dataset.aspect_ratio,
-        #                                                 ratio_nums=dataset.ratio_nums)
-        train_dataloader = build_dataloader(dataset, batch_sampler=batch_sampler, num_workers=config.num_workers)
-    else:
-        train_dataloader = build_dataloader(dataset, num_workers=config.num_workers, batch_size=config.train_batch_size, shuffle=True)
 
     # build optimizer and lr scheduler
     lr_scale_ratio = 1

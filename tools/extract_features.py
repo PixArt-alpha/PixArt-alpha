@@ -25,24 +25,13 @@ from diffusion.utils.misc import SimpleTimer
 from diffusion.utils.data_sampler import AspectRatioBatchSampler
 from diffusion.data.builder import DATASETS
 from diffusion.data import ASPECT_RATIO_512, ASPECT_RATIO_1024
+from diffusion.data.datasets.utils import get_vae_feature_path, get_t5_feature_path
 
 
 def get_closest_ratio(height: float, width: float, ratios: dict):
     aspect_ratio = height / width
     closest_ratio = min(ratios.keys(), key=lambda ratio: abs(float(ratio) - aspect_ratio))
     return ratios[closest_ratio], float(closest_ratio)
-
-def get_img_output_file_path(img_path, signature):
-    path_aware_name = '_'.join(img_path.rsplit('/', 2)[-2:]) # change from 'serial-number-of-dir/serial-number-of-image.png' ---> 'serial-number-of-dir_serial-number-of-image.png'
-    npy_name = os.path.splitext(path_aware_name)[0] + '.npy'
-    output_folder = os.path.join(work_dir, signature)
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder, exist_ok=True)
-    return os.path.join(output_folder, npy_name)
-
-def get_caption_output_path(caption_path):
-    save_path = os.path.join(t5_save_dir, Path(caption_path).stem + '.npz')
-    return save_path
 
 @DATASETS.register_module()
 class DatasetMS(InternalData):
@@ -74,7 +63,7 @@ class DatasetMS(InternalData):
             for item in meta_data:
                 if item['ratio'] <= 4:
                     sample_path = os.path.join(self.root.replace(self.json_dir_name, self.img_dir_name), item['path'])
-                    output_file_path = get_img_output_file_path(img_path=sample_path, signature='ms')
+                    output_file_path = get_vae_feature_path(vae_save_root=work_dir, image_path=sample_path, signature='ms')
                     if not os.path.exists(output_file_path):
                         self.meta_data_clean.append(item)
                         self.img_samples.append(sample_path)
@@ -150,12 +139,11 @@ def extract_caption_t5_job(item):
         if isinstance(caption, str):
             caption = [caption]
 
-        # save_path = os.path.join(t5_save_dir, Path(item['path']).stem)
-        output_path = get_caption_output_path(caption_path=item['path'])
+        output_path = get_t5_feature_path(t5_save_dir=t5_save_dir, image_path=item['path'])
+        
         if os.path.exists(output_path):
             return
-        # if os.path.exists(f"{save_path}.npz"):
-        #     return
+
         try:
             mutex.acquire()
             caption_emb, emb_mask = t5.get_text_embeddings(caption)
@@ -179,7 +167,7 @@ def extract_caption_t5():
     train_data_json = json.load(open(args.json_path, 'r'))
     train_data = train_data_json[args.start_index: args.end_index]
 
-    completed_paths = set([item['path'] for item in train_data if os.path.exists(get_caption_output_path(caption_path=item['path']))])
+    completed_paths = set([item['path'] for item in train_data if os.path.exists(get_t5_feature_path(t5_save_dir=t5_save_dir, image_path=item['path']))])
     print(f"Skipping t5 extraction for {len(completed_paths)} items with existing .npz files.")
 
     # global images_extension
@@ -267,8 +255,9 @@ def save_results(results, paths, signature, work_dir):
     new_paths = []
     os.umask(0o000)  # file permission: 666; dir permission: 777
     for res, p in zip(results, paths):
-        output_path = get_img_output_file_path(img_path=p, 
-                                           signature=signature)
+        output_path = get_vae_feature_path(vae_save_root=work_dir, 
+                             image_path=p, 
+                             signature=signature)
         dirname_base = os.path.basename(os.path.dirname(output_path))
         filename = os.path.basename(output_path)
         new_paths.append(os.path.join(dirname_base, filename))

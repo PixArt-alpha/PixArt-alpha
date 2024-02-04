@@ -1,4 +1,5 @@
-
+import os
+from pathlib import Path
 
 ASPECT_RATIO_1024 = {
     '0.25': [512., 2048.], '0.26': [512., 1984.], '0.27': [512., 1920.], '0.28': [512., 1856.],
@@ -82,3 +83,14 @@ ASPECT_RATIO_1024_TEST = {
 def get_chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
+
+def get_vae_feature_path(vae_save_root, image_path, signature):
+    path_aware_name = '_'.join(image_path.rsplit('/', 2)[-2:]) # change from 'serial-number-of-dir/serial-number-of-image.png' ---> 'serial-number-of-dir_serial-number-of-image.png'
+    npy_name = os.path.splitext(path_aware_name)[0] + '.npy'
+    output_folder = os.path.join(vae_save_root, signature)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder, exist_ok=True)
+    return os.path.join(output_folder, npy_name)
+
+def get_t5_feature_path(t5_save_dir, image_path):
+    return os.path.join(t5_save_dir, Path(image_path).stem + '.npz')
