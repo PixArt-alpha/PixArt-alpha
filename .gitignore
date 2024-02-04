@@ -163,3 +163,6 @@ output/
 #cache for docker
 docker/cache/gradio
 docker/cache/huggingface
+
+# wandb
+wandb
