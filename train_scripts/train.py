@@ -111,7 +111,7 @@ def train():
                 # avg_loss = sum(loss_buffer) / len(loss_buffer)
                 log_buffer.average()
                 info = f"Step/Epoch [{(epoch-1)*len(train_dataloader)+step+1}/{epoch}][{step + 1}/{len(train_dataloader)}]:total_eta: {eta}, " \
-                       f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, s:({data_info['img_hw'][0][0].item()}, {data_info['img_hw'][0][1].item()}), "
+                       f"epoch_eta:{eta_epoch}, time_all:{t:.3f}, time_data:{t_d:.3f}, lr:{lr:.3e}, s:({model.module.h}, {model.module.w}), "
                 info += ', '.join([f"{k}:{v:.4f}" for k, v in log_buffer.output.items()])
                 logger.info(info)
                 last_tic = time.time()
@@ -181,7 +181,6 @@ def parse_args():
         ),
     )
     parser.add_argument("--loss_report_name", type=str, default="loss")
-
     args = parser.parse_args()
     return args
 
@@ -265,7 +264,6 @@ if __name__ == '__main__':
                         pred_sigma=pred_sigma,
                         **model_kwargs).train()
     logger.info(f"{model.__class__.__name__} Model Parameters: {sum(p.numel() for p in model.parameters()):,}")
-    logger.info(f"T5 max token length: {config.model_max_length}")
     model_ema = deepcopy(model).eval()
 
     if config.load_from is not None:

@@ -8,6 +8,7 @@ from torch.utils.data import Dataset
 from diffusers.utils.torch_utils import randn_tensor
 from torchvision import transforms as T
 from diffusion.data.builder import get_data_path, DATASETS
+from diffusion.utils.logger import get_root_logger
 
 import json
 
@@ -25,6 +26,8 @@ class InternalData(Dataset):
                  patch_size=2,
                  mask_ratio=0.0,
                  load_mask_index=False,
+                 max_length=120,
+                 config=None,
                  **kwargs):
         self.root = get_data_path(root)
         self.transform = transform
@@ -34,6 +37,7 @@ class InternalData(Dataset):
         self.N = int(resolution // (input_size // patch_size))
         self.mask_ratio = mask_ratio
         self.load_mask_index = load_mask_index
+        self.max_lenth = max_length
         self.meta_data_clean = []
         self.img_samples = []
         self.txt_feat_samples = []
@@ -61,21 +65,28 @@ class InternalData(Dataset):
 
         if sample_subset is not None:
             self.sample_subset(sample_subset)  # sample dataset for local debug
+        logger = get_root_logger() if config is None else get_root_logger(os.path.join(config.work_dir, 'train_log.log'))
+        logger.info(f"T5 max token length: {self.max_lenth}")
 
     def getdata(self, index):
         img_path = self.img_samples[index]
         npz_path = self.txt_feat_samples[index]
         npy_path = self.vae_feat_samples[index]
         prompt = self.prompt_samples[index]
-        data_info = {'img_hw': torch.tensor([self.meta_data_clean[index]['height'], self.meta_data_clean[index]['width']], dtype=torch.float32),
-                     'aspect_ratio': torch.tensor(1.)}
+        data_info = {
+            'img_hw': torch.tensor([torch.tensor(self.resolution), torch.tensor(self.resolution)], dtype=torch.float32),
+            'aspect_ratio': torch.tensor(1.)
+        }
 
         img = self.loader(npy_path) if self.load_vae_feat else self.loader(img_path)
         txt_info = np.load(npz_path)
-        txt_fea = torch.from_numpy(txt_info['caption_feature'])
-        attention_mask = torch.ones(1, 1, txt_fea.shape[1])
+        txt_fea = torch.from_numpy(txt_info['caption_feature'])     # 1xTx4096
+        attention_mask = torch.ones(1, 1, txt_fea.shape[1])     # 1x1xT
         if 'attention_mask' in txt_info.keys():
             attention_mask = torch.from_numpy(txt_info['attention_mask'])[None]
+        if txt_fea.shape[1] != self.max_lenth:
+            txt_fea = torch.cat([txt_fea, txt_fea[:, -1:].repeat(1, self.max_lenth-txt_fea.shape[1], 1)], dim=1)
+            attention_mask = torch.cat([attention_mask, torch.zeros(1, 1, self.max_lenth-attention_mask.shape[-1])], dim=-1)
 
         if self.transform:
             img = self.transform(img)

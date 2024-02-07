@@ -5,6 +5,7 @@ import random
 from torchvision.datasets.folder import default_loader
 from diffusion.data.datasets.InternalData import InternalData
 from diffusion.data.builder import get_data_path, DATASETS
+from diffusion.utils.logger import get_root_logger
 import torchvision.transforms as T
 from torchvision.transforms.functional import InterpolationMode
 from diffusion.data.datasets.utils import *
@@ -29,6 +30,8 @@ class InternalDataMS(InternalData):
                  mask_ratio=0.0,
                  mask_type='null',
                  load_mask_index=False,
+                 max_length=120,
+                 config=None,
                  **kwargs):
         self.root = get_data_path(root)
         self.transform = transform
@@ -40,6 +43,7 @@ class InternalDataMS(InternalData):
         self.load_mask_index = load_mask_index
         self.mask_type = mask_type
         self.base_size = int(kwargs['aspect_ratio_type'].split('_')[-1])
+        self.max_lenth = max_length
         self.aspect_ratio = eval(kwargs.pop('aspect_ratio_type'))       # base aspect ratio
         self.meta_data_clean = []
         self.img_samples = []
@@ -80,6 +84,8 @@ class InternalDataMS(InternalData):
             if len(self.ratio_index[closest_ratio]) == 0:
                 self.ratio_index[closest_ratio].append(i)
         # print(self.ratio_nums)
+        logger = get_root_logger() if config is None else get_root_logger(os.path.join(config.work_dir, 'train_log.log'))
+        logger.info(f"T5 max token length: {self.max_lenth}")
 
     def getdata(self, index):
         img_path = self.img_samples[index]

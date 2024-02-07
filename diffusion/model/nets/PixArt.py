@@ -112,9 +112,13 @@ class PixArt(nn.Module):
         t: (N,) tensor of diffusion timesteps
         y: (N, 1, 120, C) tensor of class labels
         """
+        x = x.to(self.dtype)
+        timestep = timestep.to(self.dtype)
+        y = y.to(self.dtype)
+        pos_embed = self.pos_embed.to(self.dtype)
         self.h, self.w = x.shape[-2]//self.patch_size, x.shape[-1]//self.patch_size
-        x = self.x_embedder(x) + self.pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
-        t = self.t_embedder(timestep)  # (N, D)
+        x = self.x_embedder(x) + pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
+        t = self.t_embedder(timestep.to(x.dtype))  # (N, D)
         t0 = self.t_block(t)
         y = self.y_embedder(y, self.training)  # (N, 1, L, D)
         if mask is not None:
@@ -204,6 +208,10 @@ class PixArt(nn.Module):
         # Zero-out output layers:
         nn.init.constant_(self.final_layer.linear.weight, 0)
         nn.init.constant_(self.final_layer.linear.bias, 0)
+
+    @property
+    def dtype(self):
+        return next(self.parameters()).dtype
 
 
 def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False, extra_tokens=0, lewei_scale=1.0, base_size=16):

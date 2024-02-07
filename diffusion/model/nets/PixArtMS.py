@@ -140,9 +140,12 @@ class PixArtMS(PixArt):
         y: (N, 1, 120, C) tensor of class labels
         """
         bs = x.shape[0]
-        c_size, ar = data_info['img_hw'], data_info['aspect_ratio']
+        x = x.to(self.dtype)
+        timestep = timestep.to(self.dtype)
+        y = y.to(self.dtype)
+        c_size, ar = data_info['img_hw'].to(self.dtype), data_info['aspect_ratio'].to(self.dtype)
         self.h, self.w = x.shape[-2]//self.patch_size, x.shape[-1]//self.patch_size
-        pos_embed = torch.from_numpy(get_2d_sincos_pos_embed(self.pos_embed.shape[-1], (self.h, self.w), lewei_scale=self.lewei_scale, base_size=self.base_size)).float().unsqueeze(0).to(x.device)
+        pos_embed = torch.from_numpy(get_2d_sincos_pos_embed(self.pos_embed.shape[-1], (self.h, self.w), lewei_scale=self.lewei_scale, base_size=self.base_size)).unsqueeze(0).to(x.device).to(self.dtype)
         x = self.x_embedder(x) + pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
         t = self.t_embedder(timestep)  # (N, D)
         csize = self.csize_embedder(c_size, bs)  # (N, D)
