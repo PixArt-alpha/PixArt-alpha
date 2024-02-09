@@ -59,6 +59,7 @@ Detailed **inference speed** and **code guidance** can be found in [docs](asset/
 
 ---
 ## 🚩 **New Features/Updates**
+- ✅ Feb. 07, 2023. [train_diffusers.py](train_scripts/train_diffusers.py) can directly train with diffusers model and visualize during training.
 - ✅ Jan. 26, 2024. 💥 All checkpoints of [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha), including 256px checkpoints are all available here [Download Models](#-download-models).
 - ✅ Jan. 19, 2024. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252) ControlNet [app_controlnet.py](app/app_controlnet.py) and [Checkpoint](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main) is released!!!
 - ✅ Jan. 12, 2024. 💥 We release the [SAM-LLaVA-Captions](https://huggingface.co/datasets/PixArt-alpha/SAM-LLaVA-Captions10M) used in PixArt-α training.

@@ -6,6 +6,7 @@ import os
 import pickle
 import shutil
 
+import gc
 import mmcv
 import torch
 import torch.distributed as dist
@@ -295,3 +296,8 @@ def clip_grad_norm_(
             assert p.grad is not None
             p.grad.detach().mul_(clip_coef.to(p.grad.device))
     return total_norm
+
+
+def flush():
+    gc.collect()
+    torch.cuda.empty_cache()

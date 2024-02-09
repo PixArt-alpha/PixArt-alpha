@@ -1,8 +1,9 @@
 import logging
-
+import os
 import torch.distributed as dist
-from mmcv.utils.logging import logger_initialized
+from datetime import datetime
 from .dist_utils import is_local_master
+from mmcv.utils.logging import logger_initialized
 
 
 def get_root_logger(log_file=None, log_level=logging.INFO, name='PixArt'):
@@ -76,3 +77,18 @@ def get_logger(name, log_file=None, log_level=logging.INFO):
     logger_initialized[name] = True
 
     return logger
+
+def rename_file_with_creation_time(file_path):
+    # 获取文件的创建时间
+    creation_time = os.path.getctime(file_path)
+    creation_time_str = datetime.fromtimestamp(creation_time).strftime('%Y-%m-%d_%H-%M-%S')
+
+    # 构建新的文件名
+    dir_name, file_name = os.path.split(file_path)
+    name, ext = os.path.splitext(file_name)
+    new_file_name = f"{name}_{creation_time_str}{ext}"
+    new_file_path = os.path.join(dir_name, new_file_name)
+
+    # 重命名文件
+    os.rename(file_path, new_file_path)
+    print(f"File renamed to: {new_file_path}")

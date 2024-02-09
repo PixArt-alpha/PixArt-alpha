@@ -4,6 +4,7 @@ from pathlib import Path
 current_file_path = Path(__file__).resolve()
 sys.path.insert(0, str(current_file_path.parent.parent))
 import os
+import random
 import torch
 from torchvision.utils import save_image
 from diffusion import IDDPM, DPMS, SASolverSampler
@@ -12,6 +13,7 @@ from tools.download import find_model
 from datetime import datetime
 from typing import List, Union
 import gradio as gr
+import numpy as np
 from gradio.components import Textbox, Image
 from diffusion.model.utils import prepare_prompt_ar, resize_and_crop_tensor
 from diffusion.model.nets import PixArtMS_XL_2, PixArt_XL_2
@@ -19,6 +21,9 @@ from diffusion.model.t5 import T5Embedder
 from torchvision.utils import _log_api_usage_once, make_grid
 from diffusion.data.datasets import ASPECT_RATIO_512_TEST, ASPECT_RATIO_1024_TEST
 from asset.examples import examples
+
+
+MAX_SEED = np.iinfo(np.int32).max
 
 
 def get_args():
@@ -49,9 +54,18 @@ def set_env(seed=0):
         torch.randn(1, 4, args.image_size, args.image_size)
 
 
+def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
+    if randomize_seed:
+        seed = random.randint(0, MAX_SEED)
+    return seed
+
+
 @torch.inference_mode()
-def generate_img(prompt, sampler, sample_steps, scale):
-    os.makedirs('output/demo/online_demo_prompts/', exist_ok=True)
+def generate_img(prompt, sampler, sample_steps, scale, seed=0, randomize_seed=False):
+    seed = int(randomize_seed_fn(seed, randomize_seed))
+    set_env(seed)
+
+    os.makedirs(f'output/demo/online_demo_prompts/', exist_ok=True)
     save_promt_path = f'output/demo/online_demo_prompts/tested_prompts{datetime.now().date()}.txt'
     with open(save_promt_path, 'a') as f:
         f.write(prompt + '\n')
@@ -116,13 +130,12 @@ def generate_img(prompt, sampler, sample_steps, scale):
     torch.cuda.empty_cache()
     samples = resize_and_crop_tensor(samples, custom_hw[0,1], custom_hw[0,0])
     display_model_info = f'Model path: {args.model_path},\nBase image size: {args.image_size}, \nSampling Algo: {sampler}'
-    return ndarr_image(samples, normalize=True, value_range=(-1, 1)), prompt_show, display_model_info
+    return ndarr_image(samples, normalize=True, value_range=(-1, 1)), prompt_show, display_model_info, seed
 
 
 if __name__ == '__main__':
     from diffusion.utils.logger import get_root_logger
     args = get_args()
-    set_env()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger = get_root_logger()
 
@@ -168,34 +181,42 @@ if __name__ == '__main__':
 
     demo = gr.Interface(
         fn=generate_img,
-        inputs=[
-            Textbox(
-                label="Note: If you want to specify a aspect ratio or determine a customized height and width, "
-                "use --ar h:w (or --aspect_ratio h:w) or --hw h:w. If no aspect ratio or hw is given, all setting will be default.",
-                placeholder="Please enter your prompt. \n",
-            ),
-            gr.Radio(
-                choices=["iddpm", "dpm-solver"],
-                label="Sampler",
-                interactive=True,
-                value='dpm-solver',
-            ),
-            gr.Slider(
-                label='Sample Steps', minimum=1, maximum=100, value=20, step=1
-            ),
-            gr.Slider(
-                label='Guidance Scale',
-                minimum=0.1,
-                maximum=30.0,
-                value=4.5,
-                step=0.1,
-            ),
-        ],
-        outputs=[
-            Image(type="numpy", label="Img"),
-            Textbox(label="clean prompt"),
-            Textbox(label="model info"),
-        ],
+        inputs=[Textbox(label="Note: If you want to specify a aspect ratio or determine a customized height and width, "
+                              "use --ar h:w (or --aspect_ratio h:w) or --hw h:w. If no aspect ratio or hw is given, all setting will be default.",
+                        placeholder="Please enter your prompt. \n"),
+                gr.Radio(
+                    choices=["iddpm", "dpm-solver"],
+                    label=f"Sampler",
+                    interactive=True,
+                    value='dpm-solver',
+                ),
+                gr.Slider(
+                    label='Sample Steps',
+                    minimum=1,
+                    maximum=100,
+                    value=14,
+                    step=1
+                ),
+                gr.Slider(
+                    label='Guidance Scale',
+                    minimum=0.1,
+                    maximum=30.0,
+                    value=4.5,
+                    step=0.1
+                ),
+                gr.Slider(
+                    label="Seed",
+                    minimum=0,
+                    maximum=MAX_SEED,
+                    step=1,
+                    value=0,
+                ),
+                gr.Checkbox(label="Randomize seed", value=True),
+                ],
+        outputs=[Image(type="numpy", label="Img"),
+                 Textbox(label="clean prompt"),
+                 Textbox(label="model info"),
+                 gr.Slider(label='seed')],
         title=title,
         description=DESCRIPTION,
         examples=examples,

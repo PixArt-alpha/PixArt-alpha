@@ -64,7 +64,8 @@ def visualize(items, bs, sample_steps, cfg_scale):
         else:
             hw = torch.tensor([[args.image_size, args.image_size]], dtype=torch.float, device=device).repeat(bs, 1)
             ar = torch.tensor([[1.]], device=device).repeat(bs, 1)
-            prompts.append(prepare_prompt_ar(prompt, base_ratios, device=device, show=False)[0].strip())
+            for prompt in chunk:
+                prompts.append(prepare_prompt_ar(prompt, base_ratios, device=device, show=False)[0].strip())
             latent_size_h, latent_size_w = latent_size, latent_size
 
         null_y = model.y_embedder.y_embedding[None].repeat(len(prompts), 1, 1)[:, None]
@@ -142,6 +143,8 @@ if __name__ == '__main__':
     lewei_scale = {512: 1, 1024: 2}     # trick for positional embedding interpolation
     sample_steps_dict = {'iddpm': 100, 'dpm-solver': 20, 'sa-solver': 25}
     sample_steps = args.step if args.step != -1 else sample_steps_dict[args.sampling_algo]
+    weight_dtype = torch.float16
+    print(f"Inference with {weight_dtype}")
 
     # model setting
     if args.image_size == 512:
@@ -156,6 +159,7 @@ if __name__ == '__main__':
     print('Missing keys: ', missing)
     print('Unexpected keys', unexpected)
     model.eval()
+    model.to(weight_dtype)
     base_ratios = eval(f'ASPECT_RATIO_{args.image_size}_TEST')
 
     vae = AutoencoderKL.from_pretrained(args.tokenizer_path).to(device)
