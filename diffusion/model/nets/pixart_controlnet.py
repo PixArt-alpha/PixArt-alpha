@@ -148,7 +148,7 @@ class ControlPixArtHalf(Module):
         else:
             new_key = {}
             for k in state_dict.keys():
-                new_key[k] = re.sub(r"(blocks\.\d+)(.*)", r"\1.base_block\2", k)
+                new_key[k] = str.replace(r"(blocks\.\d+)(.*)", r"\1.base_block\2", k)
             for k, v in new_key.items():
                 if k != v:
                     print(f"replace {k} to {v}")

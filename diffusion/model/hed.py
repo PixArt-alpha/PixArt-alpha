@@ -22,6 +22,7 @@ from diffusers.models import AutoencoderKL
 import os
 
 image_resize = 1024
+rng = np.random.default_rng()
 
 
 class DoubleConvBlock(nn.Module):
@@ -92,7 +93,7 @@ class InternData(Dataset):
                 return data
             except Exception as e:
                 print(f"Error details: {str(e)}")
-                idx = np.random.randint(len(self))
+                idx = rng.integers(len(self))
         raise RuntimeError('Too many bad data.')
 
 class HEDdetector(nn.Module):

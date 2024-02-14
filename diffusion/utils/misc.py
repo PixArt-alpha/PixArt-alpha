@@ -15,6 +15,7 @@ from mmcv.runner import get_dist_info
 from diffusion.utils.logger import get_root_logger
 
 os.environ["MOX_SILENT_MODE"] = "1"  # mute moxing log
+rng = np.random.default_rng()
 
 
 def read_config(file):
@@ -50,7 +51,7 @@ def init_random_seed(seed=None, device='cuda'):
     # some potential bugs. Please refer to
     # https://github.com/open-mmlab/mmdetection/issues/6339
     rank, world_size = get_dist_info()
-    seed = np.random.randint(2 ** 31)
+    seed = rng.integers(2 ** 31)
     if world_size == 1:
         return seed
 
