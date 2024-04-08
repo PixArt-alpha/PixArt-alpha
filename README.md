@@ -166,7 +166,7 @@ For cards with a lot of capacity, such as A100, performance increases significan
 - Python >= 3.9 (Recommend to use [Anaconda](https://www.anaconda.com/download/#linux) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html))
 - [PyTorch >= 1.13.0+cu11.7](https://pytorch.org/)
 ```bash
-conda create -n pixart python==3.9.0
+conda create -n pixart python=3.9
 conda activate pixart
 pip install torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1 --index-url https://download.pytorch.org/whl/cu118
 
