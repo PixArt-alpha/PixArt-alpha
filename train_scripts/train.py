@@ -21,7 +21,7 @@ from diffusion.data.builder import build_dataset, build_dataloader, set_data_roo
 from diffusion.model.builder import build_model
 from diffusion.utils.checkpoint import save_checkpoint, load_checkpoint
 from diffusion.utils.data_sampler import AspectRatioBatchSampler, BalancedAspectRatioBatchSampler
-from diffusion.utils.dist_utils import synchronize, get_world_size, clip_grad_norm_
+from diffusion.utils.dist_utils import get_world_size, clip_grad_norm_
 from diffusion.utils.logger import get_root_logger
 from diffusion.utils.lr_scheduler import build_lr_scheduler
 from diffusion.utils.misc import set_random_seed, read_config, init_random_seed, DebugUnderflowOverflow
@@ -123,9 +123,9 @@ def train():
             global_step += 1
             data_time_start= time.time()
 
-            synchronize()
-            if accelerator.is_main_process:
-                if ((epoch - 1) * len(train_dataloader) + step + 1) % config.save_model_steps == 0:
+            if ((epoch - 1) * len(train_dataloader) + step + 1) % config.save_model_steps == 0:
+                accelerator.wait_for_everyone()
+                if accelerator.is_main_process:
                     os.umask(0o000)
                     save_checkpoint(os.path.join(config.work_dir, 'checkpoints'),
                                     epoch=epoch,
@@ -135,11 +135,10 @@ def train():
                                     optimizer=optimizer,
                                     lr_scheduler=lr_scheduler
                                     )
-            synchronize()
 
-        synchronize()
-        if accelerator.is_main_process:
-            if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
+        if epoch % config.save_model_epochs == 0 or epoch == config.num_epochs:
+            accelerator.wait_for_everyone()
+            if accelerator.is_main_process:
                 os.umask(0o000)
                 save_checkpoint(os.path.join(config.work_dir, 'checkpoints'),
                                 epoch=epoch,
@@ -149,7 +148,6 @@ def train():
                                 optimizer=optimizer,
                                 lr_scheduler=lr_scheduler
                                 )
-        synchronize()
 
 
 def parse_args():
