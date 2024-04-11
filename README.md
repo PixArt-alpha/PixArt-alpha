@@ -337,6 +337,7 @@ And then:
 ```python
 import torch
 from diffusers import PixArtAlphaPipeline, ConsistencyDecoderVAE, AutoencoderKL
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # You can replace the checkpoint id with "PixArt-alpha/PixArt-XL-2-512x512" too.
 pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-XL-2-1024-MS", torch_dtype=torch.float16, use_safetensors=True)
@@ -355,7 +356,9 @@ pipe = PixArtAlphaPipeline.from_pretrained("PixArt-alpha/PixArt-XL-2-1024-MS", t
 # del transformer
 
 # Enable memory optimizations.
-pipe.enable_model_cpu_offload()
+# pipe.enable_model_cpu_offload()
+
+pipe.to(device)
 
 prompt = "A small cactus with a happy face in the Sahara desert."
 image = pipe(prompt).images[0]
