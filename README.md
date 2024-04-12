@@ -50,7 +50,7 @@ Fast training diffusion models with transformers. You can find more visualizatio
 ---
 ## Breaking News 🔥🔥!!
 - (🔥 New) Apr. 12, 2024. 💥 A better version of [PixArt-Σ](https://github.com/PixArt-alpha/PixArt-sigma) training & inference code, checkpoints are all released!!!
-Welcome to collaborate and contribute. Star 🌟us if you think is helpful!!
+Welcome to collaborate and contribute. Star 🌟us if you think it is helpful!!
 
 
 - (🔥 New) Jan. 19, 2024. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252) ControlNet [app_controlnet.py](app/app_controlnet.py) and [Checkpoint](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main) are released!!!
