@@ -7,6 +7,8 @@
 ### <div align="center"> ICLR 2024 Spotlight <div> 
 
 <div align="center">
+  <a href="https://github.com/PixArt-alpha/PixArt-sigma/"><img src="https://img.shields.io/static/v1?label=PixArt-Sigma Code&message=Github&color=blue&logo=github-pages"></a> &ensp;
+
   <a href="https://pixart-alpha.github.io/"><img src="https://img.shields.io/static/v1?label=Project%20Page&message=Github&color=blue&logo=github-pages"></a> &ensp;
   <a href="https://huggingface.co/datasets/PixArt-alpha/SAM-LLaVA-Captions10M"><img src="https://img.shields.io/static/v1?label=SAM-LLaVA&message=HF&color=yellow"></a> &ensp;
   <a href="https://arxiv.org/abs/2310.00426"><img src="https://img.shields.io/static/v1?label=Paper&message=Arxiv:Alpha&color=red&logo=arxiv"></a> &ensp;
@@ -47,11 +49,12 @@ Fast training diffusion models with transformers. You can find more visualizatio
 
 ---
 ## Breaking News 🔥🔥!!
+- (🔥 New) Apr. 12, 2024. 💥 A better version of [PixArt-Σ](https://github.com/PixArt-alpha/PixArt-sigma) training & inference code, checkpoints are all released!!!
+Welcome to collaborate and contribute. Star 🌟us if you think is helpful!!
+
+
 - (🔥 New) Jan. 19, 2024. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252) ControlNet [app_controlnet.py](app/app_controlnet.py) and [Checkpoint](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main) are released!!!
 - (🔥 New) Jan. 16, 2024. 💥 Glad to announce that [PixArt-α](https://arxiv.org/abs/2310.00426) is accepted by ICLR 2024 (Spotlight).
-- (🔥 New) Jan. 11, 2024. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252): We are excited to announce the release of the [PixArt-δ](https://arxiv.org/abs/2401.05252) technical report!!!
-This report offers valuable insights into the training of LCM and ControlNet-like modules in Transformer Models. Along with the report, we have also released all the training and inference code for LCM & ControlNet [in this repository](https://github.com/PixArt-alpha/PixArt-alpha). 
-We encourage you to try them out and warmly welcome any Pull Requests from our users. Your contributions and feedback are highly appreciated!
 - (🔥 New) Dec. 17, 2023. 💥 PixArt supports [ComfyUI](https://github.com/comfyanonymous/ComfyUI#manual-install-windows-linux). Thanks to [@city96](https://github.com/city96/ComfyUI_ExtraModels) with his great work.
 - (🔥 New) Nov. 30, 2023. 💥 PixArt collaborates with [LCMs](https://github.com/luosiallen/latent-consistency-model) team to make the **fastest** [Training & Inference Text-to-Image Generation System](https://github.com/PixArt-alpha/PixArt-alpha).
 Here, [Training code](train_scripts/train_pixart_lcm.py) & [Inference code](scripts/inference_lcm.py) & [Weights](https://huggingface.co/PixArt-alpha/PixArt-LCM-XL-2-1024-MS) & [HF Demo](https://huggingface.co/spaces/PixArt-alpha/PixArt-LCM) [OpenXLab Demo](https://openxlab.org.cn/apps/detail/houshaowei/PixArt-LCM) are all released, we hope users will enjoy them. 
@@ -59,6 +62,9 @@ Detailed **inference speed** and **code guidance** can be found in [docs](asset/
 
 ---
 ## 🚩 **New Features/Updates**
+- ✅ Jan. 11, 2024. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252): We are excited to announce the release of the [PixArt-δ](https://arxiv.org/abs/2401.05252) technical report!!!
+This report offers valuable insights into the training of LCM and ControlNet-like modules in Transformer Models. Along with the report, we have also released all the training and inference code for LCM & ControlNet [in this repository](https://github.com/PixArt-alpha/PixArt-alpha). 
+We encourage you to try them out and warmly welcome any Pull Requests from our users. Your contributions and feedback are highly appreciated!
 - ✅ Feb. 07, 2024. [train_diffusers.py](train_scripts/train_diffusers.py) can directly train with diffusers model and visualize during training.
 - ✅ Jan. 26, 2024. 💥 All checkpoints of [PixArt-α](https://github.com/PixArt-alpha/PixArt-alpha), including 256px checkpoints are all available here [Download Models](#-download-models).
 - ✅ Jan. 19, 2024. 💥 [PixArt-δ](https://arxiv.org/abs/2401.05252) ControlNet [app_controlnet.py](app/app_controlnet.py) and [Checkpoint](https://huggingface.co/PixArt-alpha/PixArt-ControlNet/tree/main) is released!!!
@@ -417,7 +423,7 @@ python tools/extract_features.py --img_size=1024 \
     --dataset_root "data/SA1B/Images/"
 ```
 
-## 💪To-Do List
+## 💪To-Do List (Congratulations🎉)
 
 - [x] Inference code
 - [x] Training code
@@ -438,7 +444,7 @@ python tools/extract_features.py --img_size=1024 \
 - [x] SAM-LLaVA caption dataset
 - [x] ControlNet checkpoint
 - [x] 256px pre-trained models
-- [ ] PixArt-Ω: Next version model with much better ability is training!
+- [x] PixArt-Σ: Next version model with much better ability is training!
 
 # Other Source
 We make a video comparing PixArt with current most powerful Text-to-Image models.
