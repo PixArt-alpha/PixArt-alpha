@@ -88,6 +88,25 @@ running `Pixart` in under 8GB GPU VRAM is available in 🧨 [diffusers](https://
 
 ---
 
+## Contents
+* [Training](#-how-to-train)
+* [Inference](#-how-to-test)
+* [Download Models](#-download-models)
+* [Use diffusers](#1---using-in--diffusers)
+* [Data Processing](#-how-to-extract-t5-and-vae-features)
+* [PixArt-**α** Demo](#3---gradio-with-diffusers--faster-)
+* [PixArt-**α** 8GB VRAM](asset/docs/pixart.md)
+* [PixArt-**δ** (LCM)](asset/docs/pixart_lcm.md)
+* [PixArt-**δ** (ControlNet)](asset/docs/pixart_controlnet.md)
+* [PixArt-**δ** (Dreambooth)](asset/docs/pixart-dreambooth.md)
+* [Acknowledgement](#acknowledgements)
+* [Citation](#bibtex)
+
+
+* [PixArt-**Σ** Releasing](https://github.com/PixArt-alpha/PixArt-sigma)
+
+---
+
 ## 🐱 Abstract
 <b>TL; DR: <font color="red">PixArt-α</font> is a Transformer-based T2I diffusion model whose image generation quality is competitive with state-of-the-art image generators (e.g., Imagen, SDXL, and even Midjourney), and the training speed markedly surpasses existing large-scale T2I models, e.g., PixArt-α only takes 10.8% of Stable Diffusion v1.5's training time (675 vs. 6,250 A100 GPU days).</b>
 
