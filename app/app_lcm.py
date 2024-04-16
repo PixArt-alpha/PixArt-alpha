@@ -183,6 +183,7 @@ def generate(
         prompt=prompt,
         width=width,
         height=height,
+        negative_prompt=negative_prompt,
         guidance_scale=0.,
         num_inference_steps=inference_steps,
         generator=generator,

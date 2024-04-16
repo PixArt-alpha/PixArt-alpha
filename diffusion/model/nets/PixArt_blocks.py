@@ -42,7 +42,7 @@ class MultiHeadCrossAttention(nn.Module):
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(self, x, cond, mask=None):
-        # query/value: img tokens; key: condition; mask: if padding tokens
+        # query: img tokens; key/value: condition; mask: if padding tokens
         B, N, C = x.shape
 
         q = self.q_linear(x).view(1, -1, self.num_heads, self.head_dim)

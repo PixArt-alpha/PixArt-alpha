@@ -206,6 +206,7 @@ def generate(
         prompt=prompt,
         width=width,
         height=height,
+        negative_prompt=negative_prompt,
         guidance_scale=guidance_scale,
         num_inference_steps=num_inference_steps,
         generator=generator,
