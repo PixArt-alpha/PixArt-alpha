@@ -904,7 +904,8 @@ def main():
                         save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
                         accelerator.save_state(save_path)
 
-                        transformer_lora_state_dict = get_peft_model_state_dict(transformer)
+                        unwrapped_transformer = accelerator.unwrap_model(transformer, keep_fp32_wrapper=False)
+                        transformer_lora_state_dict = get_peft_model_state_dict(unwrapped_transformer)
 
                         StableDiffusionPipeline.save_lora_weights(
                             save_directory=save_path,
