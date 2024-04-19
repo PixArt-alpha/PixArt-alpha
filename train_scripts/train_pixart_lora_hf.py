@@ -292,6 +292,20 @@ def parse_args():
         "--use_8bit_adam", action="store_true", help="Whether or not to use 8-bit Adam from bitsandbytes."
     )
     parser.add_argument(
+        "--use_dora",
+        action="store_true",
+        default=False,
+        help="Whether or not to use Dora. For more information, see"
+        " https://huggingface.co/docs/peft/package_reference/lora#peft.LoraConfig.use_dora"
+    )
+    parser.add_argument(
+        "--use_rslora",
+        action="store_true",
+        default=False,
+        help="Whether or not to use RS Lora. For more information, see"
+        " https://huggingface.co/docs/peft/package_reference/lora#peft.LoraConfig.use_rslora"
+    )
+    parser.add_argument(
         "--allow_tf32",
         action="store_true",
         help=(
@@ -512,7 +526,9 @@ def main():
             "linear_1",
             "linear_2",
             # "scale_shift_table",      # not available due to the implementation in huggingface/peft, working on it.
-        ]
+        ],
+        use_dora = args.use_dora,
+        use_rslora = args.use_rslora
     )
 
     # Move transformer, vae and text_encoder to device and cast to weight_dtype
