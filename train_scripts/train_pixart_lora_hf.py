@@ -21,6 +21,7 @@ import os
 import random
 import shutil
 from pathlib import Path
+from typing import List, Union
 
 import datasets
 import numpy as np
@@ -291,6 +292,20 @@ def parse_args():
         "--use_8bit_adam", action="store_true", help="Whether or not to use 8-bit Adam from bitsandbytes."
     )
     parser.add_argument(
+        "--use_dora",
+        action="store_true",
+        default=False,
+        help="Whether or not to use Dora. For more information, see"
+        " https://huggingface.co/docs/peft/package_reference/lora#peft.LoraConfig.use_dora"
+    )
+    parser.add_argument(
+        "--use_rslora",
+        action="store_true",
+        default=False,
+        help="Whether or not to use RS Lora. For more information, see"
+        " https://huggingface.co/docs/peft/package_reference/lora#peft.LoraConfig.use_rslora"
+    )
+    parser.add_argument(
         "--allow_tf32",
         action="store_true",
         help=(
@@ -465,21 +480,6 @@ def main():
     # See Section 3.1. of the paper.
     max_length = 120
 
-    # Load scheduler, tokenizer and models.
-    noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
-    tokenizer = T5Tokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer", revision=args.revision)
-
-    text_encoder = T5EncoderModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder", revision=args.revision)
-
-    vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", revision=args.revision, variant=args.variant)
-
-    transformer = Transformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="transformer", torch_dtype=torch.float16)
-
-    # freeze parameters of models to save more memory
-    transformer.requires_grad_(False)
-    vae.requires_grad_(False)
-    text_encoder.requires_grad_(False)
-
     # For mixed precision training we cast all non-trainable weigths (vae, non-lora text_encoder and non-lora transformer) to half-precision
     # as these weights are only used for inference, keeping weights in full precision is not required.
     weight_dtype = torch.float32
@@ -488,6 +488,23 @@ def main():
     elif accelerator.mixed_precision == "bf16":
         weight_dtype = torch.bfloat16
 
+    # Load scheduler, tokenizer and models.
+    noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler", torch_dtype=weight_dtype)
+    tokenizer = T5Tokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer", revision=args.revision, torch_dtype=weight_dtype)
+
+    text_encoder = T5EncoderModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder", revision=args.revision, torch_dtype=weight_dtype)
+    text_encoder.requires_grad_(False)
+    text_encoder.to(accelerator.device)
+
+    vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", revision=args.revision, variant=args.variant, torch_dtype=weight_dtype)
+    vae.requires_grad_(False)
+    vae.to(accelerator.device)
+
+    transformer = Transformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="transformer", torch_dtype=weight_dtype)
+
+    # freeze parameters of models to save more memory
+    transformer.requires_grad_(False)    
+    
     # Freeze the transformer parameters before adding adapters
     for param in transformer.parameters():
         param.requires_grad_(False)
@@ -509,15 +526,28 @@ def main():
             "linear_1",
             "linear_2",
             # "scale_shift_table",      # not available due to the implementation in huggingface/peft, working on it.
-        ]
+        ],
+        use_dora = args.use_dora,
+        use_rslora = args.use_rslora
     )
 
     # Move transformer, vae and text_encoder to device and cast to weight_dtype
-    transformer.to(accelerator.device, dtype=weight_dtype)
-    vae.to(accelerator.device, dtype=weight_dtype)
-    text_encoder.to(accelerator.device, dtype=weight_dtype)
+    transformer.to(accelerator.device)
+    
+    def cast_training_params(model: Union[torch.nn.Module, List[torch.nn.Module]], dtype=torch.float32):
+        if not isinstance(model, list):
+            model = [model]
+        for m in model:
+            for param in m.parameters():
+                # only upcast trainable parameters into fp32
+                if param.requires_grad:
+                    param.data = param.to(dtype)
 
     transformer = get_peft_model(transformer, lora_config)
+    if args.mixed_precision == "fp16":
+        # only upcast trainable parameters (LoRA) into fp32
+        cast_training_params(transformer, dtype=torch.float32)
+
     transformer.print_trainable_parameters()
 
     # 10. Handle saving and loading of checkpoints
@@ -890,7 +920,8 @@ def main():
                         save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
                         accelerator.save_state(save_path)
 
-                        transformer_lora_state_dict = get_peft_model_state_dict(transformer)
+                        unwrapped_transformer = accelerator.unwrap_model(transformer, keep_fp32_wrapper=False)
+                        transformer_lora_state_dict = get_peft_model_state_dict(unwrapped_transformer)
 
                         StableDiffusionPipeline.save_lora_weights(
                             save_directory=save_path,
@@ -966,6 +997,7 @@ def main():
                 ignore_patterns=["step_*", "epoch_*"],
             )
 
+    
     # Final inference
     # Load previous transformer
     transformer = Transformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder='transformer', torch_dtype=weight_dtype)
@@ -983,9 +1015,8 @@ def main():
     if args.seed is not None:
         generator = generator.manual_seed(args.seed)
     images = []
-    with torch.autocast("cuda", dtype=weight_dtype):
-        for _ in range(args.num_validation_images):
-            images.append(pipeline(args.validation_prompt, num_inference_steps=20, generator=generator).images[0])
+    for _ in range(args.num_validation_images):
+        images.append(pipeline(args.validation_prompt, num_inference_steps=20, generator=generator).images[0])
 
     if accelerator.is_main_process:
         for tracker in accelerator.trackers:
