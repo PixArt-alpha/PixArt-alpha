@@ -54,6 +54,14 @@ check_min_version("0.25.0.dev0")
 
 logger = get_logger(__name__, log_level="INFO")
 
+def cast_training_params(model: Union[torch.nn.Module, List[torch.nn.Module]], dtype=torch.float32):
+    if not isinstance(model, list):
+        model = [model]
+    for m in model:
+        for param in m.parameters():
+            # only upcast trainable parameters into fp32
+            if param.requires_grad:
+                param.data = param.to(dtype)
 
 # TODO: This function should be removed once training scripts are rewritten in PEFT
 def text_encoder_lora_state_dict(text_encoder):
@@ -306,6 +314,16 @@ def parse_args():
         " https://huggingface.co/docs/peft/package_reference/lora#peft.LoraConfig.use_rslora"
     )
     parser.add_argument(
+        "--train_text_encoder",
+        action="store_true",
+        help="Whether or not to also train the text encoder")
+    parser.add_argument(
+        "--text_encoder_lora_rank",
+        type=int,
+        default=4,
+        help=("The dimension of the LoRA update matrices for the text encoder training."),
+    )
+    parser.add_argument(
         "--allow_tf32",
         action="store_true",
         help=(
@@ -495,7 +513,7 @@ def main():
     text_encoder = T5EncoderModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder", revision=args.revision, torch_dtype=weight_dtype)
     text_encoder.requires_grad_(False)
     text_encoder.to(accelerator.device)
-
+    
     vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", revision=args.revision, variant=args.variant, torch_dtype=weight_dtype)
     vae.requires_grad_(False)
     vae.to(accelerator.device)
@@ -508,6 +526,9 @@ def main():
     # Freeze the transformer parameters before adding adapters
     for param in transformer.parameters():
         param.requires_grad_(False)
+        
+    # Move transformer, vae and text_encoder to device and cast to weight_dtype
+    transformer.to(accelerator.device)
 
     lora_config = LoraConfig(
         r=args.rank,
@@ -530,26 +551,34 @@ def main():
         use_dora = args.use_dora,
         use_rslora = args.use_rslora
     )
-
-    # Move transformer, vae and text_encoder to device and cast to weight_dtype
-    transformer.to(accelerator.device)
     
-    def cast_training_params(model: Union[torch.nn.Module, List[torch.nn.Module]], dtype=torch.float32):
-        if not isinstance(model, list):
-            model = [model]
-        for m in model:
-            for param in m.parameters():
-                # only upcast trainable parameters into fp32
-                if param.requires_grad:
-                    param.data = param.to(dtype)
-
     transformer = get_peft_model(transformer, lora_config)
     if args.mixed_precision == "fp16":
         # only upcast trainable parameters (LoRA) into fp32
         cast_training_params(transformer, dtype=torch.float32)
 
+    print("Transformer:")
     transformer.print_trainable_parameters()
 
+    if args.train_text_encoder:
+        # prepare the text_encoder for LoRA
+        lora_config_for_text_encoder = LoraConfig(
+            init_lora_weights="gaussian",
+            r=args.text_encoder_lora_rank,
+            # lora_alpha=args. ...,
+            # the dropout probability of the LoRA layers
+            lora_dropout=0.01,
+            target_modules=["k","q","v","o"]
+        )
+
+        text_encoder=get_peft_model(text_encoder, lora_config_for_text_encoder)
+        if args.mixed_precision == "fp16":
+            # only upcast trainable parameters (LoRA) into fp32
+            cast_training_params(text_encoder, dtype=torch.float32)
+        
+        print("Text Encoder:")
+        text_encoder.print_trainable_parameters()
+        
     # 10. Handle saving and loading of checkpoints
     # `accelerate` 0.16.0 will have better support for customized saving
     if version.parse(accelerate.__version__) >= version.parse("0.16.0"):
@@ -558,9 +587,16 @@ def main():
             if accelerator.is_main_process:
                 transformer_ = accelerator.unwrap_model(transformer)
                 lora_state_dict = get_peft_model_state_dict(transformer_, adapter_name="default")
-                StableDiffusionPipeline.save_lora_weights(os.path.join(output_dir, "transformer_lora"), lora_state_dict)
+
+                text_encoder_ = accelerator.unwrap_model(text_encoder)
+                text_encoder_to_save = get_peft_model_state_dict(text_encoder_)
+
+                StableDiffusionPipeline.save_lora_weights(os.path.join(output_dir, "transformer_lora_weights"), lora_state_dict, 
+                                                          text_encoder_lora_layers=text_encoder_to_save)
+
                 # save weights in peft format to be able to load them back
-                transformer_.save_pretrained(output_dir)
+                transformer_.save_pretrained(os.path.join(output_dir, "transformer"))
+                text_encoder_.save_pretrained(os.path.join(output_dir, "text_encoder"))
 
                 for _, model in enumerate(models):
                     # make sure to pop weight so that corresponding model is not saved again
@@ -570,6 +606,14 @@ def main():
             # load the LoRA into the model
             transformer_ = accelerator.unwrap_model(transformer)
             transformer_.load_adapter(input_dir, "default", is_trainable=True)
+
+            # raulc0399: is seems that this hook is not implemented!!
+            # check https://github.com/huggingface/diffusers/blob/main/examples/text_to_image/train_text_to_image_lora_sdxl.py#L701
+            # todo: load and use transformer and text_encoder + cast training params
+            # if args.mixed_precision == "fp16":
+            #     # only upcast trainable parameters (LoRA) into fp32
+            #     cast_training_params(transformer_, dtype=torch.float32)
+            print("load_model_hook NOT IMPLEMENTED!!!")
 
             for _ in range(len(models)):
                 # pop models so that they are not loaded again
@@ -591,7 +635,12 @@ def main():
         else:
             raise ValueError("xformers is not available. Make sure it is installed correctly")
 
-    lora_layers = filter(lambda p: p.requires_grad, transformer.parameters())
+    params_to_optimize = filter(lambda p: p.requires_grad, transformer.parameters())
+
+    if args.train_text_encoder:
+        params_to_optimize = (
+            params_to_optimize + filter(lambda p: p.requires_grad, text_encoder.parameters())
+        )
 
     # Enable TF32 for faster training on Ampere GPUs,
     # cf https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
@@ -600,6 +649,9 @@ def main():
 
     if args.gradient_checkpointing:
         transformer.enable_gradient_checkpointing()
+        
+        if args.train_text_encoder:
+            text_encoder.gradient_checkpointing_enable()
 
     if args.scale_lr:
         args.learning_rate = args.learning_rate * args.gradient_accumulation_steps * args.train_batch_size * accelerator.num_processes
@@ -616,7 +668,7 @@ def main():
         optimizer_cls = torch.optim.AdamW
 
     optimizer = optimizer_cls(
-        lora_layers,
+        params_to_optimize,
         lr=args.learning_rate,
         betas=(args.adam_beta1, args.adam_beta2),
         weight_decay=args.adam_weight_decay,
@@ -744,7 +796,10 @@ def main():
     )
 
     # Prepare everything with our `accelerator`.
-    transformer, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(transformer, optimizer, train_dataloader, lr_scheduler)
+    if args.train_text_encoder:
+        transformer, optimizer, train_dataloader, lr_scheduler, text_encoder = accelerator.prepare(transformer, optimizer, train_dataloader, lr_scheduler, text_encoder)
+    else:
+        transformer, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(transformer, optimizer, train_dataloader, lr_scheduler)
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
@@ -808,6 +863,9 @@ def main():
 
     for epoch in range(first_epoch, args.num_train_epochs):
         transformer.train()
+        if args.train_text_encoder:
+            text_encoder.train()
+
         train_loss = 0.0
         for step, batch in enumerate(train_dataloader):
             with accelerator.accumulate(transformer):
@@ -884,7 +942,7 @@ def main():
                 # Backpropagate
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
-                    params_to_clip = lora_layers
+                    params_to_clip = params_to_optimize
                     accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
                 optimizer.step()
                 lr_scheduler.step()
@@ -923,9 +981,13 @@ def main():
                         unwrapped_transformer = accelerator.unwrap_model(transformer, keep_fp32_wrapper=False)
                         transformer_lora_state_dict = get_peft_model_state_dict(unwrapped_transformer)
 
+                        text_encoder_ = accelerator.unwrap_model(text_encoder, keep_fp32_wrapper=False)
+                        text_encoder_to_save = get_peft_model_state_dict(text_encoder_)
+
                         StableDiffusionPipeline.save_lora_weights(
-                            save_directory=save_path,
+                            save_directory=os.path.join(save_path, "transformer_lora_weights_checkpoint"),
                             unet_lora_layers=transformer_lora_state_dict,
+                            text_encoder_lora_layers=text_encoder_to_save,
                             safe_serialization=True,
                         )
 
@@ -979,9 +1041,18 @@ def main():
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
         transformer = accelerator.unwrap_model(transformer, keep_fp32_wrapper=False)
-        transformer.save_pretrained(args.output_dir)
+        transformer.save_pretrained(os.path.join(args.output_dir, "transformer"))
         lora_state_dict = get_peft_model_state_dict(transformer)
-        StableDiffusionPipeline.save_lora_weights(os.path.join(args.output_dir, "transformer_lora"), lora_state_dict)
+
+        if args.train_text_encoder:
+            text_encoder_ = accelerator.unwrap_model(text_encoder, keep_fp32_wrapper=False)
+            text_encoder_.save_pretrained(os.path.join(args.output_dir, "text_encoder"))
+            text_encoder_to_save = get_peft_model_state_dict(text_encoder_)
+        else:
+            text_encoder_to_save = None
+
+        StableDiffusionPipeline.save_lora_weights(os.path.join(args.output_dir, "transformer_lora_weights"), lora_state_dict,
+                                                  text_encoder_lora_layers=text_encoder_to_save)
 
         if args.push_to_hub:
             save_model_card(
