@@ -324,6 +324,12 @@ def parse_args():
         help=("The dimension of the LoRA update matrices for the text encoder training."),
     )
     parser.add_argument(
+        "--text_encoder_learning_rate",
+        type=float,
+        default=None,
+        help="learning rate for text encoder trainer, default is same as learning_rate",
+    )
+    parser.add_argument(
         "--allow_tf32",
         action="store_true",
         help=(
@@ -635,13 +641,23 @@ def main():
         else:
             raise ValueError("xformers is not available. Make sure it is installed correctly")
 
-    params_to_optimize = filter(lambda p: p.requires_grad, transformer.parameters())
+    # transformer params to optimize
+    params_to_optimize = list(filter(lambda p: p.requires_grad, transformer.parameters()))
 
     if args.train_text_encoder:
-        params_to_optimize = (
-            params_to_optimize + filter(lambda p: p.requires_grad, text_encoder.parameters())
-        )
-
+        text_encoder_params_to_optimize = list(filter(lambda p: p.requires_grad, text_encoder.parameters()))
+        
+        # transformer and text encoder have the same learning rate
+        if args.text_encoder_learning_rate is None:
+            params_to_optimize = (
+                params_to_optimize + text_encoder_params_to_optimize
+            )
+        else:
+            params_to_optimize = [
+                {"params": params_to_optimize, "lr": args.learning_rate},
+                {"params": text_encoder_params_to_optimize, "lr": args.text_encoder_learning_rate},
+            ]
+    
     # Enable TF32 for faster training on Ampere GPUs,
     # cf https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
     if args.allow_tf32:
@@ -800,7 +816,7 @@ def main():
         transformer, optimizer, train_dataloader, lr_scheduler, text_encoder = accelerator.prepare(transformer, optimizer, train_dataloader, lr_scheduler, text_encoder)
     else:
         transformer, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(transformer, optimizer, train_dataloader, lr_scheduler)
-
+    
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
     if overrode_max_train_steps:
