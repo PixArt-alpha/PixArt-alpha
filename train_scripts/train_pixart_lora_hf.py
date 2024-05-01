@@ -595,15 +595,18 @@ def main():
                 transformer_ = accelerator.unwrap_model(transformer)
                 lora_state_dict = get_peft_model_state_dict(transformer_, adapter_name="default")
 
-                text_encoder_ = accelerator.unwrap_model(text_encoder)
-                text_encoder_to_save = get_peft_model_state_dict(text_encoder_)
+                text_encoder_to_save = None
+                if args.train_text_encoder:
+                    text_encoder_ = accelerator.unwrap_model(text_encoder)
+                    text_encoder_to_save = get_peft_model_state_dict(text_encoder_)
 
                 StableDiffusionPipeline.save_lora_weights(os.path.join(output_dir, "transformer_lora_weights"), lora_state_dict, 
                                                           text_encoder_lora_layers=text_encoder_to_save)
 
                 # save weights in peft format to be able to load them back
                 transformer_.save_pretrained(os.path.join(output_dir, "transformer"))
-                text_encoder_.save_pretrained(os.path.join(output_dir, "text_encoder"))
+                if args.train_text_encoder:
+                    text_encoder_.save_pretrained(os.path.join(output_dir, "text_encoder"))
 
                 for _, model in enumerate(models):
                     # make sure to pop weight so that corresponding model is not saved again
@@ -997,18 +1000,21 @@ def main():
                         save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
                         accelerator.save_state(save_path)
 
-                        unwrapped_transformer = accelerator.unwrap_model(transformer, keep_fp32_wrapper=False)
-                        transformer_lora_state_dict = get_peft_model_state_dict(unwrapped_transformer)
+                        # raulc0399: not needed since they are already saved in save_state hook
+                        # unwrapped_transformer = accelerator.unwrap_model(transformer, keep_fp32_wrapper=False)
+                        # transformer_lora_state_dict = get_peft_model_state_dict(unwrapped_transformer)
 
-                        text_encoder_ = accelerator.unwrap_model(text_encoder, keep_fp32_wrapper=False)
-                        text_encoder_to_save = get_peft_model_state_dict(text_encoder_)
+                        # text_encoder_to_save = None
+                        # if args.train_text_encoder:
+                        #     text_encoder_ = accelerator.unwrap_model(text_encoder, keep_fp32_wrapper=False)
+                        #     text_encoder_to_save = get_peft_model_state_dict(text_encoder_)
 
-                        StableDiffusionPipeline.save_lora_weights(
-                            save_directory=os.path.join(save_path, "transformer_lora_weights_checkpoint"),
-                            unet_lora_layers=transformer_lora_state_dict,
-                            text_encoder_lora_layers=text_encoder_to_save,
-                            safe_serialization=True,
-                        )
+                        # StableDiffusionPipeline.save_lora_weights(
+                        #     save_directory=os.path.join(save_path, "transformer_lora_weights_checkpoint"),
+                        #     unet_lora_layers=transformer_lora_state_dict,
+                        #     text_encoder_lora_layers=text_encoder_to_save,
+                        #     safe_serialization=True,
+                        # )
 
                         logger.info(f"Saved state to {save_path}")
 
