@@ -671,6 +671,10 @@ def main():
         transformer.enable_gradient_checkpointing()
         
         if args.train_text_encoder:
+            # enabling gradient checkpointing for the text encoder will generate the warning:
+            # "UserWarning: None of the inputs have requires_grad=True. Gradients will be None"
+            # more info:
+            # https://github.com/huggingface/transformers/blob/main/src/transformers/modeling_utils.py#L2235
             text_encoder.gradient_checkpointing_enable()
 
     if args.scale_lr:
