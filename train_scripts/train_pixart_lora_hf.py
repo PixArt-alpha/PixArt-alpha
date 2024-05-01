@@ -647,9 +647,11 @@ def main():
 
     # transformer params to optimize
     params_to_optimize = list(filter(lambda p: p.requires_grad, transformer.parameters()))
+    params_to_clip = params_to_optimize
 
     if args.train_text_encoder:
         text_encoder_params_to_optimize = list(filter(lambda p: p.requires_grad, text_encoder.parameters()))
+        params_to_clip = params_to_optimize + text_encoder_params_to_optimize
         
         # transformer and text encoder have the same learning rate
         if args.text_encoder_learning_rate is None:
@@ -972,7 +974,6 @@ def main():
                 # Backpropagate
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
-                    params_to_clip = params_to_optimize
                     accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
                 optimizer.step()
                 lr_scheduler.step()
