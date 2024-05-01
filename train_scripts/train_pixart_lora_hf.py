@@ -877,6 +877,8 @@ def main():
         disable=not accelerator.is_local_main_process,
     )
 
+    models_for_accumulate = [transformer, text_encoder] if args.train_text_encoder else transformer
+
     for epoch in range(first_epoch, args.num_train_epochs):
         transformer.train()
         if args.train_text_encoder:
@@ -884,7 +886,7 @@ def main():
 
         train_loss = 0.0
         for step, batch in enumerate(train_dataloader):
-            with accelerator.accumulate(transformer):
+            with accelerator.accumulate(models_for_accumulate):
                 # Convert images to latent space
                 latents = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
                 latents = latents * vae.config.scaling_factor
