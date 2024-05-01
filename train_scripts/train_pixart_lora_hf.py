@@ -564,7 +564,7 @@ def main():
         # only upcast trainable parameters (LoRA) into fp32
         cast_training_params(transformer, dtype=torch.float32)
 
-    print("Transformer:")
+    accelerator.print("Transformer:")
     transformer.print_trainable_parameters()
 
     if args.train_text_encoder:
@@ -583,7 +583,7 @@ def main():
             # only upcast trainable parameters (LoRA) into fp32
             cast_training_params(text_encoder, dtype=torch.float32)
         
-        print("Text Encoder:")
+        accelerator.print("Text Encoder:")
         text_encoder.print_trainable_parameters()
         
     # 10. Handle saving and loading of checkpoints
@@ -623,7 +623,7 @@ def main():
             # if args.mixed_precision == "fp16":
             #     # only upcast trainable parameters (LoRA) into fp32
             #     cast_training_params(transformer_, dtype=torch.float32)
-            print("load_model_hook NOT IMPLEMENTED!!!")
+            accelerator.print("load_model_hook NOT IMPLEMENTED!!!")
 
             for _ in range(len(models)):
                 # pop models so that they are not loaded again
@@ -847,6 +847,10 @@ def main():
     logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
     logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
     logger.info(f"  Total optimization steps = {args.max_train_steps}")
+
+    if args.train_text_encoder:
+        logger.info(f"  Training text encoder with rank {args.text_encoder_lora_rank}, learing rate {args.text_encoder_learning_rate if args.text_encoder_learning_rate is not None else f"{args.learning_rate} same as transformer"}")
+
     global_step = 0
     first_epoch = 0
 
