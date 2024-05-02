@@ -1124,6 +1124,9 @@ def main():
     pipeline = DiffusionPipeline.from_pretrained(args.pretrained_model_name_or_path, transformer=transformer, text_encoder=text_encoder, vae=vae, torch_dtype=weight_dtype,)
     pipeline = pipeline.to(accelerator.device)
 
+    if args.train_text_encoder:
+        del text_encoder
+
     del transformer
     torch.cuda.empty_cache()
 
