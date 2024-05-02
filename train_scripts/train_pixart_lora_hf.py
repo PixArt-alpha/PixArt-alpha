@@ -321,7 +321,7 @@ def parse_args():
     parser.add_argument(
         "--text_encoder_lora_rank",
         type=int,
-        default=8,
+        default=4,
         help=("The dimension of the LoRA update matrices for the text encoder training."),
     )
     parser.add_argument(
@@ -568,6 +568,14 @@ def main():
     transformer.print_trainable_parameters()
 
     if args.train_text_encoder:
+        if args.gradient_checkpointing:
+            # this needs to be done before adding the LoRA layers
+            # otherwise, enabling gradient checkpointing for the text encoder will generate the warning:
+            # "UserWarning: None of the inputs have requires_grad=True. Gradients will be None"
+            # more info:
+            # https://github.com/huggingface/transformers/blob/main/src/transformers/modeling_utils.py#L2235
+            text_encoder.gradient_checkpointing_enable()
+
         # prepare the text_encoder for LoRA
         lora_config_for_text_encoder = LoraConfig(
             init_lora_weights="gaussian",
@@ -671,13 +679,6 @@ def main():
 
     if args.gradient_checkpointing:
         transformer.enable_gradient_checkpointing()
-        
-        if args.train_text_encoder:
-            # enabling gradient checkpointing for the text encoder will generate the warning:
-            # "UserWarning: None of the inputs have requires_grad=True. Gradients will be None"
-            # more info:
-            # https://github.com/huggingface/transformers/blob/main/src/transformers/modeling_utils.py#L2235
-            text_encoder.gradient_checkpointing_enable()
 
     if args.scale_lr:
         args.learning_rate = args.learning_rate * args.gradient_accumulation_steps * args.train_batch_size * accelerator.num_processes
