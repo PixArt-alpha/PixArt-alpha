@@ -590,6 +590,11 @@ def main():
         if args.mixed_precision == "fp16":
             # only upcast trainable parameters (LoRA) into fp32
             cast_training_params(text_encoder, dtype=torch.float32)
+
+            accelerator.print("\033[91m")
+            accelerator.print("IMPORTANT !! Training the Text Encoder in fp16 might lead to NaNs in step_loss, if it does please use fp32 or bf16 for training the Text Encoder.")
+            accelerator.print(" more info: \n https://github.com/huggingface/transformers/issues/4586#issuecomment-639704855 \n https://github.com/huggingface/transformers/issues/17978#issuecomment-1173761651")
+            accelerator.print("\033[0m")
         
         accelerator.print("Text Encoder:")
         text_encoder.print_trainable_parameters()
