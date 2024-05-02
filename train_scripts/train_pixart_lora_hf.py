@@ -1040,11 +1040,15 @@ def main():
                     f"Running validation... \n Generating {args.num_validation_images} images with prompt:"
                     f" {args.validation_prompt}."
                 )
+
+                text_encoder_for_generation = accelerator.unwrap_model(text_encoder, keep_fp32_wrapper=False) if args.train_text_encoder else text_encoder
+
                 # create pipeline
                 pipeline = DiffusionPipeline.from_pretrained(
                     args.pretrained_model_name_or_path,
                     transformer=accelerator.unwrap_model(transformer, keep_fp32_wrapper=False),
-                    text_encoder=text_encoder, vae=vae,
+                    text_encoder=text_encoder_for_generation,
+                    vae=vae,
                     torch_dtype=weight_dtype,
                 )
                 pipeline = pipeline.to(accelerator.device)
@@ -1110,8 +1114,13 @@ def main():
     # Load previous transformer
     transformer = Transformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder='transformer', torch_dtype=weight_dtype)
     # load lora weight
-    transformer = PeftModel.from_pretrained(transformer, args.output_dir)
-    # Load previous pipeline
+    transformer = PeftModel.from_pretrained(transformer, os.path.join(args.output_dir, "transformer"))
+
+    if args.train_text_encoder:
+        # Load previous text_encoder
+        text_encoder = T5EncoderModel.from_pretrained(args.pretrained_model_name_or_path, subfolder='text_encoder', torch_dtype=weight_dtype)
+        text_encoder = PeftModel.from_pretrained(text_encoder, os.path.join(args.output_dir, "text_encoder"))
+
     pipeline = DiffusionPipeline.from_pretrained(args.pretrained_model_name_or_path, transformer=transformer, text_encoder=text_encoder, vae=vae, torch_dtype=weight_dtype,)
     pipeline = pipeline.to(accelerator.device)
 
