@@ -321,7 +321,7 @@ def parse_args():
     parser.add_argument(
         "--text_encoder_lora_rank",
         type=int,
-        default=4,
+        default=8,
         help=("The dimension of the LoRA update matrices for the text encoder training."),
     )
     parser.add_argument(
