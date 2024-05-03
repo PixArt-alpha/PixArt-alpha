@@ -334,6 +334,12 @@ def parse_args():
         help="learning rate for text encoder trainer, default is same as learning_rate",
     )
     parser.add_argument(
+        "--text_encoder_stop_at_percentage_steps",
+        type=float,
+        default=1.0,
+        help="the percentage of the total training steps at which the training of the text encoder should be halted. 1.0 means train for all steps.",
+    )
+    parser.add_argument(
         "--allow_tf32",
         action="store_true",
         help=(
@@ -571,6 +577,9 @@ def main():
     transformer.print_trainable_parameters()
 
     if args.train_text_encoder:
+        if not 0 < args.text_encoder_stop_at_percentage_steps <= 1:
+            args.text_encoder_stop_at_percentage_steps = 1
+
         if args.gradient_checkpointing:
             # this needs to be done before adding the LoRA layers
             # otherwise, enabling gradient checkpointing for the text encoder will generate the warning:
@@ -863,6 +872,8 @@ def main():
 
     if args.train_text_encoder:
         logger.info(f"  Training text encoder with rank {args.text_encoder_lora_rank}, learing rate {args.text_encoder_learning_rate if args.text_encoder_learning_rate is not None else f"{args.learning_rate} same as transformer"}")
+        if args.text_encoder_stop_at_percentage_steps < 1:
+            logger.info(f"  Stop training text encoder at {args.text_encoder_stop_at_percentage_steps * 100}% of total training steps")
 
     global_step = 0
     first_epoch = 0
@@ -1044,7 +1055,7 @@ def main():
             if global_step >= args.max_train_steps:
                 break
 
-            if args.train_text_encoder and global_step >= args.max_train_steps / 10:
+            if args.train_text_encoder and args.text_encoder_stop_at_percentage_steps < 1 and global_step >= args.max_train_steps * args.text_encoder_stop_at_percentage_steps:
                 accelerator.print("\033[91mFreezing text encoder...")
                 
                 accelerator.print(f"Number of trainable parameters before freeze: {get_trainable_parameters(optimizer):,}")
