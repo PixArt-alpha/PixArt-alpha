@@ -63,6 +63,9 @@ def cast_training_params(model: Union[torch.nn.Module, List[torch.nn.Module]], d
             if param.requires_grad:
                 param.data = param.to(dtype)
 
+def get_trainable_parameters(optimizer: torch.optim.Optimizer) -> int:
+    return sum(sum(p.numel() for p in param_group['params'] if p.requires_grad) for param_group in optimizer.param_groups)
+
 # TODO: This function should be removed once training scripts are rewritten in PEFT
 def text_encoder_lora_state_dict(text_encoder):
     state_dict = {}
@@ -707,6 +710,8 @@ def main():
         eps=args.adam_epsilon,
     )
 
+    accelerator.print(f"Total of trainable parameters: {get_trainable_parameters(optimizer):,}")
+    
     # Get the datasets: you can either provide your own training and evaluation files (see below)
     # or specify a Dataset from the hub (the dataset will be downloaded automatically from the datasets Hub).
 
@@ -1038,6 +1043,21 @@ def main():
 
             if global_step >= args.max_train_steps:
                 break
+
+            if args.train_text_encoder and global_step >= args.max_train_steps / 10:
+                accelerator.print("\033[91mFreezing text encoder...")
+                
+                accelerator.print(f"Number of trainable parameters before freeze: {get_trainable_parameters(optimizer):,}")
+
+                text_encoder.zero_grad()
+                text_encoder.requires_grad_(False)                    
+                args.train_text_encoder = False
+
+                text_encoder = accelerator.unwrap_model(text_encoder, keep_fp32_wrapper=False)
+                text_encoder.save_pretrained(os.path.join(args.output_dir, "text_encoder"))
+
+                accelerator.print(f"Number of trainable parameters after freeze: {get_trainable_parameters(optimizer):,}")
+                accelerator.print("\033[0m")
 
         if accelerator.is_main_process:
             if args.validation_prompt is not None and epoch % args.validation_epochs == 0:
