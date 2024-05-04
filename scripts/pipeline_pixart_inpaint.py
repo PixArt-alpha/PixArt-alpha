@@ -22,8 +22,9 @@ import torch
 import torch.nn.functional as F
 from transformers import T5EncoderModel, T5Tokenizer
 
-from diffusers.image_processor import VaeImageProcessor, PipelineImageInput
+from diffusers.image_processor import PipelineImageInput, PixArtImageProcessor, VaeImageProcessor
 from diffusers.models import AutoencoderKL, Transformer2DModel
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline, ImagePipelineOutput
 from diffusers.schedulers import DPMSolverMultistepScheduler
 from diffusers.utils import (
     BACKENDS_MAPPING,
@@ -34,7 +35,6 @@ from diffusers.utils import (
     replace_example_docstring,
 )
 from diffusers.utils.torch_utils import randn_tensor
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline, ImagePipelineOutput
 
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -137,6 +137,7 @@ ASPECT_RATIO_512_BIN = {
     "4.0": [1024.0, 256.0],
 }
 
+
 # Copied from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion.retrieve_timesteps
 def retrieve_timesteps(
     scheduler,
@@ -181,6 +182,7 @@ def retrieve_timesteps(
         timesteps = scheduler.timesteps
     return timesteps, num_inference_steps
 
+
 # Copied from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img.retrieve_latents
 def retrieve_latents(
     encoder_output: torch.Tensor, generator: Optional[torch.Generator] = None, sample_mode: str = "sample"
@@ -193,6 +195,7 @@ def retrieve_latents(
         return encoder_output.latents
     else:
         raise AttributeError("Could not access latents of provided encoder_output")
+
 
 class PixArtAlphaInpaintPipeline(DiffusionPipeline):
     r"""
@@ -237,12 +240,12 @@ class PixArtAlphaInpaintPipeline(DiffusionPipeline):
     model_cpu_offload_seq = "text_encoder->transformer->vae"
 
     def __init__(
-            self,
-            tokenizer: T5Tokenizer,
-            text_encoder: T5EncoderModel,
-            vae: AutoencoderKL,
-            transformer: Transformer2DModel,
-            scheduler: DPMSolverMultistepScheduler,
+        self,
+        tokenizer: T5Tokenizer,
+        text_encoder: T5EncoderModel,
+        vae: AutoencoderKL,
+        transformer: Transformer2DModel,
+        scheduler: DPMSolverMultistepScheduler,
     ):
         super().__init__()
 
@@ -251,7 +254,7 @@ class PixArtAlphaInpaintPipeline(DiffusionPipeline):
         )
 
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
-        self.image_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor)
+        self.image_processor = PixArtImageProcessor(vae_scale_factor=self.vae_scale_factor)
         self.mask_processor = VaeImageProcessor(
             vae_scale_factor=self.vae_scale_factor, do_normalize=False, do_binarize=True, do_convert_grayscale=True
         )
@@ -267,18 +270,18 @@ class PixArtAlphaInpaintPipeline(DiffusionPipeline):
 
     # Adapted from diffusers.pipelines.deepfloyd_if.pipeline_if.encode_prompt
     def encode_prompt(
-            self,
-            prompt: Union[str, List[str]],
-            do_classifier_free_guidance: bool = True,
-            negative_prompt: str = "",
-            num_images_per_prompt: int = 1,
-            device: Optional[torch.device] = None,
-            prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-            prompt_attention_mask: Optional[torch.FloatTensor] = None,
-            negative_prompt_attention_mask: Optional[torch.FloatTensor] = None,
-            clean_caption: bool = False,
-            **kwargs,
+        self,
+        prompt: Union[str, List[str]],
+        do_classifier_free_guidance: bool = True,
+        negative_prompt: str = "",
+        num_images_per_prompt: int = 1,
+        device: Optional[torch.device] = None,
+        prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_prompt_embeds: Optional[torch.FloatTensor] = None,
+        prompt_attention_mask: Optional[torch.FloatTensor] = None,
+        negative_prompt_attention_mask: Optional[torch.FloatTensor] = None,
+        clean_caption: bool = False,
+        **kwargs,
     ):
         r"""
         Encodes the prompt into text encoder hidden states.
@@ -337,9 +340,9 @@ class PixArtAlphaInpaintPipeline(DiffusionPipeline):
             untruncated_ids = self.tokenizer(prompt, padding="longest", return_tensors="pt").input_ids
 
             if untruncated_ids.shape[-1] >= text_input_ids.shape[-1] and not torch.equal(
-                    text_input_ids, untruncated_ids
+                text_input_ids, untruncated_ids
             ):
-                removed_text = self.tokenizer.batch_decode(untruncated_ids[:, max_length - 1: -1])
+                removed_text = self.tokenizer.batch_decode(untruncated_ids[:, max_length - 1 : -1])
                 logger.warning(
                     "The following part of your input was truncated because CLIP can only handle sequences up to"
                     f" {max_length} tokens: {removed_text}"
@@ -425,22 +428,22 @@ class PixArtAlphaInpaintPipeline(DiffusionPipeline):
         return extra_step_kwargs
 
     def check_inputs(
-            self,
-            prompt,
-            height,
-            width,
-            negative_prompt,
-            callback_steps,
-            prompt_embeds=None,
-            negative_prompt_embeds=None,
-            prompt_attention_mask=None,
-            negative_prompt_attention_mask=None,
+        self,
+        prompt,
+        height,
+        width,
+        negative_prompt,
+        callback_steps,
+        prompt_embeds=None,
+        negative_prompt_embeds=None,
+        prompt_attention_mask=None,
+        negative_prompt_attention_mask=None,
     ):
         if height % 8 != 0 or width % 8 != 0:
             raise ValueError(f"`height` and `width` have to be divisible by 8 but are {height} and {width}.")
 
         if (callback_steps is None) or (
-                callback_steps is not None and (not isinstance(callback_steps, int) or callback_steps <= 0)
+            callback_steps is not None and (not isinstance(callback_steps, int) or callback_steps <= 0)
         ):
             raise ValueError(
                 f"`callback_steps` has to be a positive integer but is {callback_steps} of type"
@@ -635,12 +638,21 @@ class PixArtAlphaInpaintPipeline(DiffusionPipeline):
         return caption.strip()
 
     # Copied from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion.StableDiffusionPipeline.prepare_latents
-    def prepare_latents(self, batch_size, num_channels_latents, height, width, dtype, device, generator, latents=None,
-                        image=None,
-                        timestep=None,
-                        is_strength_max=True,
-                        return_image_latents=True,
-                        ):
+    def prepare_latents(
+        self,
+        batch_size,
+        num_channels_latents,
+        height,
+        width,
+        dtype,
+        device,
+        generator,
+        latents=None,
+        image=None,
+        timestep=None,
+        is_strength_max=True,
+        return_image_latents=True,
+    ):
         shape = (batch_size, num_channels_latents, height // self.vae_scale_factor, width // self.vae_scale_factor)
         if isinstance(generator, list) and len(generator) != batch_size:
             raise ValueError(
@@ -676,38 +688,6 @@ class PixArtAlphaInpaintPipeline(DiffusionPipeline):
         # scale the initial noise by the standard deviation required by the scheduler
         latents = latents * self.scheduler.init_noise_sigma
         return latents, noise, image_latents
-
-    @staticmethod
-    def classify_height_width_bin(height: int, width: int, ratios: dict) -> Tuple[int, int]:
-        """Returns binned height and width."""
-        ar = float(height / width)
-        closest_ratio = min(ratios.keys(), key=lambda ratio: abs(float(ratio) - ar))
-        default_hw = ratios[closest_ratio]
-        return int(default_hw[0]), int(default_hw[1])
-
-    @staticmethod
-    def resize_and_crop_tensor(samples: torch.Tensor, new_width: int, new_height: int) -> torch.Tensor:
-        orig_height, orig_width = samples.shape[2], samples.shape[3]
-
-        # Check if resizing is needed
-        if orig_height != new_height or orig_width != new_width:
-            ratio = max(new_height / orig_height, new_width / orig_width)
-            resized_width = int(orig_width * ratio)
-            resized_height = int(orig_height * ratio)
-
-            # Resize
-            samples = F.interpolate(
-                samples, size=(resized_height, resized_width), mode="bilinear", align_corners=False
-            )
-
-            # Center Crop
-            start_x = (resized_width - new_width) // 2
-            end_x = start_x + new_width
-            start_y = (resized_height - new_height) // 2
-            end_y = start_y + new_height
-            samples = samples[:, :, start_y:end_y, start_x:end_x]
-
-        return samples
 
     def _encode_vae_image(self, image: torch.Tensor, generator: torch.Generator):
         if isinstance(generator, list):
@@ -760,32 +740,32 @@ class PixArtAlphaInpaintPipeline(DiffusionPipeline):
     @torch.no_grad()
     @replace_example_docstring(EXAMPLE_DOC_STRING)
     def __call__(
-            self,
-            prompt: Union[str, List[str]] = None,
-            image: PipelineImageInput = None,
-            mask_image: PipelineImageInput = None,
-            strength: float = 1.0,
-            negative_prompt: str = "",
-            num_inference_steps: int = 20,
-            timesteps: List[int] = None,
-            guidance_scale: float = 4.5,
-            num_images_per_prompt: Optional[int] = 1,
-            height: Optional[int] = None,
-            width: Optional[int] = None,
-            eta: float = 0.0,
-            generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
-            latents: Optional[torch.FloatTensor] = None,
-            prompt_embeds: Optional[torch.FloatTensor] = None,
-            prompt_attention_mask: Optional[torch.FloatTensor] = None,
-            negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_prompt_attention_mask: Optional[torch.FloatTensor] = None,
-            output_type: Optional[str] = "pil",
-            return_dict: bool = True,
-            callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
-            callback_steps: int = 1,
-            clean_caption: bool = True,
-            use_resolution_binning: bool = True,
-            **kwargs,
+        self,
+        prompt: Union[str, List[str]] = None,
+        image: PipelineImageInput = None,
+        mask_image: PipelineImageInput = None,
+        strength: float = 1.0,
+        negative_prompt: str = "",
+        num_inference_steps: int = 20,
+        timesteps: List[int] = None,
+        guidance_scale: float = 4.5,
+        num_images_per_prompt: Optional[int] = 1,
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        eta: float = 0.0,
+        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+        latents: Optional[torch.FloatTensor] = None,
+        prompt_embeds: Optional[torch.FloatTensor] = None,
+        prompt_attention_mask: Optional[torch.FloatTensor] = None,
+        negative_prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_prompt_attention_mask: Optional[torch.FloatTensor] = None,
+        output_type: Optional[str] = "pil",
+        return_dict: bool = True,
+        callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
+        callback_steps: int = 1,
+        clean_caption: bool = True,
+        use_resolution_binning: bool = True,
+        **kwargs,
     ) -> Union[ImagePipelineOutput, Tuple]:
         """
         Function invoked when calling the pipeline for generation.
@@ -887,7 +867,7 @@ class PixArtAlphaInpaintPipeline(DiffusionPipeline):
                 ASPECT_RATIO_1024_BIN if self.transformer.config.sample_size == 128 else ASPECT_RATIO_512_BIN
             )
             orig_height, orig_width = height, width
-            height, width = self.classify_height_width_bin(height, width, ratios=aspect_ratio_bin)
+            height, width = self.image_processor.classify_height_width_bin(height, width, ratios=aspect_ratio_bin)
 
         self.check_inputs(
             prompt,
@@ -1063,7 +1043,7 @@ class PixArtAlphaInpaintPipeline(DiffusionPipeline):
         if not output_type == "latent":
             image = self.vae.decode(latents / self.vae.config.scaling_factor, return_dict=False)[0]
             if use_resolution_binning:
-                image = self.resize_and_crop_tensor(image, orig_width, orig_height)
+                image = self.image_processor.resize_and_crop_tensor(image, orig_width, orig_height)
         else:
             image = latents
 
