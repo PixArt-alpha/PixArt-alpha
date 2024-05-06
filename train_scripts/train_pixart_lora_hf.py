@@ -871,7 +871,8 @@ def main():
     logger.info(f"  Total optimization steps = {args.max_train_steps}")
 
     if args.train_text_encoder:
-        logger.info(f"  Training text encoder with rank {args.text_encoder_lora_rank}, learing rate {args.text_encoder_learning_rate if args.text_encoder_learning_rate is not None else f"{args.learning_rate} same as transformer"}")
+        training_rate_text_encoder = args.text_encoder_learning_rate if args.text_encoder_learning_rate is not None else f"{args.learning_rate} same as transformer"
+        logger.info(f"  Training text encoder with rank {args.text_encoder_lora_rank}, learing rate {training_rate_text_encoder}")
         if args.text_encoder_stop_at_percentage_steps < 1:
             logger.info(f"  Stop training text encoder at {args.text_encoder_stop_at_percentage_steps * 100}% of total training steps")
 
