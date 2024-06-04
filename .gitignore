@@ -163,3 +163,5 @@ output/
 #cache for docker
 docker/cache/gradio
 docker/cache/huggingface
+
+gradio_cached_examples

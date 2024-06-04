@@ -3,7 +3,7 @@ torchaudio
 torchvision
 mmcv==1.7.0
 diffusers[torch]
-timm==0.6.12
+timm
 accelerate
 tensorboard
 tensorboardX
@@ -12,7 +12,7 @@ sentencepiece
 ftfy
 beautifulsoup4
 protobuf==3.20.2
-gradio==4.1.1
+gradio
 yapf==0.40.1
 opencv-python
 bs4
