@@ -11,6 +11,29 @@ ckpt_id = "PixArt-alpha/PixArt-alpha"
 # https://github.com/PixArt-alpha/PixArt-alpha/blob/0f55e922376d8b797edd44d25d0e7464b260dcab/scripts/inference.py#L125
 interpolation_scale = {256: 0.5, 512: 1, 1024: 2}
 
+def convert_controlnet_layers(state_dict, converted_state_dict, args):
+    # Convert ControlNet layers
+    controlnet_state_dict = {}
+    for depth in range(args.copy_blocks_num):
+        # before_proj for first block
+        if depth == 0:
+            controlnet_state_dict[f"controlnet.{depth}.before_proj.weight"] = state_dict.pop(f"controlnet.{depth}.before_proj.weight")
+            controlnet_state_dict[f"controlnet.{depth}.before_proj.bias"] = state_dict.pop(f"controlnet.{depth}.before_proj.bias")
+        
+        # Copy transformer block
+        for k, v in list(converted_state_dict.items()):
+            if k.startswith(f"transformer_blocks.{depth}."):
+                controlnet_state_dict[f"controlnet.{depth}.copied_block.{k[len(f'transformer_blocks.{depth}.'):]}" ] = v
+                del converted_state_dict[k]
+        
+        # after_proj 
+        controlnet_state_dict[f"controlnet.{depth}.after_proj.weight"] = state_dict.pop(f"controlnet.{depth}.after_proj.weight")
+        controlnet_state_dict[f"controlnet.{depth}.after_proj.bias"] = state_dict.pop(f"controlnet.{depth}.after_proj.bias")
+
+    # Save ControlNet layers separately
+    torch.save(controlnet_state_dict, os.path.join(args.dump_path, "controlnet.pt"))
+
+    return controlnet_state_dict
 
 def main(args):
     all_state_dict = torch.load(args.orig_ckpt_path, map_location='cpu')
@@ -150,6 +173,7 @@ def main(args):
         norm_eps=1e-6,
         caption_channels=4096,
     )
+
     transformer.load_state_dict(converted_state_dict, strict=True)
 
     assert transformer.pos_embed.pos_embed is not None
@@ -176,6 +200,12 @@ def main(args):
 
         pipeline.save_pretrained(args.dump_path)
 
+    # Convert ControlNet layers
+    controlnet_state_dict = convert_controlnet_layers(state_dict, converted_state_dict, args)
+    
+    # Save ControlNet layers separately
+    torch.save(controlnet_state_dict, os.path.join(args.dump_path, "controlnet.pt"))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -193,6 +223,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--dump_path", default=None, type=str, required=True, help="Path to the output pipeline.")
     parser.add_argument("--only_transformer", default=True, type=bool, required=True)
+    parser.add_argument("--copy_blocks_num", default=13, type=int, required=False, help="Number of transformer blocks to copy for ControlNet.")
 
     args = parser.parse_args()
     main(args)
