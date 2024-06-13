@@ -166,4 +166,3 @@ docker/cache/huggingface
 
 gradio_cached_examples
 .aider*
-tries
