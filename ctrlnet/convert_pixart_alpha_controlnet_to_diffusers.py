@@ -87,7 +87,6 @@ def main(args):
 
         # The before proj layer
         if depth == 0:
-            print(f"\tAdding before_proj layer for depth 0")
             converted_state_dict[f"controlnet_blocks.{depth}.before_proj.weight"] = state_dict.pop("controlnet.0.before_proj.weight")
             converted_state_dict[f"controlnet_blocks.{depth}.before_proj.bias"] = state_dict.pop("controlnet.0.before_proj.bias")
 

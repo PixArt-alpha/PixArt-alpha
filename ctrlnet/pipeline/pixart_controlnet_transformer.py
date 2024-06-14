@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 from diffusers.models.attention import BasicTransformerBlock
-# from diffusers.configuration_utils import ConfigMixin, register_to_config
+from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.models.modeling_utils import ModelMixin
 
 class PixArtControlNetAdapterBlock(nn.Module):
@@ -57,7 +57,7 @@ class PixArtControlNetAdapterBlock(nn.Module):
         nn.init.zeros_(self.after_proj.weight)
         nn.init.zeros_(self.after_proj.bias)
 
-class PixArtControlNetAdapterModel(ModelMixin):
+class PixArtControlNetAdapterModel(ModelMixin, ConfigMixin):
     # N=13, as specified in the paper https://arxiv.org/html/2401.05252v1/#S4 ControlNet-Transformer
     def __init__(self, num_layers = 13) -> None:
         super().__init__()
