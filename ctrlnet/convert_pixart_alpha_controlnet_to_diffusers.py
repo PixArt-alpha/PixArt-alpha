@@ -4,7 +4,7 @@ import re
 
 import torch
 
-from diffusers import Transformer2DModel
+from pipeline.pixart_controlnet_transformer import PixArtControlNetAdapterModel
 
 def main(args):
     all_state_dict = torch.load(args.orig_ckpt_path, map_location='cpu')
@@ -12,9 +12,9 @@ def main(args):
 
     converted_state_dict = {}
 
+    controlnet_layers_found = 0
     patternForControlnetKeys = re.compile(r"^controlnet\.(\d+)\.")
     for key in state_dict.keys():
-
         match = patternForControlnetKeys.match(key)
         if not match:
             print(f"Skipping key: {key}")
@@ -23,6 +23,8 @@ def main(args):
         print(f"\033[1;34mProcessing key: {key}\033[0m")
         depth = match.group(1)
         print(f"\tDepth: {depth}")
+
+        controlnet_layers_found = max(controlnet_layers_found, int(depth) + 1)
 
         # Transformer blocks.
         converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.scale_shift_table"] = state_dict.pop(
@@ -91,31 +93,14 @@ def main(args):
         converted_state_dict[f"controlnet_blocks.{depth}.after_proj.weight"] = state_dict.pop("controlnet.{depth}.after_proj.weight")
         converted_state_dict[f"controlnet_blocks.{depth}.after_proj.bias"] = state_dict.pop("controlnet.{depth}.after_proj.bias")
 
-    # DiT XL/2
-    transformer = Transformer2DModel(
-        sample_size=args.image_size // 8,
-        num_layers=28,
-        attention_head_dim=72,
-        in_channels=4,
-        out_channels=8,
-        patch_size=2,
-        attention_bias=True,
-        num_attention_heads=16,
-        cross_attention_dim=1152,
-        activation_fn="gelu-approximate",
-        num_embeds_ada_norm=1000,
-        norm_type="ada_norm_single",
-        norm_elementwise_affine=False,
-        norm_eps=1e-6,
-        caption_channels=4096,
-    )
+    controlnet = PixArtControlNetAdapterModel()
+    controlnet.load_state_dict(converted_state_dict, strict=True)
 
-    transformer.load_state_dict(converted_state_dict, strict=True)
+    num_model_params = sum(p.numel() for p in controlnet.parameters())
+    print(f"Total number of controlnet parameters: {num_model_params}")
+    print(f"Controlnet layers found: {controlnet_layers_found}")
 
-    num_model_params = sum(p.numel() for p in transformer.parameters())
-    print(f"Total number of transformer parameters: {num_model_params}")
-
-    transformer.save_pretrained(os.path.join(args.dump_path, "transformer"))
+    controlnet.save_pretrained(os.path.join(args.dump_path, "controlnet"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
