@@ -1,9 +1,27 @@
 import torch
 from torch import nn
 
-from .pixart_transformer_2d import PixArtTransformer2DModel
-from diffusion.model.utils import auto_grad_checkpoint
+from diffusers.pixart_transformer_2d import PixArtTransformer2DModel
 
+class PixArtControlNetAdapterBlock(nn.Module):
+    def __init__(self, block_index, inner_dim):
+        self.block_index = block_index
+        self.hidden_size = inner_dim
+
+        if self.block_index == 0:
+            self.before_proj = nn.Linear(inner_dim, inner_dim)
+            nn.init.zeros_(self.before_proj.weight)
+            nn.init.zeros_(self.before_proj.bias)
+
+        self.after_proj = nn.Linear(inner_dim, inner_dim) 
+        nn.init.zeros_(self.after_proj.weight)
+        nn.init.zeros_(self.after_proj.bias)
+
+class PixArtControlNetAdapterModel(nn.Module):
+    pass
+
+class PixArtControlNetTransformerBlock(nn.Module):
+    pass    
 
 class PixArtControlNetTransformerModel(PixArtTransformer2DModel):
     def __init__(self, *args, blocks_num=13, **kwargs):
@@ -11,21 +29,7 @@ class PixArtControlNetTransformerModel(PixArtTransformer2DModel):
 
         self.blocks_num = blocks_num
         self.transformer_blocks = nn.ModuleList()
-        
-        # Copy first copy_blocks_num transformer blocks for ControlNet
-        for i in range(blocks_num):
-            self.controlnet.append(nn.ModuleList([
-                nn.Linear(self.inner_dim, self.inner_dim),  # before_proj
-                deepcopy(self.transformer_blocks[i]),       # copied_block 
-                nn.Linear(self.inner_dim, self.inner_dim)   # after_proj
-            ]))
-            
-            # Zero init before/after proj
-            nn.init.zeros_(self.controlnet[i][0].weight)
-            nn.init.zeros_(self.controlnet[i][0].bias)
-            nn.init.zeros_(self.controlnet[i][2].weight) 
-            nn.init.zeros_(self.controlnet[i][2].bias)
-
+    
     def forward(self, x, timestep, y, mask=None, data_info=None, c=None, **kwargs):
         if c is not None:
             c = c.to(self.dtype)

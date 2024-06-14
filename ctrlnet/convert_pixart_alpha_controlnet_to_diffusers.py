@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 
 import torch
 
@@ -11,9 +12,20 @@ def main(args):
 
     converted_state_dict = {}
 
-    for depth in range(28):
+    patternForControlnetKeys = re.compile(r"^controlnet\.(\d+)\.")
+    for key in state_dict.keys():
+
+        match = patternForControlnetKeys.match(key)
+        if not match:
+            print(f"Skipping key: {key}")
+            continue
+        
+        print(f"\033[1;34mProcessing key: {key}\033[0m")
+        depth = match.group(1)
+        print(f"\tDepth: {depth}")
+
         # Transformer blocks.
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.scale_shift_table"] = state_dict.pop(
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.scale_shift_table"] = state_dict.pop(
             f"controlnet.{depth}.copied_block.scale_shift_table"
         )
 
@@ -22,31 +34,31 @@ def main(args):
         # Self attention.
         q, k, v = torch.chunk(state_dict.pop(f"controlnet.{depth}.copied_block.attn.qkv.weight"), 3, dim=0)
         q_bias, k_bias, v_bias = torch.chunk(state_dict.pop(f"controlnet.{depth}.copied_block.attn.qkv.bias"), 3, dim=0)
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn1.to_q.weight"] = q
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn1.to_q.bias"] = q_bias
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn1.to_k.weight"] = k
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn1.to_k.bias"] = k_bias
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn1.to_v.weight"] = v
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn1.to_v.bias"] = v_bias
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn1.to_q.weight"] = q
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn1.to_q.bias"] = q_bias
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn1.to_k.weight"] = k
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn1.to_k.bias"] = k_bias
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn1.to_v.weight"] = v
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn1.to_v.bias"] = v_bias
         # Projection.
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn1.to_out.0.weight"] = state_dict.pop(
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn1.to_out.0.weight"] = state_dict.pop(
             f"controlnet.{depth}.copied_block.attn.proj.weight"
         )
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn1.to_out.0.bias"] = state_dict.pop(
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn1.to_out.0.bias"] = state_dict.pop(
             f"controlnet.{depth}.copied_block.attn.proj.bias"
         )
 
         # Feed-forward.
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.ff.net.0.proj.weight"] = state_dict.pop(
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.ff.net.0.proj.weight"] = state_dict.pop(
             f"controlnet.{depth}.copied_block.mlp.fc1.weight"
         )
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.ff.net.0.proj.bias"] = state_dict.pop(
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.ff.net.0.proj.bias"] = state_dict.pop(
             f"controlnet.{depth}.copied_block.mlp.fc1.bias"
         )
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.ff.net.2.weight"] = state_dict.pop(
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.ff.net.2.weight"] = state_dict.pop(
             f"controlnet.{depth}.copied_block.mlp.fc2.weight"
         )
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.ff.net.2.bias"] = state_dict.pop(
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.ff.net.2.bias"] = state_dict.pop(
             f"controlnet.{depth}.copied_block.mlp.fc2.bias"
         )
 
@@ -56,19 +68,28 @@ def main(args):
         k, v = torch.chunk(state_dict.pop(f"controlnet.{depth}.copied_block.cross_attn.kv_linear.weight"), 2, dim=0)
         k_bias, v_bias = torch.chunk(state_dict.pop(f"controlnet.{depth}.copied_block.cross_attn.kv_linear.bias"), 2, dim=0)
 
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn2.to_q.weight"] = q
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn2.to_q.bias"] = q_bias
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn2.to_k.weight"] = k
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn2.to_k.bias"] = k_bias
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn2.to_v.weight"] = v
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn2.to_v.bias"] = v_bias
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn2.to_q.weight"] = q
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn2.to_q.bias"] = q_bias
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn2.to_k.weight"] = k
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn2.to_k.bias"] = k_bias
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn2.to_v.weight"] = v
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn2.to_v.bias"] = v_bias
 
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn2.to_out.0.weight"] = state_dict.pop(
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn2.to_out.0.weight"] = state_dict.pop(
             f"controlnet.{depth}.copied_block.cross_attn.proj.weight"
         )
-        converted_state_dict[f"controlnet_transformer_blocks.{depth}.attn2.to_out.0.bias"] = state_dict.pop(
+        converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.attn2.to_out.0.bias"] = state_dict.pop(
             f"controlnet.{depth}.copied_block.cross_attn.proj.bias"
         )
+
+        # The before proj layer
+        if depth == 0:
+            converted_state_dict[f"controlnet_blocks.{depth}.before_proj.weight"] = state_dict.pop("controlnet.0.before_proj.weight")
+            converted_state_dict[f"controlnet_blocks.{depth}.before_proj.bias"] = state_dict.pop("controlnet.0.before_proj.bias")
+
+        # The after proj layer
+        converted_state_dict[f"controlnet_blocks.{depth}.after_proj.weight"] = state_dict.pop("controlnet.{depth}.after_proj.weight")
+        converted_state_dict[f"controlnet_blocks.{depth}.after_proj.bias"] = state_dict.pop("controlnet.{depth}.after_proj.bias")
 
     # DiT XL/2
     transformer = Transformer2DModel(
