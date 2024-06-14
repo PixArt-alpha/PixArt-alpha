@@ -3,9 +3,13 @@ from typing import Any, Dict, Optional
 import torch
 from torch import nn
 
+import copy
+
 from diffusers.models.attention import BasicTransformerBlock
+from diffusers.models.transformers.pixart_transformer_2d import PixArtTransformer2DModel
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.models.modeling_utils import ModelMixin
+from diffusers.models.modeling_outputs import Transformer2DModelOutput
 
 class PixArtControlNetAdapterBlock(nn.Module):
     def __init__(
@@ -62,6 +66,8 @@ class PixArtControlNetAdapterModel(ModelMixin, ConfigMixin):
     def __init__(self, num_layers = 13) -> None:
         super().__init__()
 
+        self.num_layers = num_layers
+
         self.controlnet_blocks = nn.ModuleList(
             [
                 PixArtControlNetAdapterBlock(block_index=i)
@@ -69,50 +75,142 @@ class PixArtControlNetAdapterModel(ModelMixin, ConfigMixin):
             ]
         )
 
+    def from_transformer(self, transformer: PixArtTransformer2DModel) -> None:
+        # copied the specified number of blocks from the transformer
+        for depth in range(self.num_layers):
+            self.controlnet_block[depth].transformer_block = copy.deepcopy(transformer.transformer_blocks[depth])
+            
 class PixArtControlNetTransformerModel(nn.Module):
-    def __init__(self, *args, blocks_num=13, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+            self, 
+            transformer: PixArtTransformer2DModel,
+            controlnet: PixArtControlNetAdapterModel,
+            blocks_num=13,
+            init_from_transformer=True
+    ):
+        super().__init__()
 
         self.blocks_num = blocks_num
-        self.transformer_blocks = nn.ModuleList()
-    
-    def forward(self, x, timestep, y, mask=None, data_info=None, c=None, **kwargs):
-        if c is not None:
-            c = c.to(self.dtype)
-            c = self.forward_c(c)
-
-        x = x.to(self.dtype)
-        timestep = timestep.to(self.dtype)
-        y = y.to(self.dtype)
-
-        x = self.pos_embed(x)
-        t = self.adaln_single.emb.timestep_embedder(timestep)
-        t0 = self.adaln_single.linear(t)
-        y = self.caption_projection(y)
-
-        x = auto_grad_checkpoint(self.transformer_blocks[0], x, None, y, None, t0, **kwargs)
-
-        if c is not None:
-            for index in range(1, self.copy_blocks_num + 1):
-                before_proj, copied_block, after_proj = self.controlnet[index - 1]
-                
-                if index == 1:
-                    c = before_proj(c) 
-                
-                c = auto_grad_checkpoint(copied_block, x + c, None, y, None, t0, **kwargs)
-                c_skip = after_proj(c)
-                x = auto_grad_checkpoint(self.transformer_blocks[index], x + c_skip, None, y, None, t0, **kwargs)
         
-            for index in range(self.copy_blocks_num + 1, len(self.transformer_blocks)):
-                x = auto_grad_checkpoint(self.transformer_blocks[index], x, None, y, None, t0, **kwargs)
-        else:
-            for index in range(1, len(self.transformer_blocks)):
-                x = auto_grad_checkpoint(self.transformer_blocks[index], x, None, y, None, t0, **kwargs)
+        if init_from_transformer:
+            # copies the specified number of blocks from the transformer
+            controlnet.from_transformer(transformer, self.blocks_num)
+    
+    def _set_gradient_checkpointing(self, module, value=False):
+        if hasattr(module, "gradient_checkpointing"):
+            module.gradient_checkpointing = value
 
-        x = self.norm_out(x)
-        shift, scale = self.scale_shift_table.chunk(2, dim=1)
-        x = x * (1 + scale.to(x.device)) + shift.to(x.device)
-        x = self.proj_out(x)
-        x = x.squeeze(1)
-        x = x.reshape(shape=(-1, self.out_channels, self.height, self.width))
-        return x
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        encoder_hidden_states: Optional[torch.Tensor] = None,
+        timestep: Optional[torch.LongTensor] = None,
+        added_cond_kwargs: Dict[str, torch.Tensor] = None,
+        cross_attention_kwargs: Dict[str, Any] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        encoder_attention_mask: Optional[torch.Tensor] = None,
+        return_dict: bool = True,
+    ):
+      
+        if self.use_additional_conditions and added_cond_kwargs is None:
+            raise ValueError("`added_cond_kwargs` cannot be None when using additional conditions for `adaln_single`.")
+
+        # ensure attention_mask is a bias, and give it a singleton query_tokens dimension.
+        #   we may have done this conversion already, e.g. if we came here via UNet2DConditionModel#forward.
+        #   we can tell by counting dims; if ndim == 2: it's a mask rather than a bias.
+        # expects mask of shape:
+        #   [batch, key_tokens]
+        # adds singleton query_tokens dimension:
+        #   [batch,                    1, key_tokens]
+        # this helps to broadcast it as a bias over attention scores, which will be in one of the following shapes:
+        #   [batch,  heads, query_tokens, key_tokens] (e.g. torch sdp attn)
+        #   [batch * heads, query_tokens, key_tokens] (e.g. xformers or classic attn)
+        if attention_mask is not None and attention_mask.ndim == 2:
+            # assume that mask is expressed as:
+            #   (1 = keep,      0 = discard)
+            # convert mask into a bias that can be added to attention scores:
+            #       (keep = +0,     discard = -10000.0)
+            attention_mask = (1 - attention_mask.to(hidden_states.dtype)) * -10000.0
+            attention_mask = attention_mask.unsqueeze(1)
+
+        # convert encoder_attention_mask to a bias the same way we do for attention_mask
+        if encoder_attention_mask is not None and encoder_attention_mask.ndim == 2:
+            encoder_attention_mask = (1 - encoder_attention_mask.to(hidden_states.dtype)) * -10000.0
+            encoder_attention_mask = encoder_attention_mask.unsqueeze(1)
+
+        # 1. Input
+        batch_size = hidden_states.shape[0]
+        height, width = (
+            hidden_states.shape[-2] // self.config.patch_size,
+            hidden_states.shape[-1] // self.config.patch_size,
+        )
+        hidden_states = self.pos_embed(hidden_states)
+
+        timestep, embedded_timestep = self.adaln_single(
+            timestep, added_cond_kwargs, batch_size=batch_size, hidden_dtype=hidden_states.dtype
+        )
+
+        if self.caption_projection is not None:
+            encoder_hidden_states = self.caption_projection(encoder_hidden_states)
+            encoder_hidden_states = encoder_hidden_states.view(batch_size, -1, hidden_states.shape[-1])
+
+        # 2. Blocks
+        for block in self.transformer_blocks:
+            if self.training and self.gradient_checkpointing:
+
+                def create_custom_forward(module, return_dict=None):
+                    def custom_forward(*inputs):
+                        if return_dict is not None:
+                            return module(*inputs, return_dict=return_dict)
+                        else:
+                            return module(*inputs)
+
+                    return custom_forward
+
+                ckpt_kwargs: Dict[str, Any] = {"use_reentrant": False} if is_torch_version(">=", "1.11.0") else {}
+                hidden_states = torch.utils.checkpoint.checkpoint(
+                    create_custom_forward(block),
+                    hidden_states,
+                    attention_mask,
+                    encoder_hidden_states,
+                    encoder_attention_mask,
+                    timestep,
+                    cross_attention_kwargs,
+                    None,
+                    **ckpt_kwargs,
+                )
+            else:
+                hidden_states = block(
+                    hidden_states,
+                    attention_mask=attention_mask,
+                    encoder_hidden_states=encoder_hidden_states,
+                    encoder_attention_mask=encoder_attention_mask,
+                    timestep=timestep,
+                    cross_attention_kwargs=cross_attention_kwargs,
+                    class_labels=None,
+                )
+
+        # 3. Output
+        shift, scale = (
+            self.scale_shift_table[None] + embedded_timestep[:, None].to(self.scale_shift_table.device)
+        ).chunk(2, dim=1)
+        hidden_states = self.norm_out(hidden_states)
+        # Modulation
+        hidden_states = hidden_states * (1 + scale.to(hidden_states.device)) + shift.to(hidden_states.device)
+        hidden_states = self.proj_out(hidden_states)
+        hidden_states = hidden_states.squeeze(1)
+
+        # unpatchify
+        hidden_states = hidden_states.reshape(
+            shape=(-1, height, width, self.config.patch_size, self.config.patch_size, self.out_channels)
+        )
+        hidden_states = torch.einsum("nhwpqc->nchpwq", hidden_states)
+        output = hidden_states.reshape(
+            shape=(-1, self.out_channels, height * self.config.patch_size, width * self.config.patch_size)
+        )
+
+        if not return_dict:
+            return (output,)
+
+        return Transformer2DModelOutput(sample=output)
+
