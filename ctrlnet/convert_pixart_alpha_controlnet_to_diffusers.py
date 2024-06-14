@@ -17,15 +17,16 @@ def main(args):
     for key in state_dict.keys():
         match = patternForControlnetKeys.match(key)
         if not match:
-            print(f"Skipping key: {key}")
             continue
         
-        print(f"\033[1;34mProcessing key: {key}\033[0m")
-        depth = match.group(1)
-        print(f"\tDepth: {depth}")
+        depth = int(match.group(1))
+        
+        controlnet_layers_found = max(controlnet_layers_found, depth + 1)
 
-        controlnet_layers_found = max(controlnet_layers_found, int(depth) + 1)
+    print(f"Controlnet layers found: {controlnet_layers_found}")
 
+    # map new dict
+    for depth in range(controlnet_layers_found):
         # Transformer blocks.
         converted_state_dict[f"controlnet_blocks.{depth}.transformer_block.scale_shift_table"] = state_dict.pop(
             f"controlnet.{depth}.copied_block.scale_shift_table"
@@ -86,20 +87,20 @@ def main(args):
 
         # The before proj layer
         if depth == 0:
+            print(f"\tAdding before_proj layer for depth 0")
             converted_state_dict[f"controlnet_blocks.{depth}.before_proj.weight"] = state_dict.pop("controlnet.0.before_proj.weight")
             converted_state_dict[f"controlnet_blocks.{depth}.before_proj.bias"] = state_dict.pop("controlnet.0.before_proj.bias")
 
         # The after proj layer
-        converted_state_dict[f"controlnet_blocks.{depth}.after_proj.weight"] = state_dict.pop("controlnet.{depth}.after_proj.weight")
-        converted_state_dict[f"controlnet_blocks.{depth}.after_proj.bias"] = state_dict.pop("controlnet.{depth}.after_proj.bias")
+        converted_state_dict[f"controlnet_blocks.{depth}.after_proj.weight"] = state_dict.pop(f"controlnet.{depth}.after_proj.weight")
+        converted_state_dict[f"controlnet_blocks.{depth}.after_proj.bias"] = state_dict.pop(f"controlnet.{depth}.after_proj.bias")
 
     controlnet = PixArtControlNetAdapterModel()
     controlnet.load_state_dict(converted_state_dict, strict=True)
 
     num_model_params = sum(p.numel() for p in controlnet.parameters())
     print(f"Total number of controlnet parameters: {num_model_params}")
-    print(f"Controlnet layers found: {controlnet_layers_found}")
-
+    
     controlnet.save_pretrained(os.path.join(args.dump_path, "controlnet"))
 
 if __name__ == "__main__":

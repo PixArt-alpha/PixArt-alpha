@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 from diffusers.models.attention import BasicTransformerBlock
-from diffusers.configuration_utils import ConfigMixing, register_to_config
+# from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.models.modeling_utils import ModelMixin
 
 class PixArtControlNetAdapterBlock(nn.Module):
