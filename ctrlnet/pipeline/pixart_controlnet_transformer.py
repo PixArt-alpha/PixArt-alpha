@@ -110,7 +110,7 @@ class PixArtControlNetAdapterModel(ModelMixin, ConfigMixin):
         for depth in range(self.num_layers):
             self.controlnet_block[depth].transformer_block = copy.deepcopy(transformer.transformer_blocks[depth])
             
-class PixArtControlNetTransformerModel(ModelMixin):
+class PixArtControlNetTransformerModel(nn.Module):
     def __init__(
             self, 
             transformer: PixArtTransformer2DModel,
