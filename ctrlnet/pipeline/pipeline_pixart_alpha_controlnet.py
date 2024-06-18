@@ -168,6 +168,15 @@ ASPECT_RATIO_256_BIN = {
     "4.0": [512.0, 128.0],
 }
 
+def get_closest_hw(width, height, image_size):
+    if image_size == 1024:
+        aspect_ratio_bin = ASPECT_RATIO_1024_BIN
+    elif image_size == 512:
+        aspect_ratio_bin = ASPECT_RATIO_512_BIN
+    else:
+        raise ValueError("Invalid image size")
+    
+    height, width = PixArtImageProcessor.classify_height_width_bin(height, width, ratios=aspect_ratio_bin)
 
 # Copied from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion.retrieve_timesteps
 def retrieve_timesteps(
