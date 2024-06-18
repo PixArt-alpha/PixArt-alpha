@@ -21,7 +21,7 @@ from typing import Callable, List, Optional, Tuple, Union
 import torch
 from transformers import T5EncoderModel, T5Tokenizer
 
-from diffusers.image_processor import PixArtImageProcessor, PipelineImageInput
+from diffusers.image_processor import PixArtImageProcessor, PipelineImageInput, VaeImageProcessor
 from diffusers.models import AutoencoderKL, PixArtTransformer2DModel
 from diffusers.schedulers import DPMSolverMultistepScheduler
 from diffusers.utils import ( 
@@ -788,7 +788,9 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
         prompt_attention_mask: Optional[torch.Tensor] = None,
         negative_prompt_embeds: Optional[torch.Tensor] = None,
         negative_prompt_attention_mask: Optional[torch.Tensor] = None,
-        # controlnet_conditioning_scale: Union[float, List[float]] = 1.0,
+        # rc todo: controlnet_conditioning_scale: Union[float, List[float]] = 1.0,
+        # rc todo: control_guidance_start = 0.0,
+        # rc todo: control_guidance_end = 1.0,
         output_type: Optional[str] = "pil",
         return_dict: bool = True,
         callback: Optional[Callable[[int, int, torch.Tensor], None]] = None,
@@ -1028,6 +1030,8 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
                     encoder_hidden_states=prompt_embeds,
                     encoder_attention_mask=prompt_attention_mask,
                     timestep=current_timestep,
+                    controlnet_cond=image_latents,
+                    # rc todo: controlnet_conditioning_scale=1.0,
                     added_cond_kwargs=added_cond_kwargs,
                     return_dict=False,
                 )[0]
