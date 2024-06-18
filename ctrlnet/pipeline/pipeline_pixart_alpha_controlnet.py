@@ -34,7 +34,7 @@ from diffusers.utils import (
 )
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines import DiffusionPipeline, ImagePipelineOutput
-
+from pixart_controlnet_transformer import PixArtControlNetAdapterModel, PixArtControlNetTransformerModel
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -277,12 +277,18 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
         text_encoder: T5EncoderModel,
         vae: AutoencoderKL,
         transformer: PixArtTransformer2DModel,
+        controlnet: PixArtControlNetAdapterModel,
         scheduler: DPMSolverMultistepScheduler,
     ):
         super().__init__()
 
+        # change to the controlnet transformer model
+        transformer = PixArtControlNetTransformerModel(
+            transformer=transformer, controlnet=controlnet
+        )
+
         self.register_modules(
-            tokenizer=tokenizer, text_encoder=text_encoder, vae=vae, transformer=transformer, scheduler=scheduler
+            tokenizer=tokenizer, text_encoder=text_encoder, vae=vae, transformer=transformer, scheduler=scheduler, controlnet=controlnet
         )
 
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
@@ -730,6 +736,14 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
 
         return image
 
+    # based on pipeline_pixart_inpaiting.py
+    def prepare_image_latents(self, image, device, dtype):
+        image = image.to(device=device, dtype=dtype)
+
+        image_latents = self.vae.encode(image).latent_dist.sample()
+        image_latents = image_latents * self.vae.config.scaling_factor
+        return image_latents
+
     # Copied from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion.StableDiffusionPipeline.prepare_latents
     def prepare_latents(self, batch_size, num_channels_latents, height, width, dtype, device, generator, latents=None):
         shape = (
@@ -774,6 +788,7 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
         prompt_attention_mask: Optional[torch.Tensor] = None,
         negative_prompt_embeds: Optional[torch.Tensor] = None,
         negative_prompt_attention_mask: Optional[torch.Tensor] = None,
+        # controlnet_conditioning_scale: Union[float, List[float]] = 1.0,
         output_type: Optional[str] = "pil",
         return_dict: bool = True,
         callback: Optional[Callable[[int, int, torch.Tensor], None]] = None,
@@ -939,8 +954,9 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
         )
 
         # 4.1 Prepare image
+        image_latents = None
         if image is not None:
-             image = self.prepare_image(
+            image = self.prepare_image(
                 image=image,
                 width=width,
                 height=height,
@@ -949,6 +965,9 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
                 device=device,
                 dtype=self.transformer.dtype,
                 do_classifier_free_guidance=do_classifier_free_guidance,
+            )
+
+            image_latents = self.prepare_image_latents(image, device, self.transformer.dtype)
 
         # 5. Prepare latents.
         latent_channels = self.transformer.config.in_channels

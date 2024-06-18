@@ -116,7 +116,7 @@ class PixArtControlNetTransformerModel(nn.Module):
             transformer: PixArtTransformer2DModel,
             controlnet: PixArtControlNetAdapterModel,
             blocks_num=13,
-            init_from_transformer=True
+            init_from_transformer=False
     ):
         super().__init__()
 
