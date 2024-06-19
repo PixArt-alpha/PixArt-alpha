@@ -20,7 +20,7 @@ Path(output_dir).mkdir(parents=True, exist_ok=True)
 input_image_path = "asset/images/controlnet/0_2.png"
 given_image = Image.open(input_image_path)
 
-prompt = "A mini VAN, simple design style, led headlight, front 45 angle view, sunlight, clear sky."
+prompt = "A yellow mini VAN, simple design style, led headlight, evening, clear sky."
 
 controlnet_strength = 1.0
 weight_dtype = torch.float16
