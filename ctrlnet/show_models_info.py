@@ -31,22 +31,14 @@ def pretty(d, indent=0):
 
 
 # model_path = "/home/raul/codelab/models/PixArt-XL-2-512-ControlNet.pth"
-# model_path = "/home/raul/codelab/models/PixArt-XL-2-1024-ControlNet.pth"
+model_path = "/home/raul/codelab/models/PixArt-XL-2-1024-ControlNet.pth"
 # model_path = "/home/raul/codelab/models/PixArt-XL-2-512x512.pth"
-model_path = "/home/raul/codelab/models/PixArt-XL-2-1024-MS.pth"
+# model_path = "/home/raul/codelab/models/PixArt-XL-2-1024-MS.pth"
 model_data = torch.load(model_path)  # , map_location=lambda storage, loc: storage)
 
-pretty(model_data['state_dict'])
+# pretty(model_data['state_dict'])
 
-# if config.image_size == 512:
-#     model = PixArt_XL_2(
-#         input_size=latent_size, lewei_scale=lewei_scale[config.image_size]
-#     )
-#     print("model architecture ControlPixArtHalf and image size is 512")
-#     model = ControlPixArtHalf(model).to(device)
-# elif config.image_size == 1024:
-#     model = PixArtMS_XL_2(
-#         input_size=latent_size, lewei_scale=lewei_scale[config.image_size]
-#     )
-#     print("model architecture ControlPixArtMSHalf and image size is 1024")
-#     model = ControlPixArtMSHalf(model).to(device)
+print(model_data['state_dict']['controlnet.0.after_proj.weight'])
+print(model_data['state_dict']['controlnet.0.after_proj.weight'].dtype)
+print(model_data['state_dict']['controlnet.0.after_proj.bias'])
+print(model_data['state_dict']['controlnet.0.after_proj.bias'].dtype)

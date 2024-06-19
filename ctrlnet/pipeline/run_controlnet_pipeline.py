@@ -31,12 +31,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.manual_seed(0)
 
 # load controlnet
-controlnet = PixArtControlNetAdapterModel()
-controlnet.from_pretrained(
+controlnet = PixArtControlNetAdapterModel.from_pretrained(
     "/home/raul/codelab/PixArt-alpha/ctrlnet/converted/controlnet",
     torch_dtype=weight_dtype,
     use_safetensors=True,
 ).to(device)
+
+# print(controlnet.controlnet_blocks[0].after_proj.weight)
+# print(controlnet.controlnet_blocks[0].after_proj.weight.dtype)
+# print(controlnet.controlnet_blocks[0].after_proj.bias)
+# print(controlnet.controlnet_blocks[0].after_proj.bias.dtype)
+# exit()
 
 pipe = PixArtAlphaControlnetPipeline.from_pretrained(
     "PixArt-alpha/PixArt-XL-2-1024-MS",
