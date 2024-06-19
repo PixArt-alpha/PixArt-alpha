@@ -14,10 +14,13 @@ sys.path.insert(0, str(current_file_path.parent.parent.parent))
 
 from diffusion.model.hed import HEDdetector
 
+output_dir = "output/controlnet"
+Path(output_dir).mkdir(parents=True, exist_ok=True)
+
 input_image_path = "asset/images/controlnet/0_2.png"
 given_image = Image.open(input_image_path)
 
-prompt = "A Electric 4 seats mini VAN,simple design stylel,led headlight,front 45 angle view,sunlight,clear sky."
+prompt = "A mini VAN, simple design style, led headlight, front 45 angle view, sunlight, clear sky."
 
 controlnet_strength = 1.0
 weight_dtype = torch.float16
@@ -70,4 +73,5 @@ with torch.no_grad():
         width=image_size,
     )
 
-    out.save("output/controlnet/output.jpg")
+    out.images[0].save(f"{output_dir}/output.jpg")
+    

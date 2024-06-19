@@ -223,7 +223,7 @@ class PixArtControlNetTransformerModel(ModelMixin):
             else:
                 # the control nets are only used for the blocks 1 to self.blocks_num
                 if block_index > 0 and block_index <= self.blocks_num and controlnet_states_down is not None:
-                    controlnet_states_left, controlnet_states_down = self.controlnet.controlnet_blocks[block_index](
+                    controlnet_states_left, controlnet_states_down = self.controlnet.controlnet_blocks[block_index - 1](
                         hidden_states=hidden_states, # used only in the first block
                         controlnet_states=controlnet_states_down,
                         encoder_hidden_states=encoder_hidden_states,
