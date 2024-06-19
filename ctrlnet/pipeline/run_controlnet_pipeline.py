@@ -17,10 +17,16 @@ from diffusion.model.hed import HEDdetector
 output_dir = "output/controlnet"
 Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-input_image_path = "asset/images/controlnet/0_2.png"
+# input_image_path = "asset/images/controlnet/0_2.png"
+# input_image_path = "asset/images/controlnet/battleship.jpg"
+# input_image_path = "asset/images/controlnet/aidog.jpg"
+input_image_path = "asset/images/controlnet/car.jpg"
 given_image = Image.open(input_image_path)
 
-prompt = "A yellow mini VAN, simple design style, led headlight, evening, clear sky."
+# prompt = "A blue car, morning, city in background."
+# prompt = "galaxy spaceship"
+# prompt = "cute robot dog"
+prompt = "modern car, city in background, morning, sunrise"
 
 controlnet_strength = 1.0
 weight_dtype = torch.float16
@@ -28,8 +34,8 @@ image_size = 1024
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# torch.manual_seed(0)
-torch.manual_seed(1971901586)
+torch.manual_seed(0)
+# torch.manual_seed(1971901586)
 
 # load controlnet
 controlnet = PixArtControlNetAdapterModel.from_pretrained(
