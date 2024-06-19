@@ -28,7 +28,8 @@ image_size = 1024
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-torch.manual_seed(0)
+# torch.manual_seed(0)
+torch.manual_seed(1971901586)
 
 # load controlnet
 controlnet = PixArtControlNetAdapterModel.from_pretrained(
@@ -72,7 +73,7 @@ with torch.no_grad():
     out = pipe(
         prompt=prompt,
         image=hed_edge,
-        num_inference_steps=30,
+        num_inference_steps=14,
         guidance_scale=4.5,
         height=image_size,
         width=image_size,
