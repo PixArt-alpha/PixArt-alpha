@@ -122,7 +122,6 @@ class PixArtControlNetTransformerModel(ModelMixin):
 
         self.blocks_num = blocks_num
         self.gradient_checkpointing = False
-        self.dtype = transformer.dtype
         self.config = transformer.config
         
         if init_from_transformer:

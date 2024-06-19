@@ -20,6 +20,8 @@ from typing import Callable, List, Optional, Tuple, Union
 
 import torch
 from transformers import T5EncoderModel, T5Tokenizer
+import PIL
+import numpy as np
 
 from diffusers.image_processor import PixArtImageProcessor, PipelineImageInput, VaeImageProcessor
 from diffusers.models import AutoencoderKL, PixArtTransformer2DModel
@@ -295,7 +297,7 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
 
         # change to the controlnet transformer model
         transformer = PixArtControlNetTransformerModel(
-            transformer=transformer, controlnet=controlnet
+            transformer=transformer, controlnet=controlnet.to(dtype=transformer.dtype, device=transformer.device)
         )
 
         self.register_modules(

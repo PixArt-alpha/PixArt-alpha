@@ -29,7 +29,11 @@ torch.manual_seed(0)
 
 # load controlnet
 controlnet = PixArtControlNetAdapterModel()
-controlnet.from_pretrained("/home/raul/codelab/PixArt-alpha/ctrlnet/converted/controlnet")
+controlnet.from_pretrained(
+    "/home/raul/codelab/PixArt-alpha/ctrlnet/converted/controlnet",
+    torch_dtype=weight_dtype,
+    use_safetensors=True,
+).to(device)
 
 pipe = PixArtAlphaControlnetPipeline.from_pretrained(
     "PixArt-alpha/PixArt-XL-2-1024-MS",
