@@ -26,7 +26,7 @@ given_image = Image.open(input_image_path)
 # prompt = "A blue car, morning, city in background."
 # prompt = "galaxy spaceship"
 # prompt = "cute robot dog"
-prompt = "modern car, city in background, morning, sunrise"
+prompt = "modern car, city in background, clear sky, suny day"
 
 controlnet_strength = 1.0
 weight_dtype = torch.float16
@@ -73,6 +73,11 @@ given_image = condition_transform(given_image).unsqueeze(0).to(device)
 hed_edge = hed(given_image) * controlnet_strength
 hed_edge = TF.normalize(hed_edge, [.5], [.5])
 hed_edge = hed_edge.repeat(1, 3, 1, 1).to(weight_dtype)
+
+c_vis = hed_edge
+c_vis = torch.clamp(127.5 * c_vis + 128.0, 0, 255).permute(0, 2, 3, 1).to("cpu", dtype=torch.uint8).numpy()[0]
+c_vis = Image.fromarray(c_vis)
+c_vis.save(f"{output_dir}/hed_edge.jpg")
 
 # run pipeline
 with torch.no_grad():
