@@ -17,6 +17,8 @@ from diffusion.model.hed import HEDdetector
 output_dir = "output/controlnet"
 Path(output_dir).mkdir(parents=True, exist_ok=True)
 
+path_to_controlnet = "<full_path_to_models>/controlnet/converted/controlnet"
+
 # input_image_path = "asset/images/controlnet/0_2.png"
 # input_image_path = "asset/images/controlnet/battleship.jpg"
 # input_image_path = "asset/images/controlnet/aidog.jpg"
@@ -39,7 +41,7 @@ torch.manual_seed(0)
 
 # load controlnet
 controlnet = PixArtControlNetAdapterModel.from_pretrained(
-    "/home/raul/codelab/PixArt-alpha/ctrlnet/converted/controlnet",
+    path_to_controlnet,
     torch_dtype=weight_dtype,
     use_safetensors=True,
 ).to(device)

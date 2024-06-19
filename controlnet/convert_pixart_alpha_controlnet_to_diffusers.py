@@ -7,7 +7,7 @@ import torch
 from pipeline.pixart_controlnet_transformer import PixArtControlNetAdapterModel
 
 # run this script with the following command:
-# python ctrlnet/convert_pixart_alpha_controlnet_to_diffusers.py --orig_ckpt_path=/home/raul/codelab/models/PixArt-XL-2-1024-ControlNet.pth --dump_path=./ctrlnet/converted
+# python controlnet/convert_pixart_alpha_controlnet_to_diffusers.py --orig_ckpt_path=<path to models>/PixArt-XL-2-1024-ControlNet.pth --dump_path=./controlnet/converted
 
 def main(args):
     all_state_dict = torch.load(args.orig_ckpt_path, map_location='cpu')
