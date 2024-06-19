@@ -178,6 +178,8 @@ def get_closest_hw(width, height, image_size):
     
     height, width = PixArtImageProcessor.classify_height_width_bin(height, width, ratios=aspect_ratio_bin)
 
+    return width, height
+
 # Copied from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion.retrieve_timesteps
 def retrieve_timesteps(
     scheduler,

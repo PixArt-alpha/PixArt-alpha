@@ -41,12 +41,13 @@ pipe = PixArtAlphaControlnetPipeline.from_pretrained(
 # preprocess image, generate HED edge
 hed = HEDdetector(False).to(device)
 
-closest_hw = get_closest_hw(given_image.size[0], given_image.size[1], image_size)
+width, height = get_closest_hw(given_image.size[0], given_image.size[1], image_size)
 
 condition_transform = T.Compose([
     T.Lambda(lambda img: img.convert('RGB')),
-    T.Resize(int(min(closest_hw))),
-    T.CenterCrop([int(closest_hw[0]), int(closest_hw[1])])
+    T.Resize(int(min(height, width))),
+    T.CenterCrop([int(height), int(width)]),
+    T.ToTensor()
 ])
 
 given_image = condition_transform(given_image).unsqueeze(0).to(device)
