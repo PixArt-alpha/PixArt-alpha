@@ -197,7 +197,7 @@ class PixArtControlNetTransformerModel(ModelMixin):
         # 2. Blocks
         for block_index, block in enumerate(self.transformer.transformer_blocks):
             if self.training and self.gradient_checkpointing:
-                # rc: to do for training and gradient checkpointing
+                # rc todo: for training and gradient checkpointing
 
                 def create_custom_forward(module, return_dict=None):
                     def custom_forward(*inputs):
