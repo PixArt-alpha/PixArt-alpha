@@ -2,16 +2,17 @@ import torch
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 
-from pipeline.pixart_controlnet_transformer import PixArtControlNetAdapterModel
-from pipeline.pipeline_pixart_alpha_controlnet import PixArtAlphaControlnetPipeline, get_closest_hw
-from diffusion.model.hed import HEDdetector
+from pixart_controlnet_transformer import PixArtControlNetAdapterModel
+from pipeline_pixart_alpha_controlnet import PixArtAlphaControlnetPipeline, get_closest_hw
 import PIL.Image as Image
 
 from pathlib import Path
 import sys
 
 current_file_path = Path(__file__).resolve()
-sys.path.insert(0, str(current_file_path.parent.parent))
+sys.path.insert(0, str(current_file_path.parent.parent.parent))
+
+from diffusion.model.hed import HEDdetector
 
 input_image_path = "asset/images/controlnet/0_2.png"
 given_image = Image.open(input_image_path)
@@ -28,7 +29,7 @@ torch.manual_seed(0)
 
 # load controlnet
 controlnet = PixArtControlNetAdapterModel()
-controlnet.from_pretrained("./../converted/controlnet")
+controlnet.from_pretrained("/home/raul/codelab/PixArt-alpha/ctrlnet/converted/controlnet")
 
 pipe = PixArtAlphaControlnetPipeline.from_pretrained(
     "PixArt-alpha/PixArt-XL-2-1024-MS",
