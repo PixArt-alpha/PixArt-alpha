@@ -47,6 +47,7 @@ from diffusers.optimization import get_scheduler
 from diffusers.training_utils import compute_snr
 from diffusers.utils import check_min_version, is_wandb_available
 from diffusers.utils.import_utils import is_xformers_available
+from diffusers.utils.torch_utils import is_compiled_module
 
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
@@ -258,20 +259,6 @@ def parse_args():
         "--use_8bit_adam", action="store_true", help="Whether or not to use 8-bit Adam from bitsandbytes."
     )
     parser.add_argument(
-        "--use_dora",
-        action="store_true",
-        default=False,
-        help="Whether or not to use Dora. For more information, see"
-        " https://huggingface.co/docs/peft/package_reference/lora#peft.LoraConfig.use_dora"
-    )
-    parser.add_argument(
-        "--use_rslora",
-        action="store_true",
-        default=False,
-        help="Whether or not to use RS Lora. For more information, see"
-        " https://huggingface.co/docs/peft/package_reference/lora#peft.LoraConfig.use_rslora"
-    )
-    parser.add_argument(
         "--allow_tf32",
         action="store_true",
         help=(
@@ -475,28 +462,6 @@ def main():
     for param in transformer.parameters():
         param.requires_grad_(False)
 
-    lora_config = LoraConfig(
-        r=args.rank,
-        init_lora_weights="gaussian",
-        target_modules=[
-            "to_k",
-            "to_q",
-            "to_v",
-            "to_out.0",
-            "proj_in",
-            "proj_out",
-            "ff.net.0.proj",
-            "ff.net.2",
-            "proj",
-            "linear",
-            "linear_1",
-            "linear_2",
-            # "scale_shift_table",      # not available due to the implementation in huggingface/peft, working on it.
-        ],
-        use_dora = args.use_dora,
-        use_rslora = args.use_rslora
-    )
-
     # Move transformer, vae and text_encoder to device and cast to weight_dtype
     transformer.to(accelerator.device)
     
@@ -509,12 +474,16 @@ def main():
                 if param.requires_grad:
                     param.data = param.to(dtype)
 
-    transformer = get_peft_model(transformer, lora_config)
     if args.mixed_precision == "fp16":
         # only upcast trainable parameters (LoRA) into fp32
         cast_training_params(transformer, dtype=torch.float32)
 
     transformer.print_trainable_parameters()
+
+    def unwrap_model(model):
+        model = accelerator.unwrap_model(model)
+        model = model._orig_mod if is_compiled_module(model) else model
+        return model
 
     # 10. Handle saving and loading of checkpoints
     # `accelerate` 0.16.0 will have better support for customized saving
@@ -522,7 +491,7 @@ def main():
         # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
         def save_model_hook(models, weights, output_dir):
             if accelerator.is_main_process:
-                transformer_ = accelerator.unwrap_model(transformer)
+                transformer_ = unwrap_model(transformer)
                 lora_state_dict = get_peft_model_state_dict(transformer_, adapter_name="default")
                 StableDiffusionPipeline.save_lora_weights(os.path.join(output_dir, "transformer_lora"), lora_state_dict)
                 # save weights in peft format to be able to load them back
@@ -534,7 +503,7 @@ def main():
 
         def load_model_hook(models, input_dir):
             # load the LoRA into the model
-            transformer_ = accelerator.unwrap_model(transformer)
+            transformer_ = unwrap_model(transformer)
             transformer_.load_adapter(input_dir, "default", is_trainable=True)
 
             for _ in range(len(models)):
@@ -886,7 +855,7 @@ def main():
                         save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
                         accelerator.save_state(save_path)
 
-                        unwrapped_transformer = accelerator.unwrap_model(transformer, keep_fp32_wrapper=False)
+                        unwrapped_transformer = unwrap_model(transformer, keep_fp32_wrapper=False)
                         transformer_lora_state_dict = get_peft_model_state_dict(unwrapped_transformer)
 
                         StableDiffusionPipeline.save_lora_weights(
@@ -912,7 +881,7 @@ def main():
                 # create pipeline
                 pipeline = DiffusionPipeline.from_pretrained(
                     args.pretrained_model_name_or_path,
-                    transformer=accelerator.unwrap_model(transformer, keep_fp32_wrapper=False),
+                    transformer=unwrap_model(transformer, keep_fp32_wrapper=False),
                     text_encoder=text_encoder, vae=vae,
                     torch_dtype=weight_dtype,
                 )
@@ -944,7 +913,7 @@ def main():
     # Save the lora layers
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
-        transformer = accelerator.unwrap_model(transformer, keep_fp32_wrapper=False)
+        transformer = unwrap_model(transformer, keep_fp32_wrapper=False)
         transformer.save_pretrained(args.output_dir)
         lora_state_dict = get_peft_model_state_dict(transformer)
         StableDiffusionPipeline.save_lora_weights(os.path.join(args.output_dir, "transformer_lora"), lora_state_dict)
