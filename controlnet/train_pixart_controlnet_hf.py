@@ -40,7 +40,8 @@ from torchvision import transforms
 from tqdm.auto import tqdm
 
 import diffusers
-from diffusers import AutoencoderKL, DDPMScheduler, DiffusionPipeline, PixArtAlphaPipeline, Transformer2DModel
+from diffusers import AutoencoderKL, DDPMScheduler, PixArtAlphaPipeline
+from diffusers.models import PixArtTransformer2DModel
 from transformers import T5EncoderModel, T5Tokenizer
 from diffusers.optimization import get_scheduler
 from diffusers.training_utils import compute_snr
@@ -439,7 +440,7 @@ def main():
     vae.requires_grad_(False)
     vae.to(accelerator.device)
 
-    transformer = Transformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="transformer")
+    transformer = PixArtTransformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="transformer")
 
     transformer.train()    
 
@@ -466,7 +467,7 @@ def main():
             for i in range(len(models)):
                 # pop models so that they are not loaded again
                 model = models.pop()
-                load_model = Transformer2DModel.from_pretrained(input_dir, subfolder="transformer")
+                load_model = PixArtTransformer2DModel.from_pretrained(input_dir, subfolder="transformer")
 
                 model.register_to_config(**load_model.config)
 
@@ -838,7 +839,7 @@ def main():
                     f" {args.validation_prompt}."
                 )
                 # create pipeline
-                pipeline = DiffusionPipeline.from_pretrained(
+                pipeline = PixArtAlphaPipeline.from_pretrained(
                     args.pretrained_model_name_or_path,
                     transformer=unwrap_model(transformer),
                     text_encoder=text_encoder,
@@ -892,7 +893,7 @@ def main():
             )
 
     # Load previous pipeline
-    pipeline = DiffusionPipeline.from_pretrained(
+    pipeline = PixArtAlphaPipeline.from_pretrained(
         args.pretrained_model_name_or_path,
         transformer=transformer,
         text_encoder=text_encoder,

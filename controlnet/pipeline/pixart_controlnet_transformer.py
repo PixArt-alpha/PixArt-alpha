@@ -6,7 +6,7 @@ from torch import nn
 import copy
 
 from diffusers.models.attention import BasicTransformerBlock
-from diffusers.models.transformers.pixart_transformer_2d import PixArtTransformer2DModel
+from diffusers.models import PixArtTransformer2DModel
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.models.modeling_utils import ModelMixin
 from diffusers.models.modeling_outputs import Transformer2DModelOutput
