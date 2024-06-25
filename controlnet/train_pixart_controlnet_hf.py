@@ -36,7 +36,6 @@ from accelerate.utils import ProjectConfiguration, set_seed
 from datasets import load_dataset
 from huggingface_hub import create_repo, upload_folder
 from packaging import version
-from peft import LoraConfig, get_peft_model_state_dict, get_peft_model, PeftModel
 from torchvision import transforms
 from tqdm.auto import tqdm
 
@@ -470,24 +469,23 @@ def main():
         # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
         def save_model_hook(models, weights, output_dir):
             if accelerator.is_main_process:
-                transformer_ = unwrap_model(transformer)
-                lora_state_dict = get_peft_model_state_dict(transformer_, adapter_name="default")
-                StableDiffusionPipeline.save_lora_weights(os.path.join(output_dir, "transformer_lora"), lora_state_dict)
-                # save weights in peft format to be able to load them back
-                transformer_.save_pretrained(output_dir)
-
                 for _, model in enumerate(models):
+                    model.save_pretrained(os.path.join(output_dir, "transformer"))
+
                     # make sure to pop weight so that corresponding model is not saved again
                     weights.pop()
 
         def load_model_hook(models, input_dir):
-            # load the LoRA into the model
-            transformer_ = unwrap_model(transformer)
-            transformer_.load_adapter(input_dir, "default", is_trainable=True)
-
-            for _ in range(len(models)):
+            for i in range(len(models)):
                 # pop models so that they are not loaded again
-                models.pop()
+                model = models.pop()
+                load_model = Transformer2DModel.from_pretrained(input_dir, subfolder="transformer")
+
+                model.register_to_config(**load_model.config)
+
+                model.load_state_dict(load_model.state_dict())
+                del load_model
+                
 
         accelerator.register_save_state_pre_hook(save_model_hook)
         accelerator.register_load_state_pre_hook(load_model_hook)
