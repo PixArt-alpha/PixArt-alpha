@@ -40,7 +40,7 @@ from torchvision import transforms
 from tqdm.auto import tqdm
 
 import diffusers
-from diffusers import AutoencoderKL, DDPMScheduler, DiffusionPipeline, StableDiffusionPipeline, PixArtAlphaPipeline, Transformer2DModel
+from diffusers import AutoencoderKL, DDPMScheduler, DiffusionPipeline, PixArtAlphaPipeline, Transformer2DModel
 from transformers import T5EncoderModel, T5Tokenizer
 from diffusers.optimization import get_scheduler
 from diffusers.training_utils import compute_snr
@@ -836,15 +836,6 @@ def main():
                         save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
                         accelerator.save_state(save_path)
 
-                        unwrapped_transformer = unwrap_model(transformer, keep_fp32_wrapper=False)
-                        transformer_lora_state_dict = get_peft_model_state_dict(unwrapped_transformer)
-
-                        StableDiffusionPipeline.save_lora_weights(
-                            save_directory=save_path,
-                            unet_lora_layers=transformer_lora_state_dict,
-                            safe_serialization=True,
-                        )
-
                         logger.info(f"Saved state to {save_path}")
 
             logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
@@ -862,8 +853,9 @@ def main():
                 # create pipeline
                 pipeline = DiffusionPipeline.from_pretrained(
                     args.pretrained_model_name_or_path,
-                    transformer=unwrap_model(transformer, keep_fp32_wrapper=False),
-                    text_encoder=text_encoder, vae=vae,
+                    transformer=unwrap_model(transformer),
+                    text_encoder=text_encoder,
+                    vae=vae,
                     torch_dtype=weight_dtype,
                 )
                 pipeline = pipeline.to(accelerator.device)
@@ -894,11 +886,9 @@ def main():
     # Save the lora layers
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
-        transformer = unwrap_model(transformer, keep_fp32_wrapper=False)
+        transformer = unwrap_model(transformer)
         transformer.save_pretrained(args.output_dir)
-        lora_state_dict = get_peft_model_state_dict(transformer)
-        StableDiffusionPipeline.save_lora_weights(os.path.join(args.output_dir, "transformer_lora"), lora_state_dict)
-
+        
         if args.push_to_hub:
             save_model_card(
                 repo_id,
@@ -914,14 +904,15 @@ def main():
                 ignore_patterns=["step_*", "epoch_*"],
             )
 
-    
-    # Final inference
-    # Load previous transformer
-    transformer = Transformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder='transformer', torch_dtype=weight_dtype)
-    # load lora weight
-    transformer = PeftModel.from_pretrained(transformer, args.output_dir)
     # Load previous pipeline
-    pipeline = DiffusionPipeline.from_pretrained(args.pretrained_model_name_or_path, transformer=transformer, text_encoder=text_encoder, vae=vae, torch_dtype=weight_dtype,)
+    pipeline = DiffusionPipeline.from_pretrained(
+        args.pretrained_model_name_or_path,
+        transformer=transformer,
+        text_encoder=text_encoder,
+        vae=vae,
+        torch_dtype=weight_dtype
+    )
+    pipeline.save_pretrained(args.output_dir)
     pipeline = pipeline.to(accelerator.device)
 
     del transformer
