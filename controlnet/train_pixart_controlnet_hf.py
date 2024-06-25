@@ -453,30 +453,9 @@ def main():
     vae.requires_grad_(False)
     vae.to(accelerator.device)
 
-    transformer = Transformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="transformer", torch_dtype=weight_dtype)
+    transformer = Transformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="transformer")
 
-    # freeze parameters of models to save more memory
-    transformer.requires_grad_(False)    
-    
-    # Freeze the transformer parameters before adding adapters
-    for param in transformer.parameters():
-        param.requires_grad_(False)
-
-    # Move transformer, vae and text_encoder to device and cast to weight_dtype
-    transformer.to(accelerator.device)
-    
-    def cast_training_params(model: Union[torch.nn.Module, List[torch.nn.Module]], dtype=torch.float32):
-        if not isinstance(model, list):
-            model = [model]
-        for m in model:
-            for param in m.parameters():
-                # only upcast trainable parameters into fp32
-                if param.requires_grad:
-                    param.data = param.to(dtype)
-
-    if args.mixed_precision == "fp16":
-        # only upcast trainable parameters (LoRA) into fp32
-        cast_training_params(transformer, dtype=torch.float32)
+    transformer.train()    
 
     transformer.print_trainable_parameters()
 
@@ -526,7 +505,10 @@ def main():
         else:
             raise ValueError("xformers is not available. Make sure it is installed correctly")
 
-    lora_layers = filter(lambda p: p.requires_grad, transformer.parameters())
+    if unwrap_model(transformer).dtype != torch.float32:
+        raise ValueError(
+            f"Transformer loaded as datatype {unwrap_model(transformer).dtype}. The trainable parameters should be in torch.float32."
+        )
 
     # Enable TF32 for faster training on Ampere GPUs,
     # cf https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
@@ -550,8 +532,9 @@ def main():
     else:
         optimizer_cls = torch.optim.AdamW
 
+    params_to_optimize = transformer.parameters()
     optimizer = optimizer_cls(
-        lora_layers,
+        params_to_optimize,
         lr=args.learning_rate,
         betas=(args.adam_beta1, args.adam_beta2),
         weight_decay=args.adam_weight_decay,
@@ -819,7 +802,7 @@ def main():
                 # Backpropagate
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
-                    params_to_clip = lora_layers
+                    params_to_clip = transformer.parameters()
                     accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
                 optimizer.step()
                 lr_scheduler.step()
