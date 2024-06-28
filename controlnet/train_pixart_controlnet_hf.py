@@ -775,7 +775,7 @@ def main():
         disable=not accelerator.is_local_main_process,
     )
 
-    transformerAbc = PixArtControlNetTransformerModel(transformer, controlnet)
+    controlnet_transformer = PixArtControlNetTransformerModel(transformer, controlnet)
     for epoch in range(first_epoch, args.num_train_epochs):
         controlnet.train()
         train_loss = 0.0
@@ -829,7 +829,7 @@ def main():
                     added_cond_kwargs = {"resolution": resolution, "aspect_ratio": aspect_ratio}
 
                 # Predict the noise residual and compute loss
-                model_pred = transformer(noisy_latents,
+                model_pred = controlnet_transformer(noisy_latents,
                     encoder_hidden_states=prompt_embeds,
                     encoder_attention_mask=prompt_attention_mask,
                     timestep=timesteps,
