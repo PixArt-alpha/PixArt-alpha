@@ -873,7 +873,8 @@ def main():
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
         transformer = unwrap_model(transformer)
-        transformer.save_pretrained(args.output_dir)
+        # this is saved in the pipeline.save_pretrained below
+        # transformer.save_pretrained(os.path.join(args.output_dir, "transformer"))
         
         if args.push_to_hub:
             save_model_card(
