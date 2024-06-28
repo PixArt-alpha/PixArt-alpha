@@ -890,29 +890,28 @@ def main():
                 ignore_patterns=["step_*", "epoch_*"],
             )
 
-    # Load previous pipeline
-    pipeline = PixArtAlphaPipeline.from_pretrained(
-        args.pretrained_model_name_or_path,
-        transformer=transformer,
-        text_encoder=text_encoder,
-        vae=vae,
-        torch_dtype=weight_dtype
-    )
-    pipeline.save_pretrained(args.output_dir)
-    pipeline = pipeline.to(accelerator.device)
+        # Load previous pipeline
+        pipeline = PixArtAlphaPipeline.from_pretrained(
+            args.pretrained_model_name_or_path,
+            transformer=transformer,
+            text_encoder=text_encoder,
+            vae=vae,
+            torch_dtype=weight_dtype
+        )
+        pipeline.save_pretrained(args.output_dir)
+        pipeline = pipeline.to(accelerator.device)
 
-    del transformer
-    torch.cuda.empty_cache()
+        del transformer
+        torch.cuda.empty_cache()
 
-    # run inference
-    generator = torch.Generator(device=accelerator.device)
-    if args.seed is not None:
-        generator = generator.manual_seed(args.seed)
-    images = []
-    for _ in range(args.num_validation_images):
-        images.append(pipeline(args.validation_prompt, num_inference_steps=20, generator=generator).images[0])
+        # run inference
+        generator = torch.Generator(device=accelerator.device)
+        if args.seed is not None:
+            generator = generator.manual_seed(args.seed)
+        images = []
+        for _ in range(args.num_validation_images):
+            images.append(pipeline(args.validation_prompt, num_inference_steps=20, generator=generator).images[0])
 
-    if accelerator.is_main_process:
         for tracker in accelerator.trackers:
             if len(images) != 0:
                 if tracker.name == "tensorboard":
