@@ -49,6 +49,7 @@ from diffusers.utils import check_min_version, is_wandb_available
 from diffusers.utils.import_utils import is_xformers_available
 from diffusers.utils.torch_utils import is_compiled_module
 
+from pipeline.pixart_controlnet_transformer import PixArtControlNetAdapterModel, PixArtControlNetTransformerModel
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.29.2")
@@ -105,6 +106,13 @@ def parse_args():
         help="Variant of the model files of the pretrained model identifier from huggingface.co/models, 'e.g.' fp16",
     )
     parser.add_argument(
+        "--controlnet_model_name_or_path",
+        type=str,
+        default=None,
+        help="Path to pretrained controlnet model or model identifier from huggingface.co/models."
+        " If not specified controlnet weights are initialized from the transformer.",
+    )
+    parser.add_argument(
         "--dataset_name",
         type=str,
         default=None,
@@ -132,6 +140,12 @@ def parse_args():
     )
     parser.add_argument(
         "--image_column", type=str, default="image", help="The column of the dataset containing an image."
+    )
+    parser.add_argument(
+        "--conditioning_image_column",
+        type=str,
+        default="conditioning_image",
+        help="The column of the dataset containing the controlnet conditioning image.",
     )
     parser.add_argument(
         "--caption_column",
@@ -169,7 +183,7 @@ def parse_args():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="pixart-finetuned",
+        default="pixart-controlnet",
         help="The output directory where the model predictions and checkpoints will be written.",
     )
     parser.add_argument(
@@ -356,6 +370,16 @@ def parse_args():
         "--enable_xformers_memory_efficient_attention", action="store_true", help="Whether or not to use xformers."
     )
     parser.add_argument("--noise_offset", type=float, default=0, help="The scale of noise offset.")
+
+    parser.add_argument(
+        "--tracker_project_name",
+        type=str,
+        default="pixart_controlnet",
+        help=(
+            "The `project_name` argument passed to Accelerator.init_trackers for"
+            " more information see https://huggingface.co/docs/accelerate/v0.17.0/en/package_reference/accelerator#accelerate.Accelerator"
+        ),
+    )
     
     args = parser.parse_args()
     
@@ -441,8 +465,16 @@ def main():
     vae.to(accelerator.device)
 
     transformer = PixArtTransformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="transformer")
+    transformer.requires_grad_(False)
 
-    transformer.train()    
+    if args.controlnet_model_name_or_path:
+        logger.info("Loading existing controlnet weights")
+        controlnet = PixArtControlNetAdapterModel.from_pretrained(args.controlnet_model_name_or_path)
+    else:
+        logger.info("Initializing controlnet weights from unet")
+        controlnet = PixArtControlNetAdapterModel.from_unet(transformer)
+
+    controlnet.train()
 
     def unwrap_model(model):
         model = accelerator.unwrap_model(model)
@@ -486,12 +518,13 @@ def main():
                     "xFormers 0.0.16 cannot be used for training in some GPUs. If you observe problems during training, please update xFormers to at least 0.0.17. See https://huggingface.co/docs/diffusers/main/en/optimization/xformers for more details."
                 )
             transformer.enable_xformers_memory_efficient_attention()
+            controlnet.enable_xformers_memory_efficient_attention()
         else:
             raise ValueError("xformers is not available. Make sure it is installed correctly")
 
-    if unwrap_model(transformer).dtype != torch.float32:
+    if unwrap_model(controlnet).dtype != torch.float32:
         raise ValueError(
-            f"Transformer loaded as datatype {unwrap_model(transformer).dtype}. The trainable parameters should be in torch.float32."
+            f"Transformer loaded as datatype {unwrap_model(controlnet).dtype}. The trainable parameters should be in torch.float32."
         )
 
     # Enable TF32 for faster training on Ampere GPUs,
@@ -501,6 +534,7 @@ def main():
 
     if args.gradient_checkpointing:
         transformer.enable_gradient_checkpointing()
+        controlnet.enable_gradient_checkpointing()
 
     if args.scale_lr:
         args.learning_rate = args.learning_rate * args.gradient_accumulation_steps * args.train_batch_size * accelerator.num_processes
@@ -516,7 +550,7 @@ def main():
     else:
         optimizer_cls = torch.optim.AdamW
 
-    params_to_optimize = transformer.parameters()
+    params_to_optimize = controlnet.parameters()
     optimizer = optimizer_cls(
         params_to_optimize,
         lr=args.learning_rate,
@@ -646,7 +680,7 @@ def main():
     )
 
     # Prepare everything with our `accelerator`.
-    transformer, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(transformer, optimizer, train_dataloader, lr_scheduler)
+    controlnet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(controlnet, optimizer, train_dataloader, lr_scheduler)
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
@@ -658,7 +692,7 @@ def main():
     # We need to initialize the trackers we use, and also store our configuration.
     # The trackers initializes automatically on the main process.
     if accelerator.is_main_process:
-        accelerator.init_trackers("pixart-fine-tune", config=vars(args))
+        accelerator.init_trackers(args.tracker_project_name, config=vars(args))
 
     # Train!
     total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
@@ -708,11 +742,12 @@ def main():
         disable=not accelerator.is_local_main_process,
     )
 
+    transformerAbc = PixArtControlNetTransformerModel(transformer, controlnet)
     for epoch in range(first_epoch, args.num_train_epochs):
-        transformer.train()
+        controlnet.train()
         train_loss = 0.0
         for step, batch in enumerate(train_dataloader):
-            with accelerator.accumulate(transformer):
+            with accelerator.accumulate(controlnet):
                 # Convert images to latent space
                 latents = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
                 latents = latents * vae.config.scaling_factor
@@ -786,7 +821,7 @@ def main():
                 # Backpropagate
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
-                    params_to_clip = transformer.parameters()
+                    params_to_clip = controlnet.parameters()
                     accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
                 optimizer.step()
                 lr_scheduler.step()

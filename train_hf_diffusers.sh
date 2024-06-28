@@ -15,7 +15,7 @@ accelerate launch --num_processes=1 ./train_scripts/train_pixart_hf.py --mixed_p
   --train_batch_size=2 --gradient_accumulation_steps=1 \
   --num_train_epochs=100 --checkpointing_steps=200 \
   --checkpoints_total_limit=30 \
-  --learning_rate=3e-04 --lr_scheduler="cosine" --lr_warmup_steps=0 \
+  --learning_rate=5e-6 --lr_scheduler="cosine" --lr_warmup_steps=0 \
   --seed=42 \
   --output_dir="lego-city-adventures-model" \
   --report_to="wandb" \
