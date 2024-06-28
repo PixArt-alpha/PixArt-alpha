@@ -474,7 +474,7 @@ def main():
         def save_model_hook(models, weights, output_dir):
             if accelerator.is_main_process:
                 for _, model in enumerate(models):
-                    model.save_pretrained(os.path.join(output_dir, "transformer"))
+                    model.save_pretrained(os.path.join(output_dir, "controlnet"))
 
                     # make sure to pop weight so that corresponding model is not saved again
                     weights.pop()
@@ -483,7 +483,7 @@ def main():
             for i in range(len(models)):
                 # pop models so that they are not loaded again
                 model = models.pop()
-                load_model = PixArtTransformer2DModel.from_pretrained(input_dir, subfolder="transformer")
+                load_model = PixArtControlNetAdapterModel.from_pretrained(input_dir, subfolder="controlnet")
 
                 model.register_to_config(**load_model.config)
 
@@ -932,8 +932,8 @@ def main():
     # Save the lora layers
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
-        transformer = unwrap_model(transformer)
-        transformer.save_pretrained(args.output_dir)
+        controlnet = unwrap_model(controlnet)
+        controlnet.save_pretrained(args.output_dir)
         
         if args.push_to_hub:
             save_model_card(
@@ -950,29 +950,28 @@ def main():
                 ignore_patterns=["step_*", "epoch_*"],
             )
 
-    # Load previous pipeline
-    pipeline = PixArtAlphaPipeline.from_pretrained(
-        args.pretrained_model_name_or_path,
-        transformer=transformer,
-        text_encoder=text_encoder,
-        vae=vae,
-        torch_dtype=weight_dtype
-    )
-    pipeline.save_pretrained(args.output_dir)
-    pipeline = pipeline.to(accelerator.device)
+        # Load previous pipeline
+        pipeline = PixArtAlphaPipeline.from_pretrained(
+            args.pretrained_model_name_or_path,
+            transformer=transformer,
+            text_encoder=text_encoder,
+            vae=vae,
+            torch_dtype=weight_dtype
+        )
+        pipeline.save_pretrained(args.output_dir)
+        pipeline = pipeline.to(accelerator.device)
 
-    del transformer
-    torch.cuda.empty_cache()
+        del transformer
+        torch.cuda.empty_cache()
 
-    # run inference
-    generator = torch.Generator(device=accelerator.device)
-    if args.seed is not None:
-        generator = generator.manual_seed(args.seed)
-    images = []
-    for _ in range(args.num_validation_images):
-        images.append(pipeline(args.validation_prompt, num_inference_steps=20, generator=generator).images[0])
+        # run inference
+        generator = torch.Generator(device=accelerator.device)
+        if args.seed is not None:
+            generator = generator.manual_seed(args.seed)
+        images = []
+        for _ in range(args.num_validation_images):
+            images.append(pipeline(args.validation_prompt, num_inference_steps=20, generator=generator).images[0])
 
-    if accelerator.is_main_process:
         for tracker in accelerator.trackers:
             if len(images) != 0:
                 if tracker.name == "tensorboard":
