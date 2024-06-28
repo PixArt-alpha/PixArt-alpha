@@ -606,6 +606,16 @@ def main():
             raise ValueError(
                 f"--caption_column' value '{args.caption_column}' needs to be one of: {', '.join(column_names)}"
             )
+        
+    if args.conditioning_image_column is None:
+        conditioning_image_column = column_names[2]
+        logger.info(f"conditioning image column defaulting to {conditioning_image_column}")
+    else:
+        conditioning_image_column = args.conditioning_image_column
+        if conditioning_image_column not in column_names:
+            raise ValueError(
+                f"`--conditioning_image_column` value '{args.conditioning_image_column}' not found in dataset columns. Dataset columns are: {', '.join(column_names)}"
+            )
 
     # Preprocessing the datasets.
     # We need to tokenize input captions and transform the images.
@@ -637,10 +647,23 @@ def main():
         ]
     )
 
+    conditioning_image_transforms = transforms.Compose(
+        [
+            transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
+            transforms.CenterCrop(args.resolution),
+            transforms.ToTensor(),
+        ]
+    )
+
     def preprocess_train(examples):
         images = [image.convert("RGB") for image in examples[image_column]]
         examples["pixel_values"] = [train_transforms(image) for image in images]
+
+        conditioning_images = [image.convert("RGB") for image in examples[args.conditioning_image_column]]
+        examples["conditioning_pixel_values"] = [conditioning_image_transforms(image) for image in conditioning_images]
+
         examples["input_ids"], examples['prompt_attention_mask'] = tokenize_captions(examples, proportion_empty_prompts=args.proportion_empty_prompts, max_length=max_length)
+
         return examples
 
     with accelerator.main_process_first():
@@ -652,9 +675,19 @@ def main():
     def collate_fn(examples):
         pixel_values = torch.stack([example["pixel_values"] for example in examples])
         pixel_values = pixel_values.to(memory_format=torch.contiguous_format).float()
+
+        conditioning_pixel_values = torch.stack([example["conditioning_pixel_values"] for example in examples])
+        conditioning_pixel_values = conditioning_pixel_values.to(memory_format=torch.contiguous_format).float()
+
         input_ids = torch.stack([example["input_ids"] for example in examples])
         prompt_attention_mask = torch.stack([example["prompt_attention_mask"] for example in examples])
-        return {"pixel_values": pixel_values, "input_ids": input_ids, 'prompt_attention_mask': prompt_attention_mask}
+
+        return {
+            "pixel_values": pixel_values,
+            "conditioning_pixel_values": conditioning_pixel_values,
+            "input_ids": input_ids,
+            'prompt_attention_mask': prompt_attention_mask
+        }
 
     # DataLoaders creation:
     train_dataloader = torch.utils.data.DataLoader(
@@ -752,6 +785,10 @@ def main():
                 latents = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
                 latents = latents * vae.config.scaling_factor
 
+                # Convert control images to latent space
+                controlnet_image_latents = vae.encode(batch["conditioning_pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
+                controlnet_image_latents = controlnet_image_latents * vae.config.scaling_factor
+
                 # Sample noise that we'll add to the latents
                 noise = torch.randn_like(latents)
                 if args.noise_offset:
@@ -793,11 +830,14 @@ def main():
 
                 # Predict the noise residual and compute loss
                 model_pred = transformer(noisy_latents,
-                                         encoder_hidden_states=prompt_embeds,
-                                         encoder_attention_mask=prompt_attention_mask,
-                                         timestep=timesteps,
-                                         added_cond_kwargs=added_cond_kwargs).sample.chunk(2, 1)[0]
-
+                    encoder_hidden_states=prompt_embeds,
+                    encoder_attention_mask=prompt_attention_mask,
+                    timestep=timesteps,
+                    controlnet_cond=controlnet_image_latents,
+                    added_cond_kwargs=added_cond_kwargs,
+                    return_dict=False
+                )[0]
+                
                 if args.snr_gamma is None:
                     loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
                 else:
