@@ -17,6 +17,7 @@
 import argparse
 import logging
 import math
+import gc
 import os
 import random
 import shutil
@@ -35,6 +36,7 @@ from accelerate.logging import get_logger
 from accelerate.utils import ProjectConfiguration, set_seed
 from datasets import load_dataset
 from huggingface_hub import create_repo, upload_folder
+from PIL import Image
 from packaging import version
 from torchvision import transforms
 from tqdm.auto import tqdm
@@ -50,11 +52,124 @@ from diffusers.utils.import_utils import is_xformers_available
 from diffusers.utils.torch_utils import is_compiled_module
 
 from pipeline.pixart_controlnet_transformer import PixArtControlNetAdapterModel, PixArtControlNetTransformerModel
+from pipeline.pipeline_pixart_alpha_controlnet import PixArtAlphaControlnetPipeline
+
+if is_wandb_available():
+    import wandb
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.29.2")
 
 logger = get_logger(__name__, log_level="INFO")
+
+def log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=False):
+    logger.info("Running validation... ")
+
+    if not is_final_validation:
+        controlnet = accelerator.unwrap_model(controlnet)
+        pipeline = PixArtAlphaControlnetPipeline.from_pretrained(
+            args.pretrained_model_name_or_path,
+            vae=vae,
+            transformer=transformer,
+            controlnet=controlnet,
+            revision=args.revision,
+            variant=args.variant,
+            torch_dtype=weight_dtype,
+        )
+    else:
+        controlnet = PixArtControlNetAdapterModel.from_pretrained(args.output_dir, torch_dtype=weight_dtype)
+        
+        pipeline = PixArtAlphaControlnetPipeline.from_pretrained(
+            args.pretrained_model_name_or_path,
+            controlnet=controlnet,
+            revision=args.revision,
+            variant=args.variant,
+            torch_dtype=weight_dtype,
+        )
+
+    pipeline.set_progress_bar_config(disable=True)
+
+    if args.enable_xformers_memory_efficient_attention:
+        pipeline.enable_xformers_memory_efficient_attention()
+
+    if args.seed is None:
+        generator = None
+    else:
+        generator = torch.Generator(device=accelerator.device).manual_seed(args.seed)
+
+    if len(args.validation_image) == len(args.validation_prompt):
+        validation_images = args.validation_image
+        validation_prompts = args.validation_prompt
+    elif len(args.validation_image) == 1:
+        validation_images = args.validation_image * len(args.validation_prompt)
+        validation_prompts = args.validation_prompt
+    elif len(args.validation_prompt) == 1:
+        validation_images = args.validation_image
+        validation_prompts = args.validation_prompt * len(args.validation_image)
+    else:
+        raise ValueError(
+            "number of `args.validation_image` and `args.validation_prompt` should be checked in `parse_args`"
+        )
+
+    image_logs = []
+    
+    for validation_prompt, validation_image in zip(validation_prompts, validation_images):
+        validation_image = Image.open(validation_image).convert("RGB")
+        validation_image = validation_image.resize((args.resolution, args.resolution))
+
+        images = []
+
+        for _ in range(args.num_validation_images):
+            image = pipeline(
+                prompt=validation_prompt, image=validation_image, num_inference_steps=20, generator=generator
+            ).images[0]
+            images.append(image)
+
+        image_logs.append(
+            {"validation_image": validation_image, "images": images, "validation_prompt": validation_prompt}
+        )
+
+    tracker_key = "test" if is_final_validation else "validation"
+    for tracker in accelerator.trackers:
+        if tracker.name == "tensorboard":
+            for log in image_logs:
+                images = log["images"]
+                validation_prompt = log["validation_prompt"]
+                validation_image = log["validation_image"]
+
+                formatted_images = []
+
+                formatted_images.append(np.asarray(validation_image))
+
+                for image in images:
+                    formatted_images.append(np.asarray(image))
+
+                formatted_images = np.stack(formatted_images)
+
+                tracker.writer.add_images(validation_prompt, formatted_images, step, dataformats="NHWC")
+        elif tracker.name == "wandb":
+            formatted_images = []
+
+            for log in image_logs:
+                images = log["images"]
+                validation_prompt = log["validation_prompt"]
+                validation_image = log["validation_image"]
+
+                formatted_images.append(wandb.Image(validation_image, caption="Controlnet conditioning"))
+
+                for image in images:
+                    image = wandb.Image(image, caption=validation_prompt)
+                    formatted_images.append(image)
+
+            tracker.log({tracker_key: formatted_images})
+        else:
+            logger.warning(f"image logging not implemented for {tracker.name}")
+
+        del pipeline
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        return image_logs
 
 def save_model_card(repo_id: str, images=None, base_model=str, dataset_name=str, repo_folder=None):
     img_str = ""
@@ -154,7 +269,25 @@ def parse_args():
         help="The column of the dataset containing a caption or a list of captions.",
     )
     parser.add_argument(
-        "--validation_prompt", type=str, default=None, help="A prompt that is sampled during training for inference."
+        "--validation_prompt",
+        type=str,
+        nargs="+",
+        default=None,
+        help="One or more prompts to be evaluated every `--validation_epochs`."
+        " Provide either a matching number of `--validation_image`s, a single `--validation_image`"
+        " to be used with all prompts, or a single prompt that will be used with all `--validation_image`s."
+    )
+    parser.add_argument(
+        "--validation_image",
+        type=str,
+        default=None,
+        nargs="+",
+        help=(
+            "A set of paths to the controlnet conditioning image be evaluated every `--validation_epochs`"
+            " and logged to `--report_to`. Provide either a matching number of `--validation_prompt`s, a"
+            " a single `--validation_prompt` to be used with all `--validation_image`s, or a single"
+            " `--validation_image` that will be used with all `--validation_prompt`s."
+        ),
     )
     parser.add_argument(
         "--num_validation_images",
@@ -892,42 +1025,7 @@ def main():
 
         if accelerator.is_main_process:
             if args.validation_prompt is not None and epoch % args.validation_epochs == 0:
-                logger.info(
-                    f"Running validation... \n Generating {args.num_validation_images} images with prompt:"
-                    f" {args.validation_prompt}."
-                )
-                # create pipeline
-                pipeline = PixArtAlphaPipeline.from_pretrained(
-                    args.pretrained_model_name_or_path,
-                    transformer=unwrap_model(transformer),
-                    text_encoder=text_encoder,
-                    vae=vae,
-                    torch_dtype=weight_dtype,
-                )
-                pipeline = pipeline.to(accelerator.device)
-                pipeline.set_progress_bar_config(disable=True)
-
-                # run inference
-                generator = torch.Generator(device=accelerator.device)
-                if args.seed is not None:
-                    generator = generator.manual_seed(args.seed)
-                images = []
-                for _ in range(args.num_validation_images):
-                    images.append(pipeline(args.validation_prompt, num_inference_steps=20, generator=generator).images[0])
-
-                for tracker in accelerator.trackers:
-                    if tracker.name == "tensorboard":
-                        np_images = np.stack([np.asarray(img) for img in images])
-                        tracker.writer.add_images("validation", np_images, epoch, dataformats="NHWC")
-                    if tracker.name == "wandb":
-                        tracker.log(
-                            {
-                                "validation": [wandb.Image(image, caption=f"{i}: {args.validation_prompt}") for i, image in enumerate(images)]
-                            }
-                        )
-
-                del pipeline
-                torch.cuda.empty_cache()
+                log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=False)
 
     # Save the lora layers
     accelerator.wait_for_everyone()
@@ -950,42 +1048,7 @@ def main():
                 ignore_patterns=["step_*", "epoch_*"],
             )
 
-        # Load previous pipeline
-        pipeline = PixArtAlphaPipeline.from_pretrained(
-            args.pretrained_model_name_or_path,
-            transformer=transformer,
-            text_encoder=text_encoder,
-            vae=vae,
-            torch_dtype=weight_dtype
-        )
-        pipeline.save_pretrained(args.output_dir)
-        pipeline = pipeline.to(accelerator.device)
-
-        del transformer
-        torch.cuda.empty_cache()
-
-        # run inference
-        generator = torch.Generator(device=accelerator.device)
-        if args.seed is not None:
-            generator = generator.manual_seed(args.seed)
-        images = []
-        for _ in range(args.num_validation_images):
-            images.append(pipeline(args.validation_prompt, num_inference_steps=20, generator=generator).images[0])
-
-        for tracker in accelerator.trackers:
-            if len(images) != 0:
-                if tracker.name == "tensorboard":
-                    np_images = np.stack([np.asarray(img) for img in images])
-                    tracker.writer.add_images("test", np_images, epoch, dataformats="NHWC")
-                if tracker.name == "wandb":
-                    tracker.log(
-                        {
-                            "test": [
-                                wandb.Image(image, caption=f"{i}: {args.validation_prompt}")
-                                for i, image in enumerate(images)
-                            ]
-                        }
-                    )
+        log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=True)
 
     accelerator.end_training()
 
