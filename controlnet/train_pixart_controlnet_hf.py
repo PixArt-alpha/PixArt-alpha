@@ -42,12 +42,13 @@ from torchvision import transforms
 from tqdm.auto import tqdm
 
 import diffusers
-from diffusers import AutoencoderKL, DDPMScheduler, PixArtAlphaPipeline
+from diffusers import AutoencoderKL, DDPMScheduler
 from diffusers.models import PixArtTransformer2DModel
 from transformers import T5EncoderModel, T5Tokenizer
 from diffusers.optimization import get_scheduler
 from diffusers.training_utils import compute_snr
-from diffusers.utils import check_min_version, is_wandb_available
+from diffusers.utils import check_min_version, is_wandb_available, make_image_grid
+from diffusers.utils.hub_utils import load_or_create_model_card, populate_model_card
 from diffusers.utils.import_utils import is_xformers_available
 from diffusers.utils.torch_utils import is_compiled_module
 
@@ -171,31 +172,47 @@ def log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype
 
         return image_logs
 
-def save_model_card(repo_id: str, images=None, base_model=str, dataset_name=str, repo_folder=None):
+def save_model_card(repo_id: str, image_logs=None, base_model=str, dataset_name=str, repo_folder=None):
     img_str = ""
-    for i, image in enumerate(images):
-        image.save(os.path.join(repo_folder, f"image_{i}.png"))
-        img_str += f"![img_{i}](./image_{i}.png)\n"
+    if image_logs is not None:
+        img_str = "You can find some example images below.\n\n"
+        for i, log in enumerate(image_logs):
+            images = log["images"]
+            validation_prompt = log["validation_prompt"]
+            validation_image = log["validation_image"]
+            validation_image.save(os.path.join(repo_folder, "image_control.png"))
+            img_str += f"prompt: {validation_prompt}\n"
+            images = [validation_image] + images
+            make_image_grid(images, 1, len(images)).save(os.path.join(repo_folder, f"images_{i}.png"))
+            img_str += f"![images_{i})](./images_{i}.png)\n"
 
-    yaml = f"""
----
-license: creativeml-openrail-m
-base_model: {base_model}
-tags:
-- stable-diffusion
-- stable-diffusion-diffusers
-- text-to-image
-- diffusers
-inference: true
----
-    """
-    model_card = f"""
-# text2image fine-tuning - {repo_id}
-These are the weights for {base_model}. The weights were fine-tuned on the {dataset_name} dataset. You can find some example images in the following. \n
+    model_description = f"""
+# controlnet-{repo_id}
+
+These are controlnet weights trained on {base_model} with new type of conditioning.
 {img_str}
 """
-    with open(os.path.join(repo_folder, "README.md"), "w") as f:
-        f.write(yaml + model_card)
+
+    model_card = load_or_create_model_card(
+        repo_id_or_path=repo_id,
+        from_training=True,
+        license="openrail++",
+        base_model=base_model,
+        model_description=model_description,
+        inference=True,
+    )
+
+    tags = [
+        "stable-diffusion-xl",
+        "stable-diffusion-xl-diffusers",
+        "text-to-image",
+        "diffusers",
+        "controlnet",
+        "diffusers-training",
+    ]
+    model_card = populate_model_card(model_card, tags=tags)
+
+    model_card.save(os.path.join(repo_folder, "README.md"))
 
 
 def parse_args():
@@ -1032,11 +1049,15 @@ def main():
     if accelerator.is_main_process:
         controlnet = unwrap_model(controlnet)
         controlnet.save_pretrained(args.output_dir)
+
+        image_logs = None
+        if args.validation_prompt is not None:
+            image_logs = log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=True)
         
         if args.push_to_hub:
             save_model_card(
                 repo_id,
-                images=images,
+                image_logs=image_logs,
                 base_model=args.pretrained_model_name_or_path,
                 dataset_name=args.dataset_name,
                 repo_folder=args.output_dir,
@@ -1048,10 +1069,7 @@ def main():
                 ignore_patterns=["step_*", "epoch_*"],
             )
 
-        log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=True)
-
     accelerator.end_training()
-
 
 if __name__ == "__main__":
     main()
