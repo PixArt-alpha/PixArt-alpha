@@ -528,13 +528,9 @@ def parse_args():
 
     return args
 
-
-DATASET_NAME_MAPPING = {"lambdalabs/pokemon-blip-captions": ("image", "text"),}
-
-
 def main():
     args = parse_args()
-    
+
     if args.report_to == "wandb" and args.hub_token is not None:
         raise ValueError(
             "You cannot use both --report_to=wandb and --hub_token due to a security risk of exposing your token."
@@ -732,9 +728,8 @@ def main():
     column_names = dataset["train"].column_names
 
     # 6. Get the column names for input/target.
-    dataset_columns = DATASET_NAME_MAPPING.get(args.dataset_name, None)
     if args.image_column is None:
-        image_column = dataset_columns[0] if dataset_columns is not None else column_names[0]
+        image_column = column_names[0]
     else:
         image_column = args.image_column
         if image_column not in column_names:
@@ -742,7 +737,7 @@ def main():
                 f"--image_column' value '{args.image_column}' needs to be one of: {', '.join(column_names)}"
             )
     if args.caption_column is None:
-        caption_column = dataset_columns[1] if dataset_columns is not None else column_names[1]
+        caption_column = column_names[1]
     else:
         caption_column = args.caption_column
         if caption_column not in column_names:
