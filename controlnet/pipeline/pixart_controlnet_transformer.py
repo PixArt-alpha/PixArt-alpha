@@ -131,13 +131,15 @@ class PixArtControlNetTransformerModel(ModelMixin):
             transformer: PixArtTransformer2DModel,
             controlnet: PixArtControlNetAdapterModel,
             blocks_num=13,
-            init_from_transformer=False
+            init_from_transformer=False,
+            training=False
     ):
         super().__init__()
 
         self.blocks_num = blocks_num
         self.gradient_checkpointing = False
         self.config = transformer.config
+        self.training = training
         
         if init_from_transformer:
             # copies the specified number of blocks from the transformer
@@ -165,6 +167,11 @@ class PixArtControlNetTransformerModel(ModelMixin):
       
         if self.transformer.use_additional_conditions and added_cond_kwargs is None:
             raise ValueError("`added_cond_kwargs` cannot be None when using additional conditions for `adaln_single`.")
+
+        if self.training:
+            hidden_states = hidden_states.to(torch.float32)
+            encoder_hidden_states = encoder_hidden_states.to(torch.float32)
+            controlnet_cond = controlnet_cond.to(torch.float32)
 
         # ensure attention_mask is a bias, and give it a singleton query_tokens dimension.
         #   we may have done this conversion already, e.g. if we came here via UNet2DConditionModel#forward.

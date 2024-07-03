@@ -916,7 +916,8 @@ def main():
         disable=not accelerator.is_local_main_process,
     )
 
-    controlnet_transformer = PixArtControlNetTransformerModel(transformer, controlnet)
+    controlnet_transformer = PixArtControlNetTransformerModel(transformer, controlnet, training=True)
+    latent_channels = transformer.config.in_channels
     for epoch in range(first_epoch, args.num_train_epochs):
         controlnet.train()
         train_loss = 0.0
@@ -978,6 +979,11 @@ def main():
                     added_cond_kwargs=added_cond_kwargs,
                     return_dict=False
                 )[0]
+
+                if transformer.config.out_channels // 2 == latent_channels:
+                    model_pred = model_pred.chunk(2, dim=1)[0]
+                else:
+                    model_pred = model_pred
                 
                 if args.snr_gamma is None:
                     loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
