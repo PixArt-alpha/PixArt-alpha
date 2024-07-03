@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Self
+from typing import Any, Dict, Optional
 
 import torch
 from torch import nn
@@ -112,7 +112,7 @@ class PixArtControlNetAdapterModel(ModelMixin, ConfigMixin):
         )
 
     @classmethod
-    def from_transformer(cls, transformer: PixArtTransformer2DModel) -> Self:
+    def from_transformer(cls, transformer: PixArtTransformer2DModel):
         control_net = PixArtControlNetAdapterModel()
         
         # copied the specified number of blocks from the transformer

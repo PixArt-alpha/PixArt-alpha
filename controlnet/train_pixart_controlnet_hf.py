@@ -1055,7 +1055,7 @@ def main():
                 break
 
         if accelerator.is_main_process:
-            if args.validation_prompt is not None and epoch % args.validation_steps == 0:
+            if args.validation_prompt is not None and global_step % args.validation_steps == 0:
                 log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=False)
 
     # Save the lora layers
