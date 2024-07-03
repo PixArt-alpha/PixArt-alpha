@@ -294,7 +294,7 @@ def parse_args():
         type=str,
         nargs="+",
         default=None,
-        help="One or more prompts to be evaluated every `--validation_epochs`."
+        help="One or more prompts to be evaluated every `--validation_steps`."
         " Provide either a matching number of `--validation_image`s, a single `--validation_image`"
         " to be used with all prompts, or a single prompt that will be used with all `--validation_image`s."
     )
@@ -304,7 +304,7 @@ def parse_args():
         default=None,
         nargs="+",
         help=(
-            "A set of paths to the controlnet conditioning image be evaluated every `--validation_epochs`"
+            "A set of paths to the controlnet conditioning image be evaluated every `--validation_steps`"
             " and logged to `--report_to`. Provide either a matching number of `--validation_prompt`s, a"
             " a single `--validation_prompt` to be used with all `--validation_image`s, or a single"
             " `--validation_image` that will be used with all `--validation_prompt`s."
@@ -317,9 +317,9 @@ def parse_args():
         help="Number of images that should be generated during validation with `validation_prompt`.",
     )
     parser.add_argument(
-        "--validation_epochs",
+        "--validation_steps",
         type=int,
-        default=1,
+        default=100,
         help=(
             "Run fine-tuning validation every X epochs. The validation process consists of running the prompt"
             " `args.validation_prompt` multiple times: `args.num_validation_images`."
@@ -359,7 +359,7 @@ def parse_args():
     parser.add_argument(
         "--train_batch_size", type=int, default=16, help="Batch size (per device) for the training dataloader."
     )
-    parser.add_argument("--num_train_epochs", type=int, default=100)
+    parser.add_argument("--num_train_epochs", type=int, default=1)
     parser.add_argument(
         "--max_train_steps",
         type=int,
@@ -608,6 +608,7 @@ def main():
     vae.to(accelerator.device)
 
     transformer = PixArtTransformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="transformer")
+    transformer.to(accelerator.device)
     transformer.requires_grad_(False)
 
     if args.controlnet_model_name_or_path:
@@ -617,6 +618,7 @@ def main():
         logger.info("Initializing controlnet weights from transformer.")
         controlnet = PixArtControlNetAdapterModel.from_transformer(transformer)
 
+    controlnet.to(accelerator.device)
     controlnet.train()
 
     def unwrap_model(model):
@@ -1053,7 +1055,7 @@ def main():
                 break
 
         if accelerator.is_main_process:
-            if args.validation_prompt is not None and epoch % args.validation_epochs == 0:
+            if args.validation_prompt is not None and epoch % args.validation_steps == 0:
                 log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=False)
 
     # Save the lora layers

@@ -6,7 +6,7 @@
 # check with
 # accelerate env
 
-export MODEL_DIR="PixArt-alpha/PixArt-XL-2-1024-MS"
+export MODEL_DIR="PixArt-alpha/PixArt-XL-2-512x512"
 export OUTPUT_DIR="pixart-controlnet-hf-diffusers-test"
 
 accelerate launch ./controlnet/train_pixart_controlnet_hf.py \
@@ -14,12 +14,10 @@ accelerate launch ./controlnet/train_pixart_controlnet_hf.py \
  --output_dir=$OUTPUT_DIR \
  --dataset_name=fusing/fill50k \
  --mixed_precision="fp16" \
- --resolution=1024 \
+ --resolution=512 \
  --learning_rate=1e-5 \
- --max_train_steps=15000 \
  --validation_image "./conditioning_image_1.png" "./conditioning_image_2.png" \
  --validation_prompt "red circle with blue background" "cyan circle with brown floral background" \
- --validation_epochs=100 \
  --train_batch_size=1 \
  --gradient_accumulation_steps=4 \
  --report_to="wandb" \
