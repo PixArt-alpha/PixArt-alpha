@@ -19,7 +19,7 @@ accelerate launch ./controlnet/train_pixart_controlnet_hf.py \
  --max_train_steps=15000 \
  --validation_image "./conditioning_image_1.png" "./conditioning_image_2.png" \
  --validation_prompt "red circle with blue background" "cyan circle with brown floral background" \
- --validation_steps=100 \
+ --validation_epochs=100 \
  --train_batch_size=1 \
  --gradient_accumulation_steps=4 \
  --report_to="wandb" \

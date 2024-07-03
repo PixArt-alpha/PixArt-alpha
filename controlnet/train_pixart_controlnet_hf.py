@@ -19,10 +19,10 @@ import logging
 import math
 import gc
 import os
+import sys
 import random
 import shutil
 from pathlib import Path
-from typing import List, Union
 
 import datasets
 import numpy as np
@@ -51,6 +51,10 @@ from diffusers.utils import check_min_version, is_wandb_available, make_image_gr
 from diffusers.utils.hub_utils import load_or_create_model_card, populate_model_card
 from diffusers.utils.import_utils import is_xformers_available
 from diffusers.utils.torch_utils import is_compiled_module
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+subfolder_path = os.path.join(script_dir, 'pipeline')
+sys.path.insert(0, subfolder_path)
 
 from pipeline.pixart_controlnet_transformer import PixArtControlNetAdapterModel, PixArtControlNetTransformerModel
 from pipeline.pipeline_pixart_alpha_controlnet import PixArtAlphaControlnetPipeline
@@ -610,8 +614,8 @@ def main():
         logger.info("Loading existing controlnet weights")
         controlnet = PixArtControlNetAdapterModel.from_pretrained(args.controlnet_model_name_or_path)
     else:
-        logger.info("Initializing controlnet weights from unet")
-        controlnet = PixArtControlNetAdapterModel.from_unet(transformer)
+        logger.info("Initializing controlnet weights from transformer.")
+        controlnet = PixArtControlNetAdapterModel.from_transformer(transformer)
 
     controlnet.train()
 

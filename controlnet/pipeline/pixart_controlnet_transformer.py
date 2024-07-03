@@ -1,9 +1,7 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Self
 
 import torch
 from torch import nn
-
-import copy
 
 from diffusers.models.attention import BasicTransformerBlock
 from diffusers.models import PixArtTransformer2DModel
@@ -61,6 +59,14 @@ class PixArtControlNetAdapterBlock(nn.Module):
         nn.init.zeros_(self.after_proj.weight)
         nn.init.zeros_(self.after_proj.bias)
 
+    def train(self, mode: bool = True):
+        self.transformer_block.train(mode)
+
+        if self.block_index == 0:
+            self.before_proj.train(mode)
+
+        self.after_proj.train(mode)
+
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -105,10 +111,19 @@ class PixArtControlNetAdapterModel(ModelMixin, ConfigMixin):
             ]
         )
 
-    def from_transformer(self, transformer: PixArtTransformer2DModel) -> None:
+    @classmethod
+    def from_transformer(cls, transformer: PixArtTransformer2DModel) -> Self:
+        control_net = PixArtControlNetAdapterModel()
+        
         # copied the specified number of blocks from the transformer
-        for depth in range(self.num_layers):
-            self.controlnet_block[depth].transformer_block = copy.deepcopy(transformer.transformer_blocks[depth])
+        for depth in range(control_net.num_layers):
+            control_net.controlnet_blocks[depth].transformer_block.load_state_dict(transformer.transformer_blocks[depth].state_dict())
+
+        return control_net
+
+    def train(self, mode: bool = True):
+        for block in self.controlnet_blocks:
+            block.train(mode)
             
 class PixArtControlNetTransformerModel(ModelMixin):
     def __init__(
@@ -198,6 +213,8 @@ class PixArtControlNetTransformerModel(ModelMixin):
         for block_index, block in enumerate(self.transformer.transformer_blocks):
             if self.training and self.gradient_checkpointing:
                 # rc todo: for training and gradient checkpointing
+                print("Gradient checkpointing is not supported for the controlnet transformer model, yet.")
+                exit(1)
 
                 def create_custom_forward(module, return_dict=None):
                     def custom_forward(*inputs):

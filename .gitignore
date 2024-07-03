@@ -1,5 +1,8 @@
 asset/images/controlnet/*.jpg
+conditioning_image_1.png
+conditioning_image_2.png
 *.swp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
