@@ -1023,8 +1023,8 @@ def main():
                 accelerator.log({"train_loss": train_loss}, step=global_step)
                 train_loss = 0.0
 
-                if global_step % args.checkpointing_steps == 0:
-                    if accelerator.is_main_process:
+                if accelerator.is_main_process:
+                    if global_step % args.checkpointing_steps == 0:
                         # _before_ saving state, check if this save would set us over the `checkpoints_total_limit`
                         if args.checkpoints_total_limit is not None:
                             checkpoints = os.listdir(args.output_dir)
@@ -1048,15 +1048,14 @@ def main():
 
                         logger.info(f"Saved state to {save_path}")
 
+                    if args.validation_prompt is not None and global_step % args.validation_steps == 0:
+                        log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=False)
+
             logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
             progress_bar.set_postfix(**logs)
 
             if global_step >= args.max_train_steps:
                 break
-
-        if accelerator.is_main_process:
-            if args.validation_prompt is not None and global_step % args.validation_steps == 0:
-                log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=False)
 
     # Save the lora layers
     accelerator.wait_for_everyone()
