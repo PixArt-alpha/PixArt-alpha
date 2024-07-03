@@ -68,9 +68,9 @@ check_min_version("0.29.2")
 logger = get_logger(__name__, log_level="INFO")
 
 def log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=False):
-    logger.info("Running validation... ")
-
     if not is_final_validation:
+        logger.info("Running validation... ")
+
         controlnet = accelerator.unwrap_model(controlnet)
         pipeline = PixArtAlphaControlnetPipeline.from_pretrained(
             args.pretrained_model_name_or_path,
@@ -82,6 +82,8 @@ def log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype
             torch_dtype=weight_dtype,
         )
     else:
+        logger.info("Running validation - final ... ")
+
         controlnet = PixArtControlNetAdapterModel.from_pretrained(args.output_dir, torch_dtype=weight_dtype)
         
         pipeline = PixArtAlphaControlnetPipeline.from_pretrained(
@@ -92,6 +94,7 @@ def log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype
             torch_dtype=weight_dtype,
         )
 
+    pipeline = pipeline.to(accelerator.device)
     pipeline.set_progress_bar_config(disable=True)
 
     if args.enable_xformers_memory_efficient_attention:
