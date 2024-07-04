@@ -67,7 +67,7 @@ check_min_version("0.29.2")
 
 logger = get_logger(__name__, log_level="INFO")
 
-def log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=False):
+def log_validation(vae, transformer, controlnet, tokenizer, scheduler, text_encoder, args, accelerator, weight_dtype, step, is_final_validation=False):
     if not is_final_validation:
         logger.info(f"Running validation step {step} ... ")
 
@@ -76,6 +76,9 @@ def log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype
             args.pretrained_model_name_or_path,
             vae=vae,
             transformer=transformer,
+            scheduler=scheduler,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
             controlnet=controlnet,
             revision=args.revision,
             variant=args.variant,
@@ -1052,7 +1055,7 @@ def main():
                         logger.info(f"Saved state to {save_path}")
 
                     if args.validation_prompt is not None and global_step % args.validation_steps == 0:
-                        log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=False)
+                        log_validation(vae, transformer, controlnet, tokenizer, noise_scheduler, text_encoder, args, accelerator, weight_dtype, step, is_final_validation=False)
 
             logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
             progress_bar.set_postfix(**logs)
@@ -1068,7 +1071,7 @@ def main():
 
         image_logs = None
         if args.validation_prompt is not None:
-            image_logs = log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=True)
+            image_logs = log_validation(vae, transformer, controlnet, tokenizer, noise_scheduler, text_encoder, args, accelerator, weight_dtype, step, is_final_validation=True)
         
         if args.push_to_hub:
             save_model_card(
