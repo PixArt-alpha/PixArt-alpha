@@ -69,7 +69,7 @@ logger = get_logger(__name__, log_level="INFO")
 
 def log_validation(vae, transformer, controlnet, args, accelerator, weight_dtype, step, is_final_validation=False):
     if not is_final_validation:
-        logger.info("Running validation... ")
+        logger.info(f"Running validation step {step} ... ")
 
         controlnet = accelerator.unwrap_model(controlnet)
         pipeline = PixArtAlphaControlnetPipeline.from_pretrained(
