@@ -167,12 +167,7 @@ class PixArtControlNetTransformerModel(ModelMixin):
       
         if self.transformer.use_additional_conditions and added_cond_kwargs is None:
             raise ValueError("`added_cond_kwargs` cannot be None when using additional conditions for `adaln_single`.")
-
-        if self.training:
-            hidden_states = hidden_states.to(torch.float32)
-            encoder_hidden_states = encoder_hidden_states.to(torch.float32)
-            controlnet_cond = controlnet_cond.to(torch.float32)
-
+        
         # ensure attention_mask is a bias, and give it a singleton query_tokens dimension.
         #   we may have done this conversion already, e.g. if we came here via UNet2DConditionModel#forward.
         #   we can tell by counting dims; if ndim == 2: it's a mask rather than a bias.
