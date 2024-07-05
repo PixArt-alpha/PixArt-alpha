@@ -295,9 +295,8 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
     ):
         super().__init__()
 
-        # change to the controlnet transformer model
         transformer = PixArtControlNetTransformerModel(
-            transformer=transformer, controlnet=controlnet.to(dtype=transformer.dtype, device=transformer.device)
+            transformer=transformer, controlnet=controlnet
         )
 
         self.register_modules(
@@ -401,7 +400,7 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
         if self.text_encoder is not None:
             dtype = self.text_encoder.dtype
         elif self.transformer is not None:
-            dtype = self.transformer.dtype
+            dtype = self.transformer.controlnet.dtype
         else:
             dtype = None
 
@@ -978,11 +977,11 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
                 batch_size=batch_size * num_images_per_prompt,
                 num_images_per_prompt=num_images_per_prompt,
                 device=device,
-                dtype=self.transformer.dtype,
+                dtype=self.transformer.controlnet.dtype,
                 do_classifier_free_guidance=do_classifier_free_guidance,
             )
 
-            image_latents = self.prepare_image_latents(image, device, self.transformer.dtype)
+            image_latents = self.prepare_image_latents(image, device, self.transformer.controlnet.dtype)
 
         # 5. Prepare latents.
         latent_channels = self.transformer.config.in_channels
