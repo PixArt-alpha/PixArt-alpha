@@ -2,6 +2,7 @@ asset/images/controlnet/*.jpg
 conditioning_image_1.png
 conditioning_image_2.png
 *.swp
+pixart-controlnet-hf-diffusers-test
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
