@@ -295,6 +295,7 @@ class PixArtAlphaControlnetPipeline(DiffusionPipeline):
     ):
         super().__init__()
 
+        # change to the controlnet transformer model
         transformer = PixArtControlNetTransformerModel(
             transformer=transformer, controlnet=controlnet
         )
