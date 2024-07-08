@@ -870,7 +870,7 @@ def main():
 
     # Prepare everything with our `accelerator`.
     controlnet_transformer = PixArtControlNetTransformerModel(transformer, controlnet, training=True)
-    controlnet_transformer, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(controlnet_transformer, optimizer, train_dataloader, lr_scheduler)
+    controlnet_transformer, controlnet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(controlnet_transformer, controlnet, optimizer, train_dataloader, lr_scheduler)
     
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
