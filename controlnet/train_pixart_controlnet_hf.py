@@ -68,6 +68,9 @@ check_min_version("0.29.2")
 logger = get_logger(__name__, log_level="INFO")
 
 def log_validation(vae, transformer, controlnet, tokenizer, scheduler, text_encoder, args, accelerator, weight_dtype, step, is_final_validation=False):
+    if weight_dtype == torch.float16 or weight_dtype == torch.bfloat16:
+        raise ValueError("Validation is not supported with mixed precision training.")
+
     if not is_final_validation:
         logger.info(f"Running validation step {step} ... ")
 
@@ -123,11 +126,11 @@ def log_validation(vae, transformer, controlnet, tokenizer, scheduler, text_enco
         )
 
     image_logs = []
-    
+
     for validation_prompt, validation_image in zip(validation_prompts, validation_images):
         validation_image = Image.open(validation_image).convert("RGB")
         validation_image = validation_image.resize((args.resolution, args.resolution))
-
+        
         images = []
 
         for _ in range(args.num_validation_images):
@@ -179,6 +182,8 @@ def log_validation(vae, transformer, controlnet, tokenizer, scheduler, text_enco
         del pipeline
         gc.collect()
         torch.cuda.empty_cache()
+
+        logger.info("Validation done!!")
 
         return image_logs
 
@@ -624,11 +629,13 @@ def main():
         logger.info("Initializing controlnet weights from transformer.")
         controlnet = PixArtControlNetAdapterModel.from_transformer(transformer)
 
+    transformer.to(dtype=weight_dtype)
+
     controlnet.to(accelerator.device)
     controlnet.train()
 
-    def unwrap_model(model):
-        model = accelerator.unwrap_model(model)
+    def unwrap_model(model, keep_fp32_wrapper=True):
+        model = accelerator.unwrap_model(model, keep_fp32_wrapper=keep_fp32_wrapper)
         model = model._orig_mod if is_compiled_module(model) else model
         return model
 
@@ -862,8 +869,9 @@ def main():
     )
 
     # Prepare everything with our `accelerator`.
-    controlnet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(controlnet, optimizer, train_dataloader, lr_scheduler)
-
+    controlnet_transformer = PixArtControlNetTransformerModel(transformer, controlnet, training=True)
+    controlnet_transformer, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(controlnet_transformer, optimizer, train_dataloader, lr_scheduler)
+    
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
     if overrode_max_train_steps:
@@ -924,10 +932,9 @@ def main():
         disable=not accelerator.is_local_main_process,
     )
 
-    controlnet_transformer = PixArtControlNetTransformerModel(transformer, controlnet, training=True)
     latent_channels = transformer.config.in_channels
     for epoch in range(first_epoch, args.num_train_epochs):
-        controlnet.train()
+        controlnet_transformer.controlnet.train()
         train_loss = 0.0
         for step, batch in enumerate(train_dataloader):
             with accelerator.accumulate(controlnet):
@@ -938,7 +945,7 @@ def main():
                 # Convert control images to latent space
                 controlnet_image_latents = vae.encode(batch["conditioning_pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
                 controlnet_image_latents = controlnet_image_latents * vae.config.scaling_factor
-
+                
                 # Sample noise that we'll add to the latents
                 noise = torch.randn_like(latents)
                 if args.noise_offset:
@@ -1016,7 +1023,7 @@ def main():
                 # Backpropagate
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
-                    params_to_clip = controlnet.parameters()
+                    params_to_clip = controlnet_transformer.controlnet.parameters()
                     accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
                 optimizer.step()
                 lr_scheduler.step()
@@ -1055,7 +1062,7 @@ def main():
                         logger.info(f"Saved state to {save_path}")
 
                     if args.validation_prompt is not None and global_step % args.validation_steps == 0:
-                        log_validation(vae, transformer, controlnet, tokenizer, noise_scheduler, text_encoder, args, accelerator, weight_dtype, step, is_final_validation=False)
+                        log_validation(vae, transformer, controlnet_transformer.controlnet, tokenizer, noise_scheduler, text_encoder, args, accelerator, weight_dtype, global_step, is_final_validation=False)
 
             logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
             progress_bar.set_postfix(**logs)
@@ -1066,12 +1073,12 @@ def main():
     # Save the lora layers
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
-        controlnet = unwrap_model(controlnet)
+        controlnet = unwrap_model(controlnet, keep_fp32_wrapper=False)
         controlnet.save_pretrained(args.output_dir)
 
         image_logs = None
         if args.validation_prompt is not None:
-            image_logs = log_validation(vae, transformer, controlnet, tokenizer, noise_scheduler, text_encoder, args, accelerator, weight_dtype, step, is_final_validation=True)
+            image_logs = log_validation(vae, transformer, controlnet_transformer.controlnet, tokenizer, noise_scheduler, text_encoder, args, accelerator, weight_dtype, global_step, is_final_validation=True)
         
         if args.push_to_hub:
             save_model_card(
