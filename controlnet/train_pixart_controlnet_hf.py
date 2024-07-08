@@ -69,7 +69,7 @@ logger = get_logger(__name__, log_level="INFO")
 
 def log_validation(vae, transformer, controlnet, tokenizer, scheduler, text_encoder, args, accelerator, weight_dtype, step, is_final_validation=False):
     if weight_dtype == torch.float16 or weight_dtype == torch.bfloat16:
-        raise ValueError("Validation is not supported with mixed precision training.")
+        raise ValueError("Validation is not supported with mixed precision training, disable validation and use the validation script, that will generate images from the saved checkpoints.")
 
     if not is_final_validation:
         logger.info(f"Running validation step {step} ... ")
