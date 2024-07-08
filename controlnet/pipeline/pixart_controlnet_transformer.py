@@ -125,7 +125,7 @@ class PixArtControlNetAdapterModel(ModelMixin, ConfigMixin):
         for block in self.controlnet_blocks:
             block.train(mode)
             
-class PixArtControlNetTransformerModel(ModelMixin):
+class PixArtControlNetTransformerModel(ModelMixin, ConfigMixin):
     def __init__(
             self, 
             transformer: PixArtTransformer2DModel,
@@ -138,7 +138,7 @@ class PixArtControlNetTransformerModel(ModelMixin):
 
         self.blocks_num = blocks_num
         self.gradient_checkpointing = False
-        self.config = transformer.config
+        self.register_to_config(**transformer.config)
         self.training = training
         
         if init_from_transformer:
