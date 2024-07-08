@@ -17,7 +17,7 @@ from diffusion.model.hed import HEDdetector
 output_dir = "output/controlnet"
 Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-path_to_controlnet = "<full_path_to_models>/controlnet/converted/controlnet"
+path_to_controlnet = "raulc0399/pixart-alpha-hed-controlnet"
 
 # input_image_path = "asset/images/controlnet/0_2.png"
 # input_image_path = "asset/images/controlnet/battleship.jpg"
