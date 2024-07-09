@@ -101,5 +101,10 @@ if __name__ == "__main__":
 
     assert len(prompts) == len(control_images)
 
+    # Check if the output folder exists, if not, create it
+    if not os.path.exists(output_folder):
+        print(f"Creating output folder {output_folder}")
+        os.makedirs(output_folder)
+
     generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts, control_images, image_size=512, weight_dtype=torch.float16)
 
