@@ -99,6 +99,7 @@ class PixArtControlNetAdapterBlock(nn.Module):
 
 class PixArtControlNetAdapterModel(ModelMixin, ConfigMixin):
     # N=13, as specified in the paper https://arxiv.org/html/2401.05252v1/#S4 ControlNet-Transformer
+    @register_to_config
     def __init__(self, num_layers = 13) -> None:
         super().__init__()
 

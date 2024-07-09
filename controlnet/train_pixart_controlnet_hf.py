@@ -646,7 +646,9 @@ def main():
         def save_model_hook(models, weights, output_dir):
             if accelerator.is_main_process:
                 for _, model in enumerate(models):
-                    model.save_pretrained(os.path.join(output_dir, "controlnet"))
+                    if isinstance(model, PixArtControlNetTransformerModel):
+                        print(f"Saving model {model.__class__.__name__} to {output_dir}")
+                        model.controlnet.save_pretrained(os.path.join(output_dir, "controlnet"))
 
                     # make sure to pop weight so that corresponding model is not saved again
                     weights.pop()
@@ -870,7 +872,7 @@ def main():
 
     # Prepare everything with our `accelerator`.
     controlnet_transformer = PixArtControlNetTransformerModel(transformer, controlnet, training=True)
-    controlnet_transformer, controlnet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(controlnet_transformer, controlnet, optimizer, train_dataloader, lr_scheduler)
+    controlnet_transformer, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(controlnet_transformer, optimizer, train_dataloader, lr_scheduler)
     
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
