@@ -64,6 +64,7 @@ def generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts,
 
     print(f"Validation images: {len(validation_images)}")
 
+    print(f"Checking folder for checkpoints {checkpoints_folder}")
     for folder in os.listdir(checkpoints_folder):
         checkpoint_folder = os.path.join(checkpoints_folder, folder, "controlnet")
 
