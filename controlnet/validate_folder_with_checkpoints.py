@@ -46,7 +46,14 @@ def process_checkpoint_folder(checkpoint_folder, output_folder, checkpoint_numbe
 
             print(f"\tSaved image to {output_image_path}")
 
-    print(f"  Finished processing checkpoint {checkpoint_folder}!")
+    # Clean up models
+    del controlnet
+    del pipe
+
+    # Clean up GPU memory
+    torch.cuda.empty_cache()
+
+    print(f"\033[32mFinished processing checkpoint {checkpoint_folder}!\033[0m")
 
 def generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts, control_images, image_size=1024, weight_dtype=torch.float16):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -69,7 +76,7 @@ def generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts,
         checkpoint_folder = os.path.join(checkpoints_folder, folder, "controlnet")
 
         if os.path.isdir(checkpoint_folder):
-            print(f"Found checkpoint from {checkpoint_folder}")
+            print(f"\033[33mFound checkpoint from {checkpoint_folder}\033[0m")
 
             checkpoint_number = os.path.basename(checkpoint_folder).split('-')[-1]
             process_checkpoint_folder(checkpoint_folder, output_folder, checkpoint_number, prompts, validation_images, image_size, weight_dtype, device)
@@ -77,7 +84,7 @@ def generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts,
     # also try the controlnet subfolder directly
     checkpoint_folder = os.path.join(checkpoints_folder, "controlnet")
     if os.path.isdir(checkpoint_folder):
-            print(f"Found checkpoint from {checkpoint_folder}")
+            print(f"\033[33mFound checkpoint from {checkpoint_folder}\033[0m")
 
             checkpoint_number = "final"
             process_checkpoint_folder(checkpoint_folder, output_folder, checkpoint_number, prompts, validation_images, image_size, weight_dtype, device)
