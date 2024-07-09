@@ -9,4 +9,4 @@ CONTROL_IMAGES_FOLDER="output/controlnet/control_images"
 python ./controlnet/validate_folder_with_checkpoints.py \
  --checkpoints_folder "$CHECKPOINTS_FOLDER" \
  --output_folder "$OUTPUT_DIR" \
- --control_images_folder "CONTROL_IMAGES_FOLDER"
+ --control_images_folder "$CONTROL_IMAGES_FOLDER"

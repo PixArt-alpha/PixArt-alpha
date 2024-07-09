@@ -75,7 +75,7 @@ def generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts,
 
     # also try the controlnet subfolder directly
     checkpoint_folder = os.path.join(checkpoints_folder, "controlnet")
-    if os.path.isdir(checkpoint_folder)):
+    if os.path.isdir(checkpoint_folder):
             print(f"Found checkpoint from {checkpoint_folder}")
 
             checkpoint_number = "final"
