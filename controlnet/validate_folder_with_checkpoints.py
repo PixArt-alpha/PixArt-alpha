@@ -16,9 +16,41 @@ from pipeline.pipeline_pixart_alpha_controlnet import PixArtAlphaControlnetPipel
 # MODEL_ID="PixArt-alpha/PixArt-XL-2-1024-MS"
 MODEL_ID="PixArt-alpha/PixArt-XL-2-512x512"
 
+def process_checkpoint_folder(checkpoint_folder, output_folder, checkpoint_number, prompts, validation_images, image_size, weight_dtype, device):
+    controlnet = PixArtControlNetAdapterModel.from_pretrained(
+        checkpoint_folder,
+        torch_dtype=weight_dtype,
+        use_safetensors=True,
+    ).to(device)
+
+    pipe = PixArtAlphaControlnetPipeline.from_pretrained(
+        MODEL_ID,
+        controlnet=controlnet,
+        torch_dtype=weight_dtype,
+        use_safetensors=True,
+    ).to(device)
+
+    for i, prompt in enumerate(prompts):
+        with torch.no_grad():
+            out = pipe(
+                prompt=prompt,
+                image=validation_images[i],
+                num_inference_steps=14,
+                guidance_scale=4.5,
+                height=image_size,
+                width=image_size,
+            )
+            
+            output_image_path = os.path.join(output_folder, f"{checkpoint_number}_img_{i+1}.jpg")
+            out.images[0].save(output_image_path)
+
+            print(f"\tSaved image to {output_image_path}")
+
+    print(f"  Finished processing checkpoint {checkpoint_folder}!")
+
 def generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts, control_images, image_size=1024, weight_dtype=torch.float16):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    torch.manual_seed(0)
+    torch.manual_seed(42)
 
     validation_images = []
     for control_image in control_images:
@@ -38,38 +70,14 @@ def generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts,
         if os.path.isdir(checkpoint_folder):
             print(f"Found checkpoint from {checkpoint_folder}")
 
-            checkpoint_number = folder.split('-')[-1]
+            checkpoint_number = os.path.basename(checkpoint_folder).split('-')[-1]
+            process_checkpoint_folder(checkpoint_folder, output_folder, checkpoint_number, prompts, validation_images, image_size, weight_dtype, device)
 
-            controlnet = PixArtControlNetAdapterModel.from_pretrained(
-                checkpoint_folder,
-                torch_dtype=weight_dtype,
-                use_safetensors=True,
-            ).to(device)
-
-            pipe = PixArtAlphaControlnetPipeline.from_pretrained(
-                MODEL_ID,
-                controlnet=controlnet,
-                torch_dtype=weight_dtype,
-                use_safetensors=True,
-            ).to(device)
-
-            for i, prompt in enumerate(prompts):
-                with torch.no_grad():
-                    out = pipe(
-                        prompt=prompt,
-                        image=validation_images[i],
-                        num_inference_steps=14,
-                        guidance_scale=4.5,
-                        height=image_size,
-                        width=image_size,
-                    )
-                    
-                    output_image_path = os.path.join(output_folder, f"{checkpoint_number}_img_{i+1}.jpg")
-                    out.images[0].save(output_image_path)
-
-                    print(f"\tSaved image to {output_image_path}")
-
-            print(f"  Finished processing checkpoint {checkpoint_folder}!")
+    # also try the controlnet subfolder directly
+    checkpoint_folder = os.path.join(checkpoints_folder, "controlnet")
+    if os.path.isdir(checkpoint_folder)):
+            print(f"Found checkpoint from {checkpoint_folder}")
+            process_checkpoint_folder(checkpoint_folder, output_folder, checkpoint_number, prompts, validation_images, image_size, weight_dtype, device)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Script to validate folder with checkpoints.')
