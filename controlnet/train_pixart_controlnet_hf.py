@@ -1078,12 +1078,12 @@ def main():
     # Save the lora layers
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
-        controlnet = unwrap_model(controlnet, keep_fp32_wrapper=False)
-        controlnet.save_pretrained(args.output_dir)
-
+        controlnet = unwrap_model(controlnet_transformer.controlnet, keep_fp32_wrapper=False)
+        controlnet.save_pretrained(os.path.join(args.output_dir, "controlnet"))
+        
         image_logs = None
         if args.validation_prompt is not None:
-            image_logs = log_validation(vae, transformer, controlnet_transformer.controlnet, tokenizer, noise_scheduler, text_encoder, args, accelerator, weight_dtype, global_step, is_final_validation=True)
+            image_logs = log_validation(vae, transformer, controlnet, tokenizer, noise_scheduler, text_encoder, args, accelerator, weight_dtype, global_step, is_final_validation=True)
         
         if args.push_to_hub:
             save_model_card(
