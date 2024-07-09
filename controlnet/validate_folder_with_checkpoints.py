@@ -1,11 +1,16 @@
 import os
+import sys
 import torch
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
-from pathlib import Path
 from PIL import Image
-from pixart_controlnet_transformer import PixArtControlNetAdapterModel
-from pipeline_pixart_alpha_controlnet import PixArtAlphaControlnetPipeline, get_closest_hw
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+subfolder_path = os.path.join(script_dir, 'pipeline')
+sys.path.insert(0, subfolder_path)
+
+from pipeline.pixart_controlnet_transformer import PixArtControlNetAdapterModel
+from pipeline.pipeline_pixart_alpha_controlnet import PixArtAlphaControlnetPipeline, get_closest_hw
 
 # MODEL_ID="PixArt-alpha/PixArt-XL-2-1024-MS"
 MODEL_ID="PixArt-alpha/PixArt-XL-2-512x512"
