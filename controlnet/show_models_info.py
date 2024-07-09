@@ -29,16 +29,25 @@ def pretty(d, indent=0):
         if isinstance(value, dict):
             pretty(value, indent + 1)
 
-
+# the controlnet model
 # model_path = "/home/raul/codelab/models/PixArt-XL-2-512-ControlNet.pth"
-model_path = "/home/raul/codelab/models/PixArt-XL-2-1024-ControlNet.pth"
+# model_path = "/home/raul/codelab/models/PixArt-XL-2-1024-ControlNet.pth"
+
+# the alpha model
 # model_path = "/home/raul/codelab/models/PixArt-XL-2-512x512.pth"
 # model_path = "/home/raul/codelab/models/PixArt-XL-2-1024-MS.pth"
+
+# the sigma model
+# model_path = "/home/raul/codelab/models/PixArt-Sigma-XL-2-2K-MS.pth"
+# model_path = "/home/raul/codelab/models/PixArt-Sigma-XL-2-1024-MS.pth"
+# model_path = "/home/raul/codelab/models/PixArt-Sigma-XL-2-512-MS.pth"
+model_path = "/home/raul/codelab/models/PixArt-Sigma-XL-2-256x256.pth"
+
 model_data = torch.load(model_path)  # , map_location=lambda storage, loc: storage)
 
-# pretty(model_data['state_dict'])
+pretty(model_data['state_dict'])
 
-print(model_data['state_dict']['controlnet.0.after_proj.weight'])
-print(model_data['state_dict']['controlnet.0.after_proj.weight'].dtype)
-print(model_data['state_dict']['controlnet.0.after_proj.bias'])
-print(model_data['state_dict']['controlnet.0.after_proj.bias'].dtype)
+# print(model_data['state_dict']['controlnet.0.after_proj.weight'])
+# print(model_data['state_dict']['controlnet.0.after_proj.weight'].dtype)
+# print(model_data['state_dict']['controlnet.0.after_proj.bias'])
+# print(model_data['state_dict']['controlnet.0.after_proj.bias'].dtype)
