@@ -66,7 +66,9 @@ def generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts,
                     output_image_path = os.path.join(output_folder, f"{checkpoint_number}_img_{i+1}.jpg")
                     out.images[0].save(output_image_path)
 
-                    print(f"Saved image to {output_image_path}")
+                    print(f"\tSaved image to {output_image_path}")
+
+            print(f"  Finished processing checkpoint {checkpoint_folder}!")
 
 if __name__ == "__main__":
     checkpoints_folder = "path/to/checkpoints"
