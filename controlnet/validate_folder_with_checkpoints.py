@@ -4,6 +4,7 @@ import torch
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 from PIL import Image
+import argparse
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 subfolder_path = os.path.join(script_dir, 'pipeline')
@@ -71,16 +72,23 @@ def generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts,
             print(f"  Finished processing checkpoint {checkpoint_folder}!")
 
 if __name__ == "__main__":
-    checkpoints_folder = "path/to/checkpoints"
-    output_folder = "path/to/output"
-    path_to_control_images = "path/to/control_images"
+    parser = argparse.ArgumentParser(description='Script to validate folder with checkpoints.')
+    parser.add_argument('--checkpoints_folder', type=str, help='Path to the folder containing checkpoints')
+    parser.add_argument('--output_folder', type=str, help='Path to the output folder')
+    parser.add_argument('--control_images_folder', type=str, help='Path to the folder containing control images')
+    args = parser.parse_args()
+
+    checkpoints_folder = args.checkpoints_folder
+    output_folder = args.output_folder
+    control_images_folder = args.control_images_folder
 
     prompts = ["red circle with blue background", "cyan circle with brown floral background"]
     control_images = [
-        os.path.join(path_to_control_images, "conditioning_image_1.png"),
-        os.path.join(path_to_control_images, "conditioning_image_2.png")
+        os.path.join(control_images_folder, "conditioning_image_1.png"),
+        os.path.join(control_images_folder, "conditioning_image_2.png")
     ]
 
     assert len(prompts) == len(control_images)
 
     generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts, control_images, image_size=512, weight_dtype=torch.float16)
+
