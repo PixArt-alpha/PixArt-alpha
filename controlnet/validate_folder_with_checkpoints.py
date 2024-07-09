@@ -78,7 +78,7 @@ def generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts,
         if os.path.isdir(checkpoint_folder):
             print(f"\033[33mFound checkpoint from {checkpoint_folder}\033[0m")
 
-            checkpoint_number = os.path.basename(checkpoint_folder).split('-')[-1]
+            checkpoint_number = os.path.basename(folder).split('-')[-1]
             process_checkpoint_folder(checkpoint_folder, output_folder, checkpoint_number, prompts, validation_images, image_size, weight_dtype, device)
 
     # also try the controlnet subfolder directly
