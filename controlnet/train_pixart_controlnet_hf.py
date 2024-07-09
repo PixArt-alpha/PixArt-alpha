@@ -654,16 +654,19 @@ def main():
                     weights.pop()
 
         def load_model_hook(models, input_dir):
+            # rc todo: test and load the controlenet adapter and transformer
+            raise ValueError("load model hook not tested")
+        
             for i in range(len(models)):
                 # pop models so that they are not loaded again
                 model = models.pop()
-                load_model = PixArtControlNetAdapterModel.from_pretrained(input_dir, subfolder="controlnet")
 
-                model.register_to_config(**load_model.config)
+                if isinstance(model, PixArtControlNetTransformerModel):
+                    load_model = PixArtControlNetAdapterModel.from_pretrained(input_dir, subfolder="controlnet")
+                    model.register_to_config(**load_model.config)
 
-                model.load_state_dict(load_model.state_dict())
-                del load_model
-                
+                    model.load_state_dict(load_model.state_dict())
+                    del load_model                
 
         accelerator.register_save_state_pre_hook(save_model_hook)
         accelerator.register_load_state_pre_hook(load_model_hook)
