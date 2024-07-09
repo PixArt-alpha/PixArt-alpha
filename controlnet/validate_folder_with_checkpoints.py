@@ -29,10 +29,14 @@ def generate_images_from_checkpoints(checkpoints_folder, output_folder, prompts,
         print("Validation images are empty.")
         return
 
+    print(f"Validation images: {len(validation_images)}")
+
     for folder in os.listdir(checkpoints_folder):
         checkpoint_folder = os.path.join(checkpoints_folder, folder, "controlnet")
 
         if os.path.isdir(checkpoint_folder):
+            print(f"Found checkpoint from {checkpoint_folder}")
+
             checkpoint_number = folder.split('-')[-1]
 
             controlnet = PixArtControlNetAdapterModel.from_pretrained(
