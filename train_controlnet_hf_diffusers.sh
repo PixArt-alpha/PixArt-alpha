@@ -7,7 +7,7 @@
 # accelerate env
 
 export MODEL_DIR="PixArt-alpha/PixArt-XL-2-512x512"
-export OUTPUT_DIR="pixart-controlnet-hf-diffusers-test"
+export OUTPUT_DIR="output/pixart-controlnet-hf-diffusers-test"
 
 accelerate launch ./controlnet/train_pixart_controlnet_hf.py \
  --pretrained_model_name_or_path=$MODEL_DIR \
