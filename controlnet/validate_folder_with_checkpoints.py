@@ -41,7 +41,8 @@ def process_checkpoint_folder(checkpoint_folder, output_folder, checkpoint_numbe
                 width=image_size,
             )
             
-            output_image_path = os.path.join(output_folder, f"{checkpoint_number}_img_{i+1}.jpg")
+            checkpoint_number_str = str(checkpoint_number).zfill(8)
+            output_image_path = os.path.join(output_folder, f"{checkpoint_number_str}_img_{i+1}.jpg")
             out.images[0].save(output_image_path)
 
             print(f"\tSaved image to {output_image_path}")
