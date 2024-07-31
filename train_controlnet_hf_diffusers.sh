@@ -6,14 +6,14 @@
 # check with
 # accelerate env
 
-export MODEL_DIR="PixArt-alpha/PixArt-XL-2-512x512"
-export OUTPUT_DIR="output/pixart-controlnet-hf-diffusers-test"
+export MODEL_DIR="PixArt-alpha/PixArt-XL-2-1024-MS"
+export OUTPUT_DIR="/workspace/pixart-controlnet-open-pose"
 
 accelerate launch ./controlnet/train_pixart_controlnet_hf.py \
  --pretrained_model_name_or_path=$MODEL_DIR \
  --output_dir=$OUTPUT_DIR \
- --dataset_name=fusing/fill50k \
- --resolution=512 \
+ --train_data_dir="/workspace/open_pose_controlnet" \
+ --resolution=1024 \
  --learning_rate=1e-5 \
  --train_batch_size=1 \
  --gradient_accumulation_steps=4 \
