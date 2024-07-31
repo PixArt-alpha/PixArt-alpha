@@ -736,16 +736,13 @@ def main():
             data_dir=args.train_data_dir,
         )
     else:
-        data_files = {}
         if args.train_data_dir is not None:
-            data_files["train"] = os.path.join(args.train_data_dir, "**")
-        dataset = load_dataset(
-            "imagefolder",
-            data_files=data_files,
-            cache_dir=args.cache_dir,
-        )
+            dataset = load_dataset(
+                args.train_data_dir,
+                cache_dir=args.cache_dir,
+            )
         # See more about loading custom images at
-        # https://huggingface.co/docs/datasets/v2.4.0/en/image_load#imagefolder
+        # https://huggingface.co/docs/datasets/v2.0.0/en/dataset_script
 
     # Preprocessing the datasets.
     # We need to tokenize inputs and targets.
@@ -817,12 +814,21 @@ def main():
     )
 
     def preprocess_train(examples):
-        images = [image.convert("RGB") for image in examples[image_column]]
-        examples["pixel_values"] = [train_transforms(image) for image in images]
+        def process_image_column(column, transform):
+            processed = []
+            for item in examples[column]:
+                if isinstance(item, str) and args.train_data_dir is not None:  # If it's a file path
+                    image =  Image.open(os.path.join(args.train_data_dir, item)).convert("RGB")
+                else:  # If it's already an image
+                    image = item.convert("RGB")
 
-        conditioning_images = [image.convert("RGB") for image in examples[args.conditioning_image_column]]
-        examples["conditioning_pixel_values"] = [conditioning_image_transforms(image) for image in conditioning_images]
+                processed.append(transform(image))
 
+            return processed
+        
+        examples["pixel_values"] = process_image_column(image_column, train_transforms)
+        examples["conditioning_pixel_values"] = process_image_column(conditioning_image_column, conditioning_image_transforms)
+        
         examples["input_ids"], examples['prompt_attention_mask'] = tokenize_captions(examples, proportion_empty_prompts=args.proportion_empty_prompts, max_length=max_length)
 
         return examples
