@@ -1,3 +1,6 @@
+asset/images/controlnet/*.jpg
+*.swp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -163,3 +166,7 @@ output/
 #cache for docker
 docker/cache/gradio
 docker/cache/huggingface
+
+gradio_cached_examples
+.aider*
+wandb/

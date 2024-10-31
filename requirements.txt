@@ -1,22 +1,24 @@
-torch==2.1.1
-torchaudio==2.1.1
-torchvision==0.16.1
+torch
+torchaudio
+torchvision
 mmcv==1.7.0
-git+https://github.com/huggingface/diffusers
-timm==0.6.12
+diffusers[torch]
+timm
 accelerate
 tensorboard
 tensorboardX
 transformers
-sentencepiece~=0.1.99
+sentencepiece
 ftfy
 beautifulsoup4
 protobuf==3.20.2
-gradio==4.1.1
+gradio
 yapf==0.40.1
 opencv-python
 bs4
 einops
+# if you get an error that torch is not defined, comment the following line, install all from requirements.txt 
+# and then install xformers
 xformers
 optimum
-peft==0.6.2
+peft

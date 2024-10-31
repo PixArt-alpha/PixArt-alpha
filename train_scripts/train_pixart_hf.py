@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Fine-tuning script for Stable Diffusion for text2image with support for LoRA."""
+"""Fine-tuning script for Stable Diffusion for text2image with HuggingFace diffusers."""
 
 import argparse
 import logging
@@ -36,21 +36,22 @@ from accelerate.utils import ProjectConfiguration, set_seed
 from datasets import load_dataset
 from huggingface_hub import create_repo, upload_folder
 from packaging import version
-from peft import LoraConfig, get_peft_model_state_dict, get_peft_model, PeftModel
 from torchvision import transforms
 from tqdm.auto import tqdm
 
 import diffusers
-from diffusers import AutoencoderKL, DDPMScheduler, DiffusionPipeline, StableDiffusionPipeline, PixArtAlphaPipeline, Transformer2DModel
+from diffusers import AutoencoderKL, DDPMScheduler, PixArtAlphaPipeline
+from diffusers.models import PixArtTransformer2DModel
 from transformers import T5EncoderModel, T5Tokenizer
 from diffusers.optimization import get_scheduler
 from diffusers.training_utils import compute_snr
 from diffusers.utils import check_min_version, is_wandb_available
 from diffusers.utils.import_utils import is_xformers_available
+from diffusers.utils.torch_utils import is_compiled_module
 
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
-check_min_version("0.25.0.dev0")
+check_min_version("0.29.2")
 
 logger = get_logger(__name__, log_level="INFO")
 
@@ -69,13 +70,12 @@ tags:
 - stable-diffusion-diffusers
 - text-to-image
 - diffusers
-- lora
 inference: true
 ---
     """
     model_card = f"""
-# LoRA text2image fine-tuning - {repo_id}
-These are LoRA adaption weights for {base_model}. The weights were fine-tuned on the {dataset_name} dataset. You can find some example images in the following. \n
+# text2image fine-tuning - {repo_id}
+These are the weights for {base_model}. The weights were fine-tuned on the {dataset_name} dataset. You can find some example images in the following. \n
 {img_str}
 """
     with open(os.path.join(repo_folder, "README.md"), "w") as f:
@@ -169,7 +169,7 @@ def parse_args():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="sd-model-finetuned-lora",
+        default="pixart-finetuned",
         help="The output directory where the model predictions and checkpoints will be written.",
     )
     parser.add_argument(
@@ -258,20 +258,6 @@ def parse_args():
         "--use_8bit_adam", action="store_true", help="Whether or not to use 8-bit Adam from bitsandbytes."
     )
     parser.add_argument(
-        "--use_dora",
-        action="store_true",
-        default=False,
-        help="Whether or not to use Dora. For more information, see"
-        " https://huggingface.co/docs/peft/package_reference/lora#peft.LoraConfig.use_dora"
-    )
-    parser.add_argument(
-        "--use_rslora",
-        action="store_true",
-        default=False,
-        help="Whether or not to use RS Lora. For more information, see"
-        " https://huggingface.co/docs/peft/package_reference/lora#peft.LoraConfig.use_rslora"
-    )
-    parser.add_argument(
         "--allow_tf32",
         action="store_true",
         help=(
@@ -342,7 +328,6 @@ def parse_args():
             ' (default), `"wandb"` and `"comet_ml"`. Use `"all"` to report to all integrations.'
         ),
     )
-    parser.add_argument("--local_rank", type=int, default=-1, help="For distributed training: local_rank")
     parser.add_argument(
         "--checkpointing_steps",
         type=int,
@@ -371,20 +356,9 @@ def parse_args():
         "--enable_xformers_memory_efficient_attention", action="store_true", help="Whether or not to use xformers."
     )
     parser.add_argument("--noise_offset", type=float, default=0, help="The scale of noise offset.")
-    parser.add_argument(
-        "--rank",
-        type=int,
-        default=4,
-        help=("The dimension of the LoRA update matrices."),
-    )
-
-    parser.add_argument("--local-rank", type=int, default=-1)
-
+    
     args = parser.parse_args()
-    env_local_rank = int(os.environ.get("LOCAL_RANK", -1))
-    if env_local_rank != -1 and env_local_rank != args.local_rank:
-        args.local_rank = env_local_rank
-
+    
     # Sanity checks
     if args.dataset_name is None and args.train_data_dir is None:
         raise ValueError("Need either a dataset name or a training folder.")
@@ -446,7 +420,7 @@ def main():
     # See Section 3.1. of the paper.
     max_length = 120
 
-    # For mixed precision training we cast all non-trainable weigths (vae, non-lora text_encoder and non-lora transformer) to half-precision
+    # For mixed precision training we cast all non-trainable weigths (vae, text_encoder) to half-precision
     # as these weights are only used for inference, keeping weights in full precision is not required.
     weight_dtype = torch.float32
     if accelerator.mixed_precision == "fp16":
@@ -466,55 +440,14 @@ def main():
     vae.requires_grad_(False)
     vae.to(accelerator.device)
 
-    transformer = Transformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="transformer", torch_dtype=weight_dtype)
+    transformer = PixArtTransformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="transformer")
 
-    # freeze parameters of models to save more memory
-    transformer.requires_grad_(False)    
-    
-    # Freeze the transformer parameters before adding adapters
-    for param in transformer.parameters():
-        param.requires_grad_(False)
+    transformer.train()    
 
-    lora_config = LoraConfig(
-        r=args.rank,
-        init_lora_weights="gaussian",
-        target_modules=[
-            "to_k",
-            "to_q",
-            "to_v",
-            "to_out.0",
-            "proj_in",
-            "proj_out",
-            "ff.net.0.proj",
-            "ff.net.2",
-            "proj",
-            "linear",
-            "linear_1",
-            "linear_2",
-            # "scale_shift_table",      # not available due to the implementation in huggingface/peft, working on it.
-        ],
-        use_dora = args.use_dora,
-        use_rslora = args.use_rslora
-    )
-
-    # Move transformer, vae and text_encoder to device and cast to weight_dtype
-    transformer.to(accelerator.device)
-    
-    def cast_training_params(model: Union[torch.nn.Module, List[torch.nn.Module]], dtype=torch.float32):
-        if not isinstance(model, list):
-            model = [model]
-        for m in model:
-            for param in m.parameters():
-                # only upcast trainable parameters into fp32
-                if param.requires_grad:
-                    param.data = param.to(dtype)
-
-    transformer = get_peft_model(transformer, lora_config)
-    if args.mixed_precision == "fp16":
-        # only upcast trainable parameters (LoRA) into fp32
-        cast_training_params(transformer, dtype=torch.float32)
-
-    transformer.print_trainable_parameters()
+    def unwrap_model(model):
+        model = accelerator.unwrap_model(model)
+        model = model._orig_mod if is_compiled_module(model) else model
+        return model
 
     # 10. Handle saving and loading of checkpoints
     # `accelerate` 0.16.0 will have better support for customized saving
@@ -522,24 +455,23 @@ def main():
         # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
         def save_model_hook(models, weights, output_dir):
             if accelerator.is_main_process:
-                transformer_ = accelerator.unwrap_model(transformer)
-                lora_state_dict = get_peft_model_state_dict(transformer_, adapter_name="default")
-                StableDiffusionPipeline.save_lora_weights(os.path.join(output_dir, "transformer_lora"), lora_state_dict)
-                # save weights in peft format to be able to load them back
-                transformer_.save_pretrained(output_dir)
-
                 for _, model in enumerate(models):
+                    model.save_pretrained(os.path.join(output_dir, "transformer"))
+
                     # make sure to pop weight so that corresponding model is not saved again
                     weights.pop()
 
         def load_model_hook(models, input_dir):
-            # load the LoRA into the model
-            transformer_ = accelerator.unwrap_model(transformer)
-            transformer_.load_adapter(input_dir, "default", is_trainable=True)
-
-            for _ in range(len(models)):
+            for i in range(len(models)):
                 # pop models so that they are not loaded again
-                models.pop()
+                model = models.pop()
+                load_model = PixArtTransformer2DModel.from_pretrained(input_dir, subfolder="transformer")
+
+                model.register_to_config(**load_model.config)
+
+                model.load_state_dict(load_model.state_dict())
+                del load_model
+                
 
         accelerator.register_save_state_pre_hook(save_model_hook)
         accelerator.register_load_state_pre_hook(load_model_hook)
@@ -557,7 +489,10 @@ def main():
         else:
             raise ValueError("xformers is not available. Make sure it is installed correctly")
 
-    lora_layers = list(filter(lambda p: p.requires_grad, transformer.parameters()))
+    if unwrap_model(transformer).dtype != torch.float32:
+        raise ValueError(
+            f"Transformer loaded as datatype {unwrap_model(transformer).dtype}. The trainable parameters should be in torch.float32."
+        )
 
     # Enable TF32 for faster training on Ampere GPUs,
     # cf https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
@@ -581,8 +516,9 @@ def main():
     else:
         optimizer_cls = torch.optim.AdamW
 
+    params_to_optimize = transformer.parameters()
     optimizer = optimizer_cls(
-        lora_layers,
+        params_to_optimize,
         lr=args.learning_rate,
         betas=(args.adam_beta1, args.adam_beta2),
         weight_decay=args.adam_weight_decay,
@@ -722,7 +658,7 @@ def main():
     # We need to initialize the trackers we use, and also store our configuration.
     # The trackers initializes automatically on the main process.
     if accelerator.is_main_process:
-        accelerator.init_trackers("text2image-fine-tune", config=vars(args))
+        accelerator.init_trackers("pixart-fine-tune", config=vars(args))
 
     # Train!
     total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
@@ -850,7 +786,7 @@ def main():
                 # Backpropagate
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
-                    params_to_clip = lora_layers
+                    params_to_clip = transformer.parameters()
                     accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
                 optimizer.step()
                 lr_scheduler.step()
@@ -886,15 +822,6 @@ def main():
                         save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
                         accelerator.save_state(save_path)
 
-                        unwrapped_transformer = accelerator.unwrap_model(transformer, keep_fp32_wrapper=False)
-                        transformer_lora_state_dict = get_peft_model_state_dict(unwrapped_transformer)
-
-                        StableDiffusionPipeline.save_lora_weights(
-                            save_directory=save_path,
-                            unet_lora_layers=transformer_lora_state_dict,
-                            safe_serialization=True,
-                        )
-
                         logger.info(f"Saved state to {save_path}")
 
             logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
@@ -910,10 +837,11 @@ def main():
                     f" {args.validation_prompt}."
                 )
                 # create pipeline
-                pipeline = DiffusionPipeline.from_pretrained(
+                pipeline = PixArtAlphaPipeline.from_pretrained(
                     args.pretrained_model_name_or_path,
-                    transformer=accelerator.unwrap_model(transformer, keep_fp32_wrapper=False),
-                    text_encoder=text_encoder, vae=vae,
+                    transformer=unwrap_model(transformer),
+                    text_encoder=text_encoder,
+                    vae=vae,
                     torch_dtype=weight_dtype,
                 )
                 pipeline = pipeline.to(accelerator.device)
@@ -944,11 +872,10 @@ def main():
     # Save the lora layers
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
-        transformer = accelerator.unwrap_model(transformer, keep_fp32_wrapper=False)
-        transformer.save_pretrained(args.output_dir)
-        lora_state_dict = get_peft_model_state_dict(transformer)
-        StableDiffusionPipeline.save_lora_weights(os.path.join(args.output_dir, "transformer_lora"), lora_state_dict)
-
+        transformer = unwrap_model(transformer)
+        # this is saved in the pipeline.save_pretrained below
+        # transformer.save_pretrained(os.path.join(args.output_dir, "transformer"))
+        
         if args.push_to_hub:
             save_model_card(
                 repo_id,
@@ -964,28 +891,28 @@ def main():
                 ignore_patterns=["step_*", "epoch_*"],
             )
 
-    
-    # Final inference
-    # Load previous transformer
-    transformer = Transformer2DModel.from_pretrained(args.pretrained_model_name_or_path, subfolder='transformer', torch_dtype=weight_dtype)
-    # load lora weight
-    transformer = PeftModel.from_pretrained(transformer, args.output_dir)
-    # Load previous pipeline
-    pipeline = DiffusionPipeline.from_pretrained(args.pretrained_model_name_or_path, transformer=transformer, text_encoder=text_encoder, vae=vae, torch_dtype=weight_dtype,)
-    pipeline = pipeline.to(accelerator.device)
+        # Load previous pipeline
+        pipeline = PixArtAlphaPipeline.from_pretrained(
+            args.pretrained_model_name_or_path,
+            transformer=transformer,
+            text_encoder=text_encoder,
+            vae=vae,
+            torch_dtype=weight_dtype
+        )
+        pipeline.save_pretrained(args.output_dir)
+        pipeline = pipeline.to(accelerator.device)
 
-    del transformer
-    torch.cuda.empty_cache()
+        del transformer
+        torch.cuda.empty_cache()
 
-    # run inference
-    generator = torch.Generator(device=accelerator.device)
-    if args.seed is not None:
-        generator = generator.manual_seed(args.seed)
-    images = []
-    for _ in range(args.num_validation_images):
-        images.append(pipeline(args.validation_prompt, num_inference_steps=20, generator=generator).images[0])
+        # run inference
+        generator = torch.Generator(device=accelerator.device)
+        if args.seed is not None:
+            generator = generator.manual_seed(args.seed)
+        images = []
+        for _ in range(args.num_validation_images):
+            images.append(pipeline(args.validation_prompt, num_inference_steps=20, generator=generator).images[0])
 
-    if accelerator.is_main_process:
         for tracker in accelerator.trackers:
             if len(images) != 0:
                 if tracker.name == "tensorboard":
